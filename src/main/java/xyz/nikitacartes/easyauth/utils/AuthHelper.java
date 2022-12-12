@@ -67,7 +67,7 @@ public class AuthHelper {
     }
 
     public static String hashPassword(char[] password) {
-        return HasherArgon2.hash(password);
+        return HasherBCrypt.hash(password);
     }
 
     private static boolean verifyPassword(char[] pass, String hashed) {

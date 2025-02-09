@@ -1,7 +1,6 @@
 package xyz.nikitacartes.easyauth.mixin;
 
 import com.mojang.authlib.GameProfile;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.ClientConnection;
@@ -11,12 +10,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ConnectedClientData;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.stat.ServerStatHandler;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Uuids;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.TeleportTarget;
 import net.minecraft.world.World;
@@ -26,7 +23,6 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
-import xyz.nikitacartes.easyauth.storage.PlayerCacheV0;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -39,7 +35,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
-import static xyz.nikitacartes.easyauth.utils.AuthHelper.hasValidSession;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogWarn;
 
@@ -53,28 +48,16 @@ public abstract class PlayerManagerMixin {
     @Shadow
     private MinecraftServer server;
 
-    @Inject(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V", at = @At("RETURN"))
-    private void onPlayerConnectReturn(ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData, CallbackInfo ci) {
-        AuthEventHandler.onPlayerJoin(player);
-    }
-
     @Inject(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V", at = @At("HEAD"))
     private void onPlayerConnectHead(ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData, CallbackInfo ci) {
-        ((PlayerAuth) player).easyAuth$setIpAddress(connection);
+        AuthEventHandler.loadPlayerData(player, connection);
     }
 
     @ModifyVariable(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
             at = @At("STORE"), ordinal = 0)
     private RegistryKey<World> onPlayerConnect(RegistryKey<World> world, ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData) {
-        String uuid = ((PlayerAuth) player).easyAuth$getFakeUuid();
-        PlayerCacheV0 cache;
-        if (!playerCacheMap.containsKey(uuid)) {
-            // First join
-            cache = PlayerCacheV0.fromJson(player, uuid);
-            playerCacheMap.put(uuid, cache);
-        }
-        if (config.hidePlayerCoords && !(hasValidSession(player))) {
-            ((PlayerAuth) player).easyAuth$saveLastDimension(world);
+        if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
+            ((PlayerAuth) player).easyAuth$saveTrueDimension(world);
             return RegistryKey.of(RegistryKeys.WORLD, Identifier.of(config.worldSpawn.dimension));
         }
         return world;
@@ -83,22 +66,18 @@ public abstract class PlayerManagerMixin {
     @ModifyArgs(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;requestTeleport(DDDFF)V"))
     private void onPlayerConnect(Args args, ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData) {
-        if (config.hidePlayerCoords && !(hasValidSession(player))) {
-            PlayerCacheV0 cache = playerCacheMap.get(((PlayerAuth) player).easyAuth$getFakeUuid());
-            ((PlayerAuth) player).easyAuth$saveLastLocation(false);
-
-            LogDebug(String.format("Teleporting player %s", ((PlayerAuth) player).easyAuth$getFakeUuid()));
+        if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
+            ((PlayerAuth) player).easyAuth$saveTrueLocation();
 
             Optional<NbtCompound> nbtCompound = playerManager.loadPlayerData(player);
             if(nbtCompound.isPresent() && nbtCompound.get().contains("RootVehicle", 10)) {
                 NbtCompound nbtCompound2 = nbtCompound.get().getCompound("RootVehicle");
                 if (nbtCompound2.containsUuid("Attach")) {
-                    cache.ridingEntityUUID = nbtCompound2.getUuid("Attach");
-                } else {
-                    cache.ridingEntityUUID = null;
+                    ((PlayerAuth) player).easyAuth$setRidingEntityUUID(nbtCompound2.getUuid("Attach"));
                 }
             }
 
+            LogDebug(String.format("Teleporting player %s", player.getNameForScoreboard()));
             LogDebug(String.format("Spawn position of player %s is %s", player.getNameForScoreboard(), config.worldSpawn));
 
             args.set(0, config.worldSpawn.x);
@@ -107,6 +86,11 @@ public abstract class PlayerManagerMixin {
             args.set(3, config.worldSpawn.yaw);
             args.set(4, config.worldSpawn.pitch);
         }
+    }
+
+    @Inject(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V", at = @At("RETURN"))
+    private void onPlayerConnectReturn(ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData, CallbackInfo ci) {
+        AuthEventHandler.onPlayerJoin(player);
     }
 
     @Redirect(method = "respawnPlayer",
@@ -130,7 +114,7 @@ public abstract class PlayerManagerMixin {
     @Inject(method = "checkCanJoin(Ljava/net/SocketAddress;Lcom/mojang/authlib/GameProfile;)Lnet/minecraft/text/Text;", at = @At("HEAD"), cancellable = true)
     private void checkCanJoin(SocketAddress socketAddress, GameProfile profile, CallbackInfoReturnable<Text> cir) {
         // Getting the player that is trying to join the server
-        Text returnText = AuthEventHandler.checkCanPlayerJoinServer(profile, playerManager);
+        Text returnText = AuthEventHandler.checkCanPlayerJoinServer(profile, playerManager, socketAddress);
 
         if (returnText != null) {
             // Canceling player joining with the returnText message

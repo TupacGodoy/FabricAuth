@@ -8,28 +8,26 @@ import net.minecraft.command.argument.DimensionArgumentType;
 import net.minecraft.command.argument.RotationArgumentType;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.Uuids;
 import xyz.nikitacartes.easyauth.EasyAuth;
 import xyz.nikitacartes.easyauth.config.deprecated.AuthConfig;
-import xyz.nikitacartes.easyauth.storage.PlayerCacheV0;
+import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.storage.database.DBApiException;
 import xyz.nikitacartes.easyauth.utils.AuthHelper;
+import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
-import java.util.Locale;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.*;
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
-import static xyz.nikitacartes.easyauth.storage.PlayerCacheV0.gson;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
 public class AuthCommand {
@@ -85,20 +83,20 @@ public class AuthCommand {
                 )
                 .then(literal("remove")
                         .requires(Permissions.require("easyauth.commands.auth.remove", 3))
-                        .then(argument("uuid", word())
+                        .then(argument("username", word())
                                 .executes(ctx -> removeAccount(
                                         ctx.getSource(),
-                                        getString(ctx, "uuid")
+                                        getString(ctx, "username")
                                 ))
                         )
                 )
                 .then(literal("register")
                         .requires(Permissions.require("easyauth.commands.auth.register", 3))
-                        .then(argument("uuid", word())
+                        .then(argument("username", word())
                                 .then(argument("password", string())
                                         .executes(ctx -> registerUser(
                                                 ctx.getSource(),
-                                                getString(ctx, "uuid"),
+                                                getString(ctx, "username"),
                                                 getString(ctx, "password")
                                         ))
                                 )
@@ -106,23 +104,14 @@ public class AuthCommand {
                 )
                 .then(literal("update")
                         .requires(Permissions.require("easyauth.commands.auth.update", 3))
-                        .then(argument("uuid", word())
+                        .then(argument("username", word())
                                 .then(argument("password", string())
                                         .executes(ctx -> updatePassword(
                                                 ctx.getSource(),
-                                                getString(ctx, "uuid"),
+                                                getString(ctx, "username"),
                                                 getString(ctx, "password")
                                         ))
                                 )
-                        )
-                )
-                .then(literal("uuid")
-                        .requires(Permissions.require("easyauth.commands.auth.uuid", 3))
-                        .then(argument("player", word())
-                                .executes(ctx -> getOfflineUuid(
-                                        ctx.getSource(),
-                                        getString(ctx, "player")
-                                ))
                         )
                 )
                 .then(literal("list")
@@ -131,10 +120,10 @@ public class AuthCommand {
                 )
                 .then(literal("addToForcedOffline")
                         .requires(Permissions.require("easyauth.commands.auth.addToForcedOffline", 3))
-                        .then(argument("player", word())
+                        .then(argument("username", word())
                                 .executes(ctx -> addPlayerToForcedOffline(
                                         ctx.getSource(),
-                                        getString(ctx, "player")
+                                        getString(ctx, "username")
                                 ))
                         )
                 )
@@ -229,15 +218,20 @@ public class AuthCommand {
     /**
      * Deletes (unregisters) player's account.
      *
-     * @param source executioner of the command
-     * @param uuid   uuid of the player to delete account for
+     * @param source   executioner of the command
+     * @param username username of the player to delete account for
      * @return 0
      */
-    private static int removeAccount(ServerCommandSource source, String uuid) {
+    private static int removeAccount(ServerCommandSource source, String username) {
         THREADPOOL.submit(() -> {
-            DB.deleteUserData(uuid);
-            playerCacheMap.remove(uuid);
+            DB.deleteUserData(username);
         });
+
+        ServerPlayerEntity playerEntity = source.getServer().getPlayerManager().getPlayer(username);
+        if (playerEntity != null) {
+            ((PlayerAuth) playerEntity).easyAuth$setPlayerEntryV1(new PlayerEntryV1(username));
+            playerEntity.networkHandler.disconnect(langConfig.userdataDeleted.get());
+        }
 
         langConfig.userdataDeleted.send(source);
         return 1; // Success
@@ -247,21 +241,16 @@ public class AuthCommand {
      * Creates account for player.
      *
      * @param source   executioner of the command
-     * @param uuid     uuid of the player to create account for
+     * @param username username of the player to create account for
      * @param password new password for the player account
      * @return 0
      */
-    private static int registerUser(ServerCommandSource source, String uuid, String password) {
+    private static int registerUser(ServerCommandSource source, String username, String password) {
         THREADPOOL.submit(() -> {
-            PlayerCacheV0 playerCacheV0;
-            if (playerCacheMap.containsKey(uuid)) {
-                playerCacheV0 = playerCacheMap.get(uuid);
-            } else {
-                playerCacheV0 = PlayerCacheV0.fromJson(null, uuid);
-            }
-
-            playerCacheMap.put(uuid, playerCacheV0);
-            playerCacheMap.get(uuid).password = AuthHelper.hashPassword(password.toCharArray());
+            PlayerEntryV1 playerData = DB.getUserData(username);
+            playerData.password = AuthHelper.hashPassword(password.toCharArray());
+            playerData.registrationDate = System.currentTimeMillis();
+            playerData.update();
 
             langConfig.userdataUpdated.send(source);
         });
@@ -272,49 +261,26 @@ public class AuthCommand {
      * Force-updates the player's password.
      *
      * @param source   executioner of the command
-     * @param uuid     uuid of the player to update data for
+     * @param username username of the player to update data for
      * @param password new password for the player
      * @return 0
      */
-    private static int updatePassword(ServerCommandSource source, String uuid, String password) {
+    private static int updatePassword(ServerCommandSource source, String username, String password) {
         THREADPOOL.submit(() -> {
-            PlayerCacheV0 playerCacheV0;
-            if (playerCacheMap.containsKey(uuid)) {
-                playerCacheV0 = playerCacheMap.get(uuid);
-            } else {
-                playerCacheV0 = PlayerCacheV0.fromJson(null, uuid);
-            }
-
-            playerCacheMap.put(uuid, playerCacheV0);
-            if (playerCacheMap.get(uuid).password.isEmpty()) {
+            PlayerEntryV1 playerData = DB.getUserData(username);
+            if (playerData.password.isEmpty()) {
                 langConfig.userNotRegistered.send(source);
                 return;
             }
-            playerCacheMap.get(uuid).password = AuthHelper.hashPassword(password.toCharArray());
-
+            playerData.password = AuthHelper.hashPassword(password.toCharArray());
+            playerData.update();
             langConfig.userdataUpdated.send(source);
         });
         return 0;
     }
 
     /**
-     * Return offline uuid for player in lowercase
-     *
-     * @param source executioner of the command
-     * @param player player to get uuid from
-     * @return 0
-     */
-    private static int getOfflineUuid(ServerCommandSource source, String player) {
-        UUID uuid = Uuids.getOfflinePlayerUuid(player.toLowerCase(Locale.ENGLISH));
-
-        langConfig.offlineUuid.send(source, player, Text.literal("[" + uuid + "]").setStyle(Style.EMPTY
-                .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, uuid.toString()))
-                .withColor(Formatting.YELLOW)));
-        return 1;
-    }
-
-    /**
-     * List of registered uuid
+     * List of registered username
      *
      * @param source executioner of the command
      * @return 0
@@ -324,14 +290,12 @@ public class AuthCommand {
             if (langConfig.registeredPlayers.enabled) {
                 AtomicInteger i = new AtomicInteger();
                 MutableText message = langConfig.registeredPlayers.get();
-                DB.getAllData().forEach((uuid, playerCache) -> {
-                    if (!playerCache.isEmpty() && !gson.fromJson(playerCache, PlayerCacheV0.class).password.isEmpty()) {
-                        i.getAndIncrement();
-                        message.append(Text.translatable("\n" + i + ": [" + uuid + "]")
-                                .setStyle(Style.EMPTY.withClickEvent(
-                                        new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, uuid)))
-                                .formatted(Formatting.YELLOW));
-                    }
+                DB.getAllData().forEach((username, playerData) -> {
+                    i.getAndIncrement();
+                    message.append(Text.translatable(username)
+                            .setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, username)))
+                            .formatted(Formatting.YELLOW))
+                            .append(", ");
                 });
                 source.sendMessage(message);
             }
@@ -343,15 +307,15 @@ public class AuthCommand {
     /**
      * Add player in forcedOfflinePlayers list
      *
-     * @param source executioner of the command
-     * @param player player to add in list
+     * @param source   executioner of the command
+     * @param username player to add in list
      * @return 0
      */
-    private static int addPlayerToForcedOffline(ServerCommandSource source, String player) {
+    private static int addPlayerToForcedOffline(ServerCommandSource source, String username) {
         THREADPOOL.submit(() -> {
-            technicalConfig.forcedOfflinePlayers.add(player.toLowerCase(Locale.ENGLISH));
-            technicalConfig.confirmedOnlinePlayers.remove(player.toLowerCase(Locale.ENGLISH));
-            technicalConfig.save();
+            PlayerEntryV1 entry = DB.getUserData(username);
+            entry.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
+            entry.update();
         });
 
         langConfig.addToForcedOffline.send(source);

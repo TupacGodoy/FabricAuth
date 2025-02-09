@@ -17,7 +17,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class TechnicalConfigV1 extends ConfigTemplate {
 
     public String globalPassword = null;
+    @Deprecated
     public ArrayList<String> forcedOfflinePlayers = new ArrayList<>();
+    @Deprecated
     public ArrayList<String> confirmedOnlinePlayers = new ArrayList<>();
     public transient boolean floodgateLoaded = false;
 

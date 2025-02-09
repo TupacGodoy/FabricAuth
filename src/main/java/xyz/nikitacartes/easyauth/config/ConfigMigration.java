@@ -1,12 +1,17 @@
 package xyz.nikitacartes.easyauth.config;
 
+import com.mojang.authlib.GameProfile;
+import net.minecraft.util.UserCache;
 import xyz.nikitacartes.easyauth.EasyAuth;
 import xyz.nikitacartes.easyauth.config.deprecated.AuthConfig;
+import xyz.nikitacartes.easyauth.storage.database.*;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.gameDirectory;
+import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogError;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogInfo;
 import static xyz.nikitacartes.easyauth.config.LangConfigV1.TranslatableText;
 
@@ -62,7 +67,7 @@ public class ConfigMigration {
         EasyAuth.extendedConfig.floodgateBypassRegex = oldConfig.experimental.floodgateBypassUsernameRegex;
         EasyAuth.extendedConfig.hidePlayersFromPlayerList = oldConfig.main.hideUnauthenticatedPLayersFromPlayerList;
         EasyAuth.extendedConfig.preventAnotherLocationKick = oldConfig.experimental.preventAnotherLocationKick;
-        EasyAuth.extendedConfig.useBcrypt = oldConfig.experimental.useBCryptLibrary;
+        EasyAuth.extendedConfig.checkUnmigratedArgon2 = !oldConfig.experimental.useBCryptLibrary;
         EasyAuth.extendedConfig.forcedOfflineUuid = oldConfig.experimental.forcedOfflineUuids;
         EasyAuth.extendedConfig.skipAllAuthChecks = oldConfig.experimental.skipAllAuthChecks;
         EasyAuth.extendedConfig.save();
@@ -121,6 +126,46 @@ public class ConfigMigration {
         EasyAuth.storageConfig.mongodb.mongodbDatabase = notNull(oldConfig.main.MongoDBDatabase);
         EasyAuth.storageConfig.useSimpleauthDb = oldConfig.experimental.useSimpleAuthDatabase;
         EasyAuth.storageConfig.save();
+    }
+
+    public static void migrateFromV1() {
+        LogInfo("Migrating config and DB from v1 to v2");
+        long now = System.currentTimeMillis();
+
+        EasyAuth.extendedConfig.checkUnmigratedArgon2 = !EasyAuth.extendedConfig.useBcrypt;
+        EasyAuth.extendedConfig.save();
+
+        DbApi db;
+        if (EasyAuth.storageConfig.databaseType.equalsIgnoreCase("mysql")) {
+            db = new MySQL(EasyAuth.storageConfig);
+        } else if (EasyAuth.storageConfig.databaseType.equalsIgnoreCase("mongodb")) {
+            db = new MongoDB(EasyAuth.storageConfig);
+        } else {
+            EasyAuth.storageConfig.databaseType = "sqlite";
+
+            db = new SQLite(EasyAuth.storageConfig);
+        }
+        try {
+            db.connect();
+        } catch (DBApiException e) {
+            LogError("onInitialize error: ", e);
+        }
+
+        UserCache userCache = new UserCache(null, new File(gameDirectory + "/usercache.json"));
+        HashMap<String, String> uuids = new HashMap<>();
+        for (UserCache.Entry entry : userCache.load()) {
+            GameProfile profile = entry.getProfile();
+            uuids.put(profile.getName(), profile.getId().toString());
+        }
+        db.migrateFromV1(uuids);
+
+        EasyAuth.storageConfig.save();
+        db.close();
+
+        EasyAuth.config.configVersion = 2;
+        EasyAuth.config.save();
+
+        LogInfo("Migration completed in " + (System.currentTimeMillis() - now) + "ms");
     }
     
     private static String notNull(String string) {

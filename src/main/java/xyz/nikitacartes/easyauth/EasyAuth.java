@@ -8,11 +8,12 @@ import net.fabricmc.fabric.api.event.player.*;
 import net.fabricmc.fabric.api.networking.v1.ServerLoginConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import xyz.nikitacartes.easyauth.commands.*;
 import xyz.nikitacartes.easyauth.config.*;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
-import xyz.nikitacartes.easyauth.storage.PlayerCacheV0;
+import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.storage.database.*;
 
 import java.io.File;
@@ -20,13 +21,13 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
+import static xyz.nikitacartes.easyauth.config.ConfigMigration.migrateFromV1;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
 public class EasyAuth implements ModInitializer {
@@ -34,31 +35,20 @@ public class EasyAuth implements ModInitializer {
 
     public static final ExecutorService THREADPOOL = Executors.newCachedThreadPool();
 
-    /**
-     * HashMap of players that have joined the server.
-     * It's cleared on server stop in order to save some interactions with database during runtime.
-     * Stores their data as {@link PlayerCacheV0 PlayerCacheV0} object.
-     */
-    public static final HashMap<String, PlayerCacheV0> playerCacheMap = new HashMap<>();
-
-    /**
-     * HashSet of player names that have Mojang accounts.
-     * If player is saved in here, they will be treated as online-mode ones.
-     */
-    public static final HashSet<String> mojangAccountNamesCache = new HashSet<>();
-
     // Getting game directory
     public static Path gameDirectory;
 
     // Server properties
     public static final Properties serverProp = new Properties();
 
+    // Cache for player data
+    public static final HashMap<String, PlayerEntryV1> playerDataCache = new HashMap<>();
+
     public static MainConfigV1 config;
     public static ExtendedConfigV1 extendedConfig;
     public static LangConfigV1 langConfig;
     public static TechnicalConfigV1 technicalConfig;
     public static StorageConfigV1 storageConfig;
-
 
     @Override
     public void onInitialize() {
@@ -85,21 +75,17 @@ public class EasyAuth implements ModInitializer {
 
         loadConfigs();
 
-        if (DB != null && !DB.isClosed()) {
-            DB.close();
-        }
-
         if (EasyAuth.storageConfig.databaseType.equalsIgnoreCase("mysql")) {
             DB = new MySQL(EasyAuth.storageConfig);
         } else if (EasyAuth.storageConfig.databaseType.equalsIgnoreCase("mongodb")) {
             DB = new MongoDB(EasyAuth.storageConfig);
         } else {
-            DB = new LevelDB(EasyAuth.storageConfig);
+            DB = new SQLite(EasyAuth.storageConfig);
         }
         try {
             DB.connect();
         } catch (DBApiException e) {
-            LogError("onInitialize error: ", e);
+            LogError("Error while set up database connection", e);
         }
 
         // Registering the commands
@@ -135,7 +121,6 @@ public class EasyAuth implements ModInitializer {
 
     private void onStopServer(MinecraftServer server) {
         LogInfo("Shutting down EasyAuth.");
-        DB.saveAll(playerCacheMap);
 
         // Closing threads
         try {
@@ -175,6 +160,15 @@ public class EasyAuth implements ModInitializer {
                 break;
             }
             case 1: {
+                EasyAuth.config = MainConfigV1.load();
+                EasyAuth.technicalConfig = TechnicalConfigV1.load();
+                EasyAuth.langConfig = LangConfigV1.load();
+                EasyAuth.extendedConfig = ExtendedConfigV1.load();
+                EasyAuth.storageConfig = StorageConfigV1.load();
+                migrateFromV1();
+                break;
+            }
+            case 2: {
                 EasyAuth.config = MainConfigV1.load();
                 EasyAuth.technicalConfig = TechnicalConfigV1.load();
                 EasyAuth.langConfig = LangConfigV1.load();

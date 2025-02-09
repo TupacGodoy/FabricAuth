@@ -10,7 +10,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.ActionResult;
-import net.minecraft.util.Uuids;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Final;
@@ -23,127 +22,115 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
-import xyz.nikitacartes.easyauth.storage.PlayerCacheV0;
+import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.*;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.EnumSet;
-import java.util.Locale;
+import java.util.UUID;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
-import static xyz.nikitacartes.easyauth.utils.AuthHelper.hasValidSession;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
 
 @Mixin(ServerPlayerEntity.class)
 public abstract class ServerPlayerEntityMixin implements PlayerAuth {
     @Unique
     private final ServerPlayerEntity player = (ServerPlayerEntity) (Object) this;
+
     @Final
     @Shadow
     public MinecraftServer server;
-    // * 20 for 20 ticks in second
+
+    @Shadow public abstract void playerTick();
+
     @Unique
     private long kickTimer = config.kickTimeout * 20;
 
     @Unique
-    private String ipAddr = null;
+    private String ipAddress = null;
+
+    @Unique
+    private LastLocation lastLocation = null;
+
+    @Unique
+    private UUID ridingEntityUUID = null;
+
+    @Unique
+    private boolean wasDead = false;
+
+    @Unique
+    PlayerEntryV1 playerEntryV1 = new PlayerEntryV1(player.getNameForScoreboard());
+
+    @Unique
+    private boolean canSkipAuth = false;
+
+    @Unique
+    private boolean isAuthenticated = false;
+
+    @Unique
+    private boolean isUsingMojangAccount = false;
 
     @Override
-    public void easyAuth$saveLastLocation(boolean saveDimension) {
-        PlayerCacheV0 cache = playerCacheMap.get(this.easyAuth$getFakeUuid());
-        if (cache == null) {
-            LogDebug("Player cache is null, not saving position.");
-            return;
+    public void easyAuth$saveTrueLocation() {
+        if (lastLocation == null) {
+            lastLocation = new LastLocation();
         }
-        // Saving position
-        if (saveDimension) {
-            cache.lastLocation.dimension = player.getServerWorld();
-        }
-        cache.lastLocation.position = player.getPos();
-        cache.lastLocation.yaw = player.getYaw();
-        cache.lastLocation.pitch = player.getPitch();
-        cache.ridingEntityUUID = player.getVehicle() != null ? player.getVehicle().getUuid() : null;
-        cache.wasDead = player.isDead();
-        LogDebug(String.format("Saving position of player %s as %s", player.getNameForScoreboard(), cache.lastLocation));
-        if (cache.ridingEntityUUID != null) {
-            LogDebug(String.format("Saving vehicle of player %s as %s", player.getNameForScoreboard(), cache.ridingEntityUUID));
+        lastLocation.position = player.getPos();
+        lastLocation.yaw = player.getYaw();
+        lastLocation.pitch = player.getPitch();
+
+        ridingEntityUUID = player.getVehicle() != null ? player.getVehicle().getUuid() : null;
+        wasDead = player.isDead();
+        LogDebug(String.format("Saving position of player %s as %s", player.getNameForScoreboard(), lastLocation));
+        if (ridingEntityUUID != null) {
+            LogDebug(String.format("Saving vehicle of player %s as %s", player.getNameForScoreboard(), ridingEntityUUID));
         }
     }
 
     @Override
-    public void easyAuth$saveLastDimension(RegistryKey<World> registryKey) {
-        PlayerCacheV0 cache = playerCacheMap.get(this.easyAuth$getFakeUuid());
-        if (cache == null) {
-            LogDebug("Player cache is null, not saving position.");
-            return;
+    public void easyAuth$saveTrueDimension(RegistryKey<World> registryKey) {
+        if (lastLocation == null) {
+            lastLocation = new LastLocation();
         }
-        // Saving position
-        cache.lastLocation.dimension = this.server.getWorld(registryKey);
+        lastLocation.dimension = this.server.getWorld(registryKey);
     }
 
     @Override
-    public void easyAuth$restoreLastLocation() {
-        if (!config.hidePlayerCoords) {
+    public void easyAuth$restoreTrueLocation() {
+        // ToDo: save player location at the time of connection
+        if (lastLocation == null) {
             return;
         }
-        PlayerCacheV0 cache = playerCacheMap.get(this.easyAuth$getFakeUuid());
-        if (cache == null) {
-            LogDebug("Player cache is null, not saving position.");
-            return;
-        }
-        if (cache.wasDead) {
+        if (wasDead) {
             player.kill(player.getServerWorld());
             player.getScoreboard().forEachScore(ScoreboardCriterion.DEATH_COUNT, player, (score) -> score.setScore(score.getScore() - 1));
             return;
         }
-        // Puts player to last cached position
+        // Puts player to last saved position
         player.teleport(
-                cache.lastLocation.dimension == null ? server.getWorld(World.OVERWORLD) : cache.lastLocation.dimension,
-                cache.lastLocation.position.getX(),
-                cache.lastLocation.position.getY(),
-                cache.lastLocation.position.getZ(),
+                lastLocation.dimension == null ? server.getWorld(World.OVERWORLD) : lastLocation.dimension,
+                lastLocation.position.getX(),
+                lastLocation.position.getY(),
+                lastLocation.position.getZ(),
                 EnumSet.noneOf(PositionFlag.class),
-                cache.lastLocation.yaw,
-                cache.lastLocation.pitch,
+                lastLocation.yaw,
+                lastLocation.pitch,
                 true);
-        LogDebug(String.format("Teleported player %s to %s", player.getNameForScoreboard(), cache.lastLocation));
+        LogDebug(String.format("Teleported player %s to %s", player.getNameForScoreboard(), lastLocation));
 
-        if (cache.ridingEntityUUID != null) {
-            LogDebug(String.format("Mounting player to vehicle %s", cache.ridingEntityUUID));
-            if (cache.lastLocation.dimension == null) return;
-            ServerWorld world = server.getWorld(cache.lastLocation.dimension.getRegistryKey());
+        if (ridingEntityUUID != null) {
+            LogDebug(String.format("Mounting player to vehicle %s", ridingEntityUUID));
+            if (lastLocation.dimension == null) return;
+            ServerWorld world = server.getWorld(lastLocation.dimension.getRegistryKey());
             if (world == null) return;
-            Entity entity = world.getEntity(cache.ridingEntityUUID);
+            Entity entity = world.getEntity(ridingEntityUUID);
             if (entity != null) {
                 player.startRiding(entity, true);
             } else {
                 LogDebug("Could not find vehicle for player " + player.getNameForScoreboard());
             }
         }
-    }
-
-    /**
-     * Converts player uuid, to ensure player with "nAmE" and "NamE" get same uuid.
-     * Both players are not allowed to play, since mod mimics Mojang behaviour.
-     * of not allowing accounts with same names but different capitalization.
-     *
-     * @return converted UUID as string
-     */
-    @Override
-    public String easyAuth$getFakeUuid() {
-        // If server is in online mode online-mode UUIDs should be used
-        assert server != null;
-        if (server.isOnlineMode() && this.easyAuth$isUsingMojangAccount() && !extendedConfig.forcedOfflineUuid)
-            return player.getUuidAsString();
-        /*
-            Lower case is used for Player and PlAyEr to get same UUID (for password storing)
-            Mimicking Mojang behaviour, where players cannot set their name to
-            ExAmple if Example is already taken.
-        */
-        String playername = player.getGameProfile().getName().toLowerCase(Locale.ENGLISH);
-        return Uuids.getOfflinePlayerUuid(playername).toString();
-
     }
 
     /**
@@ -154,8 +141,7 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
      */
     @Override
     public void easyAuth$sendAuthMessage() {
-        final PlayerCacheV0 cache = playerCacheMap.get(((PlayerAuth) player).easyAuth$getFakeUuid());
-        if (!config.enableGlobalPassword && (cache == null || cache.password.isEmpty())) {
+        if (!config.enableGlobalPassword && (playerEntryV1 == null || playerEntryV1.password.isEmpty())) {
             langConfig.registerRequired.send(player);
         } else {
             langConfig.loginRequired.send(player);
@@ -169,7 +155,13 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
      */
     @Override
     public boolean easyAuth$canSkipAuth() {
-        return (this.player.getClass() != ServerPlayerEntity.class) ||
+        return canSkipAuth;
+    }
+
+    @Override
+    public void easyAuth$setSkipAuth() {
+        easyAuth$setUsingMojangAccount();
+        canSkipAuth = (this.player.getClass() != ServerPlayerEntity.class) ||
                 (config.floodgateAutoLogin && technicalConfig.floodgateLoaded && FloodgateApiHelper.isFloodgatePlayer(this.player)) ||
                 (easyAuth$isUsingMojangAccount() && config.premiumAutoLogin);
     }
@@ -181,7 +173,12 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
      */
     @Override
     public boolean easyAuth$isUsingMojangAccount() {
-        return server.isOnlineMode() && mojangAccountNamesCache.contains(player.getGameProfile().getName().toLowerCase(Locale.ENGLISH));
+        return isUsingMojangAccount;
+    }
+
+    @Override
+    public void easyAuth$setUsingMojangAccount() {
+        isUsingMojangAccount = server.isOnlineMode() && playerEntryV1.onlineAccount == PlayerEntryV1.OnlineAccount.TRUE;
     }
 
     /**
@@ -191,20 +188,17 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
      */
     @Override
     public boolean easyAuth$isAuthenticated() {
-        String uuid = ((PlayerAuth) player).easyAuth$getFakeUuid();
-        return this.easyAuth$canSkipAuth() || (playerCacheMap.containsKey(uuid) && playerCacheMap.get(uuid).isAuthenticated);
+        return isAuthenticated;
     }
 
     /**
      * Sets the authentication status of the player
-     * and hides coordinates if needed.
      *
      * @param authenticated whether player should be authenticated
      */
     @Override
     public void easyAuth$setAuthenticated(boolean authenticated) {
-        PlayerCacheV0 playerCacheV0 = playerCacheMap.get(this.easyAuth$getFakeUuid());
-        playerCacheV0.isAuthenticated = authenticated;
+        isAuthenticated = authenticated;
 
         player.setInvulnerable(!authenticated && extendedConfig.playerInvulnerable);
         player.setInvisible(!authenticated && extendedConfig.playerIgnored);
@@ -228,8 +222,6 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
             // Checking player timer
             if (kickTimer <= 0 && player.networkHandler.isConnectionOpen()) {
                 player.networkHandler.disconnect(langConfig.timeExpired.get());
-            } else if (!playerCacheMap.containsKey(((PlayerAuth) player).easyAuth$getFakeUuid())) {
-                player.networkHandler.disconnect(langConfig.accountDeleted.get());
             } else {
                 // Sending authentication prompt every 10 seconds
                 if (kickTimer % 200 == 0) {
@@ -254,7 +246,7 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
     @Redirect(method = "readRootVehicle(Ljava/util/Optional;)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;startRiding(Lnet/minecraft/entity/Entity;Z)Z"))
     private boolean onPlayerConnectStartRiding(ServerPlayerEntity instance, Entity entity, boolean force) {
-        if (config.hidePlayerCoords && !(hasValidSession(player))) {
+        if (config.hidePlayerCoords && !((PlayerAuth) instance).easyAuth$isAuthenticated()) {
             return false;
         }
         return instance.startRiding(entity, force);
@@ -263,18 +255,91 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
     @Redirect(method = "readRootVehicle(Ljava/util/Optional;)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;hasVehicle()Z"))
     private boolean onPlayerConnectStartRiding(ServerPlayerEntity instance) {
-        if (config.hidePlayerCoords && !(hasValidSession(player))) {
+        if (config.hidePlayerCoords && !((PlayerAuth) instance).easyAuth$isAuthenticated()) {
             return true;
         }
         return instance.hasVehicle();
     }
 
     public String easyAuth$getIpAddress() {
-        return ipAddr;
+        return ipAddress;
     }
 
     public void easyAuth$setIpAddress(ClientConnection connection) {
         SocketAddress socketAddress = connection.getAddress();
-        ipAddr = socketAddress instanceof InetSocketAddress inetSocketAddress ? InetAddresses.toAddrString(inetSocketAddress.getAddress()) : "<unknown>";
+        ipAddress = socketAddress instanceof InetSocketAddress inetSocketAddress ? InetAddresses.toAddrString(inetSocketAddress.getAddress()) : "<unknown>";
     }
+
+    public PlayerEntryV1 easyAuth$getPlayerEntryV1() {
+        if (playerEntryV1 == null) {
+            // ToDo: from BD
+        }
+        return playerEntryV1;
+    }
+
+    public void easyAuth$setPlayerEntryV1(PlayerEntryV1 playerEntryV1) {
+        this.playerEntryV1 = playerEntryV1;
+    }
+
+    public void easyAuth$updatePlayerEntryV1() {
+        if (playerEntryV1 != null) {
+            playerEntryV1.update();
+        }
+    }
+
+
+    @Inject(method = "copyFrom(Lnet/minecraft/server/network/ServerPlayerEntity;Z)V", at = @At("RETURN"))
+    private void copyFrom(ServerPlayerEntity oldPlayer, boolean alive, CallbackInfo ci) {
+        PlayerAuth oldPlayerAuth = (PlayerAuth) oldPlayer;
+        PlayerAuth newPlayerAuth = (PlayerAuth) player;
+        newPlayerAuth.easyAuth$setKickTimer(oldPlayerAuth.easyAuth$getKickTimer());
+        newPlayerAuth.easyAuth$setIpAddress(oldPlayerAuth.easyAuth$getIpAddress());
+        newPlayerAuth.easyAuth$setLastLocation(oldPlayerAuth.easyAuth$getLastLocation());
+        newPlayerAuth.easyAuth$setRidingEntityUUID(oldPlayerAuth.easyAuth$getRidingEntityUUID());
+        newPlayerAuth.easyAuth$wasDead(oldPlayerAuth.easyAuth$wasDead());
+        newPlayerAuth.easyAuth$canSkipAuth(oldPlayerAuth.easyAuth$canSkipAuth());
+        newPlayerAuth.easyAuth$setAuthenticated(oldPlayerAuth.easyAuth$isAuthenticated());
+
+        newPlayerAuth.easyAuth$setPlayerEntryV1(oldPlayerAuth.easyAuth$getPlayerEntryV1());
+    }
+
+    public long easyAuth$getKickTimer() {
+        return kickTimer;
+    }
+
+    public void easyAuth$setKickTimer(long kickTimer) {
+        this.kickTimer = kickTimer;
+    }
+
+    public void easyAuth$setIpAddress(String ipAddress) {
+        this.ipAddress = ipAddress;
+    }
+
+    public LastLocation easyAuth$getLastLocation() {
+        return lastLocation;
+    }
+
+    public void easyAuth$setLastLocation(LastLocation lastLocation) {
+        this.lastLocation = lastLocation;
+    }
+
+    public UUID easyAuth$getRidingEntityUUID() {
+        return ridingEntityUUID;
+    }
+
+    public void easyAuth$setRidingEntityUUID(UUID ridingEntityUUID) {
+        this.ridingEntityUUID = ridingEntityUUID;
+    }
+
+    public boolean easyAuth$wasDead() {
+        return wasDead;
+    }
+
+    public void easyAuth$wasDead(boolean wasDead) {
+        this.wasDead = wasDead;
+    }
+    public void easyAuth$canSkipAuth(boolean cantSkipAuth) {
+        this.canSkipAuth = cantSkipAuth;
+    }
+
 }

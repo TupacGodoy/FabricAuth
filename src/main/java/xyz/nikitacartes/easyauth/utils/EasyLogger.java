@@ -17,7 +17,7 @@ public class EasyLogger {
     }
 
     static void log(Level level, String message, Throwable e) {
-        logger.atLevel(level).log("[EasyAuth]: " + message + "\n" + ExceptionUtils.getStackTrace(e));
+        logger.atLevel(level).log("[EasyAuth]: {}\n{}", message, ExceptionUtils.getStackTrace(e));
     }
 
     public static void LogInfo(String message) {

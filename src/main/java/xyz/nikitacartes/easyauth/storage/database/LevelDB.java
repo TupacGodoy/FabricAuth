@@ -1,13 +1,13 @@
 package xyz.nikitacartes.easyauth.storage.database;
 
 import org.iq80.leveldb.DB;
-import org.iq80.leveldb.DBException;
 import org.iq80.leveldb.Options;
-import org.iq80.leveldb.WriteBatch;
 import xyz.nikitacartes.easyauth.EasyAuth;
 import xyz.nikitacartes.easyauth.config.StorageConfigV1;
-import xyz.nikitacartes.easyauth.storage.PlayerCacheV0;
+import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
@@ -15,7 +15,6 @@ import java.util.HashMap;
 import static org.iq80.leveldb.impl.Iq80DBFactory.bytes;
 import static org.iq80.leveldb.impl.Iq80DBFactory.factory;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
-
 
 public class LevelDB implements DbApi {
     private DB levelDBStore;
@@ -59,121 +58,45 @@ public class LevelDB implements DbApi {
         }
     }
 
-    /**
-     * Tells whether DbApi connection is closed.
-     *
-     * @return false if connection is open, otherwise false
-     */
+    public String getPlayerCache0(String uuid) {
+        try {
+            byte[] data = levelDBStore.get(bytes("UUID:" + uuid));
+            if (data != null) {
+                return new String(data).substring(5);
+            }
+        } catch (Error e) {
+            LogError("getUserData error", e);
+        }
+        return null;
+    }
+
     public boolean isClosed() {
         return levelDBStore == null;
     }
 
-
-    /**
-     * Inserts the data for the player.
-     *
-     * @param uuid uuid of the player to insert data for
-     * @param data data to put inside database
-     * @return true if operation was successful, otherwise false
-     */
-    @Deprecated
-    public boolean registerUser(String uuid, String data) {
-        try {
-            if (!isUserRegistered(uuid)) {
-                levelDBStore.put(bytes("UUID:" + uuid), bytes("data:" + data));
-                return true;
-            }
-            return false;
-        } catch (Error e) {
-            LogError("Register error", e);
-            return false;
-        }
+    @Override
+    public boolean registerUser(PlayerEntryV1 data) {
+        throw new UnsupportedOperationException("LevelDB is not supported anymore");
     }
 
-    /**
-     * Checks if player is registered.
-     *
-     * @param uuid player's uuid
-     * @return true if registered, otherwise false
-     */
-    public boolean isUserRegistered(String uuid) {
-        try {
-            return levelDBStore.get(bytes("UUID:" + uuid)) != null;
-        } catch (DBException e) {
-            LogError("isUserRegistered error", e);
-        }
-        return false;
+    public @Nullable PlayerEntryV1 getUserData(String username) {
+        throw new UnsupportedOperationException("LevelDB is not supported anymore");
     }
 
-    /**
-     * Deletes data for the provided uuid.
-     *
-     * @param uuid uuid of player to delete data for
-     */
     public void deleteUserData(String uuid) {
-        try {
-            levelDBStore.delete(bytes("UUID:" + uuid));
-        } catch (Error e) {
-            LogError("deleteUserData error", e);
-        }
+        throw new UnsupportedOperationException("LevelDB is not supported anymore");
     }
 
-    /**
-     * Updates player's data.
-     *
-     * @param uuid uuid of the player to update data for
-     * @param data data to put inside database
-     */
-    @Deprecated
-    public void updateUserData(String uuid, String data) {
-        try {
-            levelDBStore.put(bytes("UUID:" + uuid), bytes("data:" + data));
-        } catch (Error e) {
-            LogError("updateUserData error", e);
-        }
+    public void updateUserData(PlayerEntryV1 data) {
+        throw new UnsupportedOperationException("LevelDB is not supported anymore");
     }
 
-    /**
-     * Gets the hashed password from DbApi.
-     *
-     * @param uuid uuid of the player to get data for.
-     * @return data as string if player has it, otherwise empty string.
-     */
-    public String getUserData(String uuid) {
-        try {
-            if (isUserRegistered(uuid))  // Gets password from db and removes "data:" prefix from it
-                return new String(levelDBStore.get(bytes("UUID:" + uuid))).substring(5);
-        } catch (Error e) {
-            LogError("getUserData error", e);
-        }
-        return "";
+    public HashMap<String, PlayerEntryV1> getAllData() {
+        throw new UnsupportedOperationException("LevelDB is not supported anymore");
     }
 
-    public HashMap<String, String> getAllData() {
-        HashMap<String, String> registeredPlayers = new HashMap<>();
-        try {
-            levelDBStore.forEach((key) -> {
-                registeredPlayers.put(new String(key.getKey()).substring(5), new String(key.getValue()).substring(5));
-            });
-        } catch (Error e) {
-            LogError("getAllData error", e);
-        }
-        return registeredPlayers;
-    }
-
-    public void saveAll(HashMap<String, PlayerCacheV0> playerCacheMap) {
-        WriteBatch batch = levelDBStore.createWriteBatch();
-        // Updating player data.
-        playerCacheMap.forEach((uuid, playerCache) -> {
-            String data = playerCache.toJson();
-            batch.put(bytes("UUID:" + uuid), bytes("data:" + data));
-        });
-        try {
-            // Writing and closing batch
-            levelDBStore.write(batch);
-            batch.close();
-        } catch (IOException e) {
-            LogError("Error saving player data", e);
-        }
+    @Override
+    public void migrateFromV1(HashMap<String, String> userCache) {
+        throw new UnsupportedOperationException("LevelDB is not supported anymore");
     }
 }

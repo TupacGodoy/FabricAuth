@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
+import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,7 +47,8 @@ public class PlayerSaveHandlerMixin {
     private void fileExists(PlayerEntity player, String extension, CallbackInfoReturnable<Optional<NbtCompound>> cir, File mixinFile) {
         if (!(mixinFile.exists() && mixinFile.isFile())) {
             String playername = player.getGameProfile().getName().toLowerCase(Locale.ENGLISH);
-            if (Boolean.parseBoolean(serverProp.getProperty("online-mode")) && mojangAccountNamesCache.contains(playername)) {
+            PlayerAuth playerAuth = (PlayerAuth) player;
+            if (Boolean.parseBoolean(serverProp.getProperty("online-mode")) && playerAuth.easyAuth$isUsingMojangAccount()) {
                 LogDebug(String.format("Migrating data for %s", playername));
                 File file = new File(this.playerDataDir, Uuids.getOfflinePlayerUuid(player.getGameProfile().getName()) + extension);
                 if (file.exists() && file.isFile()) try {
@@ -57,7 +59,7 @@ public class PlayerSaveHandlerMixin {
             } else {
                 LogDebug(
                         String.format("Not migrating %s, as premium status is '%s' and data file is %s present.",
-                                playername, mojangAccountNamesCache.contains(playername), mixinFile.exists() && mixinFile.isFile() ? "" : "not")
+                                playername, playerAuth.easyAuth$isUsingMojangAccount(), mixinFile.exists() && mixinFile.isFile() ? "" : "not")
                 );
             }
         }

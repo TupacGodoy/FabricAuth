@@ -13,10 +13,13 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 @ConfigSerializable
 public class StorageConfigV1 extends ConfigTemplate {
-    public String databaseType = "leveldb";
+    public String databaseType = "sqlite";
     public MySqlConfig mysql = new MySqlConfig();
     public MongoDBConfig mongodb = new MongoDBConfig();
-    public boolean useSimpleauthDb = false;
+    public SQLiteConfig sqlite = new SQLiteConfig();
+
+    @Deprecated
+    public boolean useSimpleauthDb = false; // needed for migration from LevelDB to SQLite
 
     public StorageConfigV1() {
         super("storage.conf");
@@ -41,6 +44,8 @@ public class StorageConfigV1 extends ConfigTemplate {
         configValues.put("mySql.table", wrapIfNecessary(mysql.mysqlTable));
         configValues.put("mongoDB.connectionString", wrapIfNecessary(mongodb.mongodbConnectionString));
         configValues.put("mongoDB.database", wrapIfNecessary(mongodb.mongodbDatabase));
+        configValues.put("sqlite.path", wrapIfNecessary(sqlite.sqlitePath));
+        configValues.put("sqlite.table", wrapIfNecessary(sqlite.sqliteTable));
         configValues.put("useSimpleAuthDb", wrapIfNecessary(useSimpleauthDb));
         String configTemplate = Resources.toString(getResource("config/" + configPath), UTF_8);
         return new StringSubstitutor(configValues).replace(configTemplate);
@@ -59,5 +64,11 @@ public class StorageConfigV1 extends ConfigTemplate {
     public static class MongoDBConfig {
         public String mongodbConnectionString = "mongodb://username:password@host:port/?options";
         public String mongodbDatabase = "easyauth";
+    }
+
+    @ConfigSerializable
+    public static class SQLiteConfig {
+        public String sqlitePath = "EasyAuth/easyauth.db";
+        public String sqliteTable = "easyauth";
     }
 }

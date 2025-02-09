@@ -3,27 +3,19 @@ package xyz.nikitacartes.easyauth.utils;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.world.World;
+import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
+
+import java.util.UUID;
 
 /**
  * PLayer authentication extension.
  */
 public interface PlayerAuth {
-    void easyAuth$saveLastLocation(boolean saveDimension);
+    void easyAuth$saveTrueLocation();
 
-    void easyAuth$saveLastDimension(RegistryKey<World> registryKey);
+    void easyAuth$saveTrueDimension(RegistryKey<World> registryKey);
 
-    void easyAuth$restoreLastLocation();
-
-    /**
-     * Converts player uuid, to ensure player with "nAmE" and "NamE" get same uuid.
-     * Both players are not allowed to play, since mod mimics Mojang behaviour.
-     * of not allowing accounts with same names but different capitalization.
-     *
-     * @return converted UUID as string
-     * @see <a href="https://samolego.github.io/SimpleAuth/org/samo_lego/simpleauth/mixin/MixinPlayerEntity.html">See implementation</a>
-     */
-    String easyAuth$getFakeUuid();
-
+    void easyAuth$restoreTrueLocation();
 
     /**
      * Sets the authentication status of the player.
@@ -40,6 +32,9 @@ public interface PlayerAuth {
      * @see <a href="https://samolego.github.io/SimpleAuth/org/samo_lego/simpleauth/mixin/MixinPlayerEntity.html">See implementation</a>
      */
     boolean easyAuth$isAuthenticated();
+
+    void easyAuth$setAuthenticated();
+
 
     /**
      * Gets the text which tells the player
@@ -58,6 +53,10 @@ public interface PlayerAuth {
      */
     boolean easyAuth$canSkipAuth();
 
+    void easyAuth$canSkipAuth(boolean cantSkipAuth);
+
+    void easyAuth$setSkipAuth();
+
     /**
      * Whether the player is using the mojang account
      *
@@ -65,6 +64,7 @@ public interface PlayerAuth {
      */
     boolean easyAuth$isUsingMojangAccount();
 
+    void easyAuth$setUsingMojangAccount();
     /**
      * Gets the player's IP address on connection step.
      *
@@ -78,4 +78,30 @@ public interface PlayerAuth {
      * @param ClientConnection connection
      */
     void easyAuth$setIpAddress(ClientConnection connection);
+
+    /**
+     * Get PlayerEntryV1 object
+     */
+    PlayerEntryV1 easyAuth$getPlayerEntryV1();
+
+    /**
+     * Set PlayerEntryV1 object
+     */
+    void easyAuth$setPlayerEntryV1(PlayerEntryV1 playerEntryV1);
+
+    /**
+     * Update PlayerEntryV1 in the database
+     */
+    void easyAuth$updatePlayerEntryV1();
+
+    long easyAuth$getKickTimer();
+    void easyAuth$setKickTimer(long kickTimer);
+    void easyAuth$setIpAddress(String ipAddress);
+    LastLocation easyAuth$getLastLocation();
+    void easyAuth$setLastLocation(LastLocation lastLocation);
+    UUID easyAuth$getRidingEntityUUID();
+    void easyAuth$setRidingEntityUUID(UUID ridingEntityUUID);
+    boolean easyAuth$wasDead();
+    void easyAuth$wasDead(boolean wasDead);
+
 }

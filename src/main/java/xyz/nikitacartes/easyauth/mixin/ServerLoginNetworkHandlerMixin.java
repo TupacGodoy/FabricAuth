@@ -8,15 +8,16 @@ import net.minecraft.util.Uuids;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,6 +37,9 @@ public abstract class ServerLoginNetworkHandlerMixin {
     @Shadow
     MinecraftServer server;
 
+    @Unique
+    private static final Pattern pattern = Pattern.compile("^[a-zA-Z0-9_]{1,16}$");
+
     /**
      * Checks whether the player has purchased an account.
      * If so, server is presented as online, and continues as in normal-online mode.
@@ -53,36 +57,43 @@ public abstract class ServerLoginNetworkHandlerMixin {
             cancellable = true
     )
     private void checkPremium(LoginHelloC2SPacket packet, CallbackInfo ci) {
+        String username = packet.name();
+
+        PlayerEntryV1 playerData = DB.getUserData(username);
+        if (playerData == null) {
+            playerData = new PlayerEntryV1(username);
+        }
+        playerDataCache.put(username, playerData);
+
         if (server.isOnlineMode()) {
             try {
-                String playername = packet.name().toLowerCase(Locale.ENGLISH);
-                Pattern pattern = Pattern.compile("^[a-z0-9_]{3,16}$");
-                Matcher matcher = pattern.matcher(playername);
-                if (technicalConfig.forcedOfflinePlayers.contains(playername)) {
-                    LogDebug("Player " + playername + " is forced to be offline");
-                    mojangAccountNamesCache.remove(playername);
+                Matcher matcher = pattern.matcher(username);
+
+                if (playerData.onlineAccount == PlayerEntryV1.OnlineAccount.FALSE) {
+                    LogDebug("Player " + username + " is forced to be offline");
                     state = ServerLoginNetworkHandler.State.VERIFYING;
 
                     this.profile = new GameProfile(Uuids.getOfflinePlayerUuid(packet.name()), packet.name());
                     ci.cancel();
                     return;
                 }
-                if (mojangAccountNamesCache.contains(playername) || technicalConfig.confirmedOnlinePlayers.contains(playername)) {
-                    LogDebug("Player " + playername + " is cached as online player. Authentication continues as vanilla");
-                    mojangAccountNamesCache.add(playername);
+                if (playerData.onlineAccount == PlayerEntryV1.OnlineAccount.TRUE) {
+                    LogDebug("Player " + username + " is cached as online player. Authentication continues as vanilla");
                     return;
                 }
-                if ((playerCacheMap.containsKey(Uuids.getOfflinePlayerUuid(playername).toString()) || !matcher.matches())) {
+                if (!matcher.matches()) {
                     // Player definitely doesn't have a mojang account
-                    LogDebug("Player " + playername + " is cached as offline player");
+                    LogDebug("Player " + username + " doesn't have a valid username for Mojang account");
                     state = ServerLoginNetworkHandler.State.VERIFYING;
+                    playerData.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
+                    playerData.update();
 
                     this.profile = new GameProfile(Uuids.getOfflinePlayerUuid(packet.name()), packet.name());
                     ci.cancel();
                 } else {
                     // Checking account status from API
-                    LogDebug("Checking player " + playername + " for premium status");
-                    HttpsURLConnection httpsURLConnection = (HttpsURLConnection) new URL("https://api.mojang.com/users/profiles/minecraft/" + playername).openConnection();
+                    LogDebug("Checking player " + username + " for premium status");
+                    HttpsURLConnection httpsURLConnection = (HttpsURLConnection) new URL("https://api.mojang.com/users/profiles/minecraft/" + username).openConnection();
                     httpsURLConnection.setRequestMethod("GET");
                     httpsURLConnection.setConnectTimeout(5000);
                     httpsURLConnection.setReadTimeout(5000);
@@ -91,18 +102,20 @@ public abstract class ServerLoginNetworkHandlerMixin {
                     if (response == HttpURLConnection.HTTP_OK) {
                         // Player has a Mojang account
                         httpsURLConnection.disconnect();
-                        LogDebug("Player " + playername + " has a Mojang account");
+                        LogDebug("Player " + username + " has a Mojang account");
 
                         // Caches the request
-                        mojangAccountNamesCache.add(playername);
-                        technicalConfig.confirmedOnlinePlayers.add(playername);
-                        technicalConfig.save();
+                        playerData.onlineAccount = PlayerEntryV1.OnlineAccount.TRUE;
+                        playerData.update();
                         // Authentication continues in original method
                     } else if (response == HttpURLConnection.HTTP_NO_CONTENT || response == HttpURLConnection.HTTP_NOT_FOUND) {
                         // Player doesn't have a Mojang account
                         httpsURLConnection.disconnect();
-                        LogDebug("Player " + playername + " doesn't have a Mojang account");
+                        LogDebug("Player " + username + " doesn't have a Mojang account");
                         state = ServerLoginNetworkHandler.State.VERIFYING;
+
+                        playerData.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
+                        playerData.update();
 
                         this.profile = new GameProfile(Uuids.getOfflinePlayerUuid(packet.name()), packet.name());
                         ci.cancel();

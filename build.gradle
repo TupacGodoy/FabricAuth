@@ -65,6 +65,9 @@ dependencies {
     // MySQL driver
     include implementation ("com.mysql:mysql-connector-j:${mysql_version}")
 
+    // SQLite driver
+    include implementation("org.xerial:sqlite-jdbc:${sqlite_version}")
+
     // Hocon config
     include implementation("org.spongepowered:configurate-core:${hocon_version}")
     include implementation("org.spongepowered:configurate-hocon:${hocon_version}")

@@ -9,7 +9,6 @@ import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
 import java.util.*;
 
-import static xyz.nikitacartes.easyauth.EasyAuth.config;
 import static xyz.nikitacartes.easyauth.EasyAuth.extendedConfig;
 
 @Mixin(PlayerListS2CPacket.class)

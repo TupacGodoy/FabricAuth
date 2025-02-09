@@ -1,3 +1,30 @@
+### 3.1.0
+##### Minecraft TBA
+
+1) Database overhaul:
+   - Now database key is username instead of uuid
+   - SQLite is now default database instead of LevelDB
+   - Drop support for LevelDB (data from LevelDB will be migrated to SQLite automatically)
+   - Config version is now 2
+   - All players from `usercache.json` will be migrated automatically
+2) Change default hash algorithm to Argon2 from BCrypt
+   - If you previously used BCrypt, typed password will be checked both against BCrypt and Argon2 (option `check-unmigrated-argon2` in `extended.conf`)
+3) Increased default `teleportation-timeout-ms` from 5 to 20 ms
+4) Player allowed to log in even if player with same nickname is already online if they join from same IP
+5) `confirmed-online-players` and `forced-offline-players` is not used anymore. Now they are stored in database for each player separately
+6) Added new option `allow-case-insensitive-username` in `extended.conf` to allow players with same nickname but different case to join (default `false`)
+
+
+7) ToDo: Check migration from offline to online user
+8) ToDo: Check migration when player changes name
+9) ToDo: Single use global password
+10) ToDO: Hide inventory
+11) ToDo: Add setting for authentication prompt every x seconds
+12) Add option to enable/disable online account on itself
+13) Add auth fetch to get players data from DB
+14) Add delete from forced offline players
+16) Add settings for mojang connection (URL, timeout, etc.)
+ 
 ### 3.0.28
 ##### Minecraft 1.21.2 - 1.21.4
 

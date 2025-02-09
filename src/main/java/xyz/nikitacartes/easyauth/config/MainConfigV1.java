@@ -22,7 +22,7 @@ public class MainConfigV1 extends ConfigTemplate {
     public boolean enableGlobalPassword = false;
     public boolean hidePlayerCoords = false;
     public boolean debug = false;
-    public long configVersion = 1;
+    public long configVersion = 2;
     public WorldSpawn worldSpawn = new WorldSpawn();
 
 

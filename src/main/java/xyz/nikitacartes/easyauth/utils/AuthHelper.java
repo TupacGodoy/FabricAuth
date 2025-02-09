@@ -1,79 +1,66 @@
 package xyz.nikitacartes.easyauth.utils;
 
-import com.google.common.net.InetAddresses;
-import net.minecraft.network.ClientConnection;
-import net.minecraft.server.network.ServerPlayerEntity;
+import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.hashing.HasherArgon2;
 import xyz.nikitacartes.easyauth.utils.hashing.HasherBCrypt;
-
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
 
 public class AuthHelper {
     /**
-     * Checks password of user
+     * Check password using PlayerEntryV1 object
      *
-     * @param uuid     uuid of player, stored in database
-     * @param password password that needs to be checked
-     * @return 1 for pass, 0 if password is false, -1 if user is not yet registered
+     * @param playerEntry PlayerEntryV1 object
+     * @param password    password that needs to be checked
+     * @return PasswordOptions enum
      */
-    public static PasswordOptions checkPassword(String uuid, char[] password) {
-        String hashed = playerCacheMap.get(uuid).password;
+    public static PasswordOptions checkPassword(PlayerEntryV1 playerEntry, char[] password) {
+        if (playerEntry == null || playerEntry.password.isEmpty()) {
+            return PasswordOptions.NOT_REGISTERED;
+        }
+        String storedPassword = playerEntry.password;
         if (config.debug) {
-            LogDebug("Checking password for " + uuid);
-            LogDebug("Stored password's hash: " + hashed);
-            LogDebug("Hashed password: " + hashPassword(password));
+            LogDebug("Checking password for " + playerEntry.username);
+            LogDebug("Stored password's hash: " + storedPassword);
+            LogDebug("Hashed password: " + HasherArgon2.hash(password));
+            if (extendedConfig.checkUnmigratedArgon2) {
+                LogDebug("Hashed password (BCrypt): " + HasherBCrypt.hash(password));
+            }
         }
         if (config.enableGlobalPassword) {
             // We have global password enabled
             // Player must know global password or password set by auth register
-            char [] passwordCopy = password.clone();
-            return (verifyPassword(password, technicalConfig.globalPassword) || (!hashed.isEmpty() && verifyPassword(passwordCopy, hashed))) ? PasswordOptions.CORRECT : PasswordOptions.WRONG;
+            char[] passwordCopy = password.clone();
+            return verifyPassword(password, technicalConfig.globalPassword) || verifyPassword(passwordCopy, storedPassword) ? PasswordOptions.CORRECT : PasswordOptions.WRONG;
         } else {
-            if (hashed.isEmpty())
-                return PasswordOptions.NOT_REGISTERED;
-
             // Verify password
-            return verifyPassword(password, hashed) ? PasswordOptions.CORRECT : PasswordOptions.WRONG;
+            return verifyPassword(password, storedPassword) ? PasswordOptions.CORRECT : PasswordOptions.WRONG;
         }
     }
 
-    /**
-     * Hashes password with algorithm, depending on config
-     *
-     * @param password character array of password string
-     * @return hashed password as string
-     */
+    public static PasswordOptions checkPassword(String username, char[] password) {
+        return checkPassword(DB.getUserData(username), password);
+    }
+
+    public static PasswordOptions checkPassword(PlayerAuth player, char[] password) {
+        return checkPassword(player.easyAuth$getPlayerEntryV1(), password);
+    }
+
     public static String hashPassword(char[] password) {
-        if (extendedConfig.useBcrypt)
-            return HasherBCrypt.hash(password);
-        else
-            return HasherArgon2.hash(password);
+        return HasherArgon2.hash(password);
     }
 
     private static boolean verifyPassword(char[] pass, String hashed) {
-        if (extendedConfig.useBcrypt)
-            return HasherBCrypt.verify(pass, hashed);
-        else
-            return HasherArgon2.verify(pass, hashed);
+        if (extendedConfig.checkUnmigratedArgon2 && HasherBCrypt.verify(pass, hashed)) {
+            return true;
+        }
+        return HasherArgon2.verify(pass, hashed);
     }
 
     public enum PasswordOptions {
         CORRECT,
         WRONG,
         NOT_REGISTERED
-    }
-
-    public static boolean hasValidSession(ServerPlayerEntity player) {
-        String uuid = ((PlayerAuth) player).easyAuth$getFakeUuid();
-        String playerIp = ((PlayerAuth) player).easyAuth$getIpAddress();
-        return ((PlayerAuth) player).easyAuth$canSkipAuth() ||
-                (playerCacheMap.containsKey(uuid) &&
-                        playerCacheMap.get(uuid).isAuthenticated &&
-                        playerCacheMap.get(uuid).validUntil >= System.currentTimeMillis() &&
-                        playerIp.equals(playerCacheMap.get(uuid).lastIp));
     }
 }

@@ -1,12 +1,16 @@
 package xyz.nikitacartes.easyauth.storage.database;
 
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
+import net.minecraft.util.Uuids;
 import xyz.nikitacartes.easyauth.config.StorageConfigV1;
-import xyz.nikitacartes.easyauth.storage.PlayerCacheV0;
+import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 
+import javax.annotation.Nullable;
 import java.sql.*;
 import java.util.HashMap;
+import java.util.Locale;
 
+import static xyz.nikitacartes.easyauth.EasyAuth.extendedConfig;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
 
@@ -31,19 +35,40 @@ public class MySQL implements DbApi {
             PreparedStatement preparedStatement = MySQLConnection.prepareStatement("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?;");
             preparedStatement.setString(1, config.mysql.mysqlTable);
             if (!preparedStatement.executeQuery().next()) {
-                MySQLConnection.createStatement().executeUpdate(
+                Statement createTableStatement = MySQLConnection.createStatement();
+                createTableStatement.executeUpdate(
                         String.format("""
                                         CREATE TABLE `%s`.`%s` (
                                             `id` INT NOT NULL AUTO_INCREMENT,
-                                            `uuid` VARCHAR(36) NOT NULL,
+                                            `username` VARCHAR(255) NOT NULL,
+                                            `username_lower` VARCHAR(255) NOT NULL,
                                             `data` JSON NOT NULL,
-                                            PRIMARY KEY (`id`), UNIQUE (`uuid`)
+                                            PRIMARY KEY (`id`), UNIQUE (`username`)
                                         ) ENGINE = InnoDB;""",
                                 config.mysql.mysqlDatabase,
                                 config.mysql.mysqlTable
                         )
                 );
+                createTableStatement.close();
+            } else {
+                // Check if the 'username' column exists. If not, add new columns
+                DatabaseMetaData metaData = MySQLConnection.getMetaData();
+                ResultSet columns = metaData.getColumns(null, null, config.mysql.mysqlTable, "username");
+                if (!columns.next()) {
+                    try (Statement addColumnStatement = MySQLConnection.createStatement()) {
+                        addColumnStatement.executeUpdate(String.format("ALTER TABLE `%s`.`%s` ADD COLUMN `username` VARCHAR(255) NULL;", config.mysql.mysqlDatabase, config.mysql.mysqlTable));
+                        LogDebug("Added column 'username' to the existing table.");
+                        addColumnStatement.executeUpdate(String.format("ALTER TABLE `%s`.`%s` ADD COLUMN `username_lower` VARCHAR(255) NULL;", config.mysql.mysqlDatabase, config.mysql.mysqlTable));
+                        LogDebug("Added column 'username_lower' to the existing table.");
+                        addColumnStatement.executeUpdate(String.format("ALTER TABLE `%s`.`%s` MODIFY COLUMN `uuid` VARCHAR(255) NULL;", config.mysql.mysqlDatabase, config.mysql.mysqlTable));
+                        LogDebug("Changed column 'uuid' to nullable.");
+                    } catch (SQLException e) {
+                        MySQLConnection = null;
+                        throw new DBApiException("Error adding username, username_lower columns or changing uuid column", e);
+                    }
+                }
             }
+            preparedStatement.close();
         } catch (ClassNotFoundException | SQLException e) {
             MySQLConnection = null;
             throw new DBApiException("Failed setting up mysql DB", e);
@@ -94,56 +119,82 @@ public class MySQL implements DbApi {
     /**
      * Inserts the data for the player.
      *
-     * @param uuid uuid of the player to insert data for
      * @param data data to put inside database
      * @return true if operation was successful, otherwise false
      */
-    @Deprecated
-    public boolean registerUser(String uuid, String data) {
+    @Override
+    public boolean registerUser(PlayerEntryV1 data) {
         try {
             reConnect();
-            if (!isUserRegistered(uuid)) {
-                PreparedStatement preparedStatement = MySQLConnection.prepareStatement("INSERT INTO " + config.mysql.mysqlTable + " (uuid, data) VALUES (?, ?);");
-                preparedStatement.setString(1, uuid);
-                preparedStatement.setString(2, data);
-                preparedStatement.executeUpdate();
-                return true;
-            }
-        } catch (SQLException e) {
-            LogError("Register error ", e);
-        }
-        return false;
-    }
-
-    /**
-     * Checks if player is registered.
-     *
-     * @param uuid player's uuid
-     * @return true if registered, otherwise false
-     */
-    public boolean isUserRegistered(String uuid) {
-        try {
-            reConnect();
-            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("SELECT * FROM " + config.mysql.mysqlTable + " WHERE uuid = ?;");
-            preparedStatement.setString(1, uuid);
-            return preparedStatement.executeQuery().next();
-        } catch (SQLException e) {
-            LogError("isUserRegistered error", e);
-        }
-        return false;
-    }
-
-    /**
-     * Deletes data for the provided uuid.
-     *
-     * @param uuid uuid of player to delete data for
-     */
-    public void deleteUserData(String uuid) {
-        try {
-            reConnect();
-            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("DELETE FROM " + config.mysql.mysqlTable + " WHERE uuid = ?;");
-            preparedStatement.setString(1, uuid);
+            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("INSERT INTO  " + config.mysql.mysqlTable + " (username, username_lower, data) VALUES (?, ?, ?);");
+            preparedStatement.setString(1, data.username);
+            preparedStatement.setString(2, data.usernameLowerCase);
+            preparedStatement.setString(3, data.toJson());
             preparedStatement.executeUpdate();
+            preparedStatement.close();
+            return true;
+        } catch (SQLException e) {
+            LogError("Register error: " + data, e);
+        }
+        return false;
+    }
+
+    /**
+     * Gets data for the provided username.
+     *
+     * @param username username of the player to get data for
+     * @return data if player is registered, otherwise empty PlayerEntryV1
+     */
+    public @Nullable PlayerEntryV1 getUserData(String username) {
+        try {
+            reConnect();
+            PreparedStatement statement;
+            if (extendedConfig.allowCaseInsensitiveUsername) {
+                statement = MySQLConnection.prepareStatement("SELECT username, username_lower, data FROM " + config.mysql.mysqlTable + " WHERE username = ?;");
+                statement.setString(1, username);
+            } else {
+                statement = MySQLConnection.prepareStatement("SELECT username, username_lower, data FROM " + config.mysql.mysqlTable + " WHERE username_lower = ?;");
+                statement.setString(1, username.toLowerCase(Locale.ENGLISH));
+            }
+            ResultSet resultSet = statement.executeQuery();
+            PlayerEntryV1 playerEntry = null;
+
+            if (resultSet.next()) {
+                playerEntry = new PlayerEntryV1(resultSet.getString("username"),
+                                                resultSet.getString("username_lower"),
+                                                resultSet.getString("data"));
+            }
+            while (resultSet.next()) {
+                String dbUsername = resultSet.getString("username");
+                if (dbUsername.equals(username)) {
+                    playerEntry = new PlayerEntryV1(dbUsername,
+                                                    resultSet.getString("username_lower"),
+                                                    resultSet.getString("data"));
+                    break;
+                }
+            }
+
+            resultSet.close();
+            statement.close();
+            return playerEntry;
+        } catch (SQLException e) {
+            LogError("Error checking user registration in MySQL database", e);
+        }
+        return null;
+    }
+
+    /**
+     * Deletes data for the provided username.
+     *
+     * @param username username of player to delete data for
+     */
+    public void deleteUserData(String username) {
+        try {
+            reConnect();
+            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("DELETE FROM " + config.mysql.mysqlTable + " WHERE username = ?;");
+            preparedStatement.setString(1, username);
+            preparedStatement.executeUpdate();
+            preparedStatement.close();
         } catch (SQLException e) {
             LogError("deleteUserData error", e);
         }
@@ -152,82 +203,88 @@ public class MySQL implements DbApi {
     /**
      * Updates player's data.
      *
-     * @param uuid uuid of the player to update data for
-     * @param data data to put inside database
+     * @param data data of the player to update data for
      */
-    @Deprecated
-    public void updateUserData(String uuid, String data) {
+    public void updateUserData(PlayerEntryV1 data) {
         try {
             reConnect();
-            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("UPDATE " + config.mysql.mysqlTable + " SET data = ? WHERE uuid = ?;");
-            preparedStatement.setString(1, data);
-            preparedStatement.setString(1, uuid);
+            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("UPDATE " + config.mysql.mysqlTable + " SET data = ? WHERE username = ?;");
+            preparedStatement.setString(1, data.toJson());
+            preparedStatement.setString(2, data.username);
             preparedStatement.executeUpdate();
+            preparedStatement.close();
         } catch (SQLException e) {
-            LogError("updateUserData error", e);
+            LogError("updateUserData error: " + data, e);
         }
-    }
-
-    /**
-     * Gets the hashed password from DbApi.
-     *
-     * @param uuid uuid of the player to get data for.
-     * @return data as string if player has it, otherwise empty string.
-     */
-    public String getUserData(String uuid) {
-        try {
-            reConnect();
-            if (isUserRegistered(uuid)) {
-                PreparedStatement preparedStatement = MySQLConnection.prepareStatement("SELECT data FROM " + config.mysql.mysqlTable + " WHERE uuid = ?;");
-                preparedStatement.setString(1, uuid);
-                ResultSet query = preparedStatement.executeQuery();
-                query.next();
-                return query.getString(1);
-            }
-        } catch (SQLException e) {
-            LogError("getUserData error", e);
-        }
-        return "";
     }
 
     @Override
-    public HashMap<String, String> getAllData() {
-        HashMap<String, String> registeredPlayers = new HashMap<>();
+    public HashMap<String, PlayerEntryV1> getAllData() {
+        HashMap<String, PlayerEntryV1> registeredPlayers = new HashMap<>();
         try {
             reConnect();
-            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("SELECT * FROM " + config.mysql.mysqlTable + ";");
-            ResultSet query = preparedStatement.executeQuery();
-            while (query.next()) {
-                String uuid = query.getString(2);
-                String data = query.getString(3);
-                registeredPlayers.put(uuid, data);
+            Statement statement = MySQLConnection.createStatement();
+            ResultSet resultSet = statement.executeQuery("SELECT * FROM " + config.mysql.mysqlTable + ";");
+            while (resultSet.next()) {
+                String username = resultSet.getString("username");
+                if (username == null) continue;
+                String usernameLowerCase = resultSet.getString("username_lower");
+                String data = resultSet.getString("data");
+                registeredPlayers.put(username, new PlayerEntryV1(username, usernameLowerCase, data));
             }
+            resultSet.close();
+            statement.close();
         } catch (SQLException e) {
-            LogError("getAllData error", e);
+            LogError("Error retrieving all data from MySQL database", e);
         }
         return registeredPlayers;
     }
 
-    public void saveAll(HashMap<String, PlayerCacheV0> playerCacheMap) {
+    @Override
+    public void migrateFromV1(HashMap<String, String> userCache) {
         try {
             reConnect();
-            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("INSERT INTO " + config.mysql.mysqlTable + " (uuid, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = ?;");
-            // Updating player data.
-            playerCacheMap.forEach((uuid, playerCache) -> {
-                String data = playerCache.toJson();
+            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("INSERT INTO " + config.mysql.mysqlTable + " (username, username_lower, data) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE data = ?;");
+            userCache.forEach((username, uuid) -> {
                 try {
-                    preparedStatement.setString(1, uuid);
-                    preparedStatement.setString(2, data);
-                    preparedStatement.setString(3, data);
+                    PreparedStatement statement = MySQLConnection.prepareStatement("SELECT data FROM " + config.mysql.mysqlTable + " WHERE uuid = ?;");
+                    statement.setString(1, uuid);
+                    ResultSet resultSet = statement.executeQuery();
 
-                    preparedStatement.addBatch();
+                    String data = null;
+                    if (resultSet.next()) {
+                        data = resultSet.getString("data");
+                    } else {
+                        statement.close();
+                        resultSet.close();
+
+                        String lowerCaseUsername = username.toLowerCase(Locale.ENGLISH);
+                        String lowerCaseUuid = Uuids.getOfflinePlayerUuid(lowerCaseUsername).toString();
+                        statement.setString(1,lowerCaseUuid);
+                        resultSet = statement.executeQuery();
+                        if (resultSet.next()) {
+                            data = resultSet.getString("data");
+                        }
+                    }
+                    statement.close();
+                    resultSet.close();
+
+                    if (data != null) {
+                        PlayerEntryV1 playerEntry = migrateFromV1(data, username);
+                        preparedStatement.setString(1, playerEntry.username);
+                        preparedStatement.setString(2, playerEntry.usernameLowerCase);
+                        preparedStatement.setString(3, playerEntry.toJson());
+                        preparedStatement.setString(4, playerEntry.toJson());
+                        preparedStatement.addBatch();
+                    }
                 } catch (SQLException e) {
-                    LogError(String.format("Error saving player data! %s ", uuid));
+                    LogError("Error migrating player " + username, e);
                 }
             });
             preparedStatement.executeBatch();
-        } catch (SQLException | NullPointerException e) {
-            LogError("Error saving players data", e);
+            preparedStatement.close();
+        } catch (SQLException e) {
+            LogError("Error migrating players data", e);
         }
     }
 }

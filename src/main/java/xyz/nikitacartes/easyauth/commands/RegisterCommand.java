@@ -6,7 +6,7 @@ import com.mojang.brigadier.tree.LiteralCommandNode;
 import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
-import xyz.nikitacartes.easyauth.storage.PlayerCacheV0;
+import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
@@ -47,10 +47,12 @@ public class RegisterCommand {
     // Method called for hashing the password & writing to DB
     private static int register(ServerCommandSource source, String pass1, String pass2) throws CommandSyntaxException {
         ServerPlayerEntity player = source.getPlayerOrThrow();
+        PlayerAuth playerAuth = (PlayerAuth) player;
+
         if (config.enableGlobalPassword) {
             langConfig.loginRequired.send(source);
             return 0;
-        } else if (((PlayerAuth) player).easyAuth$isAuthenticated()) {
+        } else if (playerAuth.easyAuth$isAuthenticated()) {
             langConfig.alreadyAuthenticated.send(source);
             return 0;
         } else if (!pass1.equals(pass2)) {
@@ -66,17 +68,26 @@ public class RegisterCommand {
             return 0;
         }
 
-        PlayerCacheV0 playerCacheV0 = playerCacheMap.get(((PlayerAuth) player).easyAuth$getFakeUuid());
-        if (playerCacheV0.password.isEmpty()) {
-            ((PlayerAuth) player).easyAuth$setAuthenticated(true);
-            ((PlayerAuth) player).easyAuth$restoreLastLocation();
-            langConfig.registerSuccess.send(source);
-            // player.getServer().getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, player));
-            playerCacheV0.password = hashPassword(pass1.toCharArray());
-            LogDebug("Player " + player.getNameForScoreboard() + "{" + player.getUuidAsString() + "} successfully registered with password: " + playerCacheV0.password);
+        PlayerEntryV1 playerData = playerAuth.easyAuth$getPlayerEntryV1();
+        if (!playerData.password.isEmpty()) {
+            langConfig.alreadyRegistered.send(source);
             return 0;
         }
-        langConfig.alreadyRegistered.send(source);
+        playerAuth.easyAuth$setAuthenticated(true);
+        playerAuth.easyAuth$restoreTrueLocation();
+        langConfig.registerSuccess.send(source);
+        // player.getServer().getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, player));
+
+        THREADPOOL.submit(() -> {
+            playerData.password = hashPassword(pass1.toCharArray());
+            playerData.registrationDate = System.currentTimeMillis();
+            playerData.lastIp = playerAuth.easyAuth$getIpAddress();
+            playerData.lastAuthenticated = System.currentTimeMillis();
+            playerAuth.easyAuth$setPlayerEntryV1(playerData);
+            DB.registerUser(playerData);
+
+            LogDebug("Player " + player.getNameForScoreboard() + "{" + player.getUuidAsString() + "} successfully registered with password: " + playerData.password);
+        });
         return 0;
     }
 }

@@ -21,6 +21,14 @@ import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
 public class PlayerCache {
 
     /**
+     * Whether player has logged in as guest.
+     * Used for {@link AuthEventHandler#onPlayerJoin(ServerPlayerEntity) session validation if 'allowGusetLogin' is enabled in config}.
+     */
+    @Expose
+    @SerializedName("is_guest_login")
+    public boolean isGuestLogin = false;
+    
+    /**
      * Whether player is authenticated.
      * Used for {@link AuthEventHandler#onPlayerJoin(ServerPlayerEntity) session validation}.
      */

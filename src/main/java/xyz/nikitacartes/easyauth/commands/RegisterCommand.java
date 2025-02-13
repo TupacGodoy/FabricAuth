@@ -59,6 +59,7 @@ public class RegisterCommand {
 
             PlayerCache playerCache = playerCacheMap.get(((PlayerAuth) player).getFakeUuid());
             if (playerCache.password.isEmpty()) {
+                playerCache.isGuestLogin = false;
                 ((PlayerAuth) player).setAuthenticated(true);
                 player.sendMessage(TranslationHelper.getRegisterSuccess(), false);
                 // player.getServer().getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, player));

@@ -222,7 +222,7 @@ public class ServerPlayerEntityMixin implements PlayerAuth {
 
     @Inject(method = "playerTick()V", at = @At("HEAD"), cancellable = true)
     private void playerTick(CallbackInfo ci) {
-        if (this.isGuest() && this.player.hasPermissionLevel(4)){
+        if (config.experimental.forceRegisterOPs && this.isGuest() && this.player.hasPermissionLevel(4)){
             this.setAuthenticated(false);
         }
         if (!this.isAuthenticated()) {

@@ -65,4 +65,11 @@ public interface PlayerAuth {
      * @return true if paid, false if cracked
      */
     boolean isUsingMojangAccount();
+
+    /**
+     * Checks whether player has logged in as guest
+     *
+     * @return false if player is not guest, otherwise true.
+     */
+    boolean isGuest();
 }

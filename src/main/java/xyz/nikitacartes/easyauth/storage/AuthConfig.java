@@ -396,5 +396,13 @@ public class AuthConfig {
          * Skip all authentication checks for all players. Should be used if authentication is handled by another plugin/proxy/etc.
          */
         public boolean skipAllAuthChecks = false;
+        /**
+         * Allows to play without registration, making it optional.
+         */
+        public boolean allowGuestLogin = false;
+        /**
+         * Forces all players with Operator status to register when 'allowGuestLogin' is true.
+         */
+        public boolean forceRegisterOPs = true;
     }
 }

@@ -112,7 +112,16 @@ public class AuthEventHandler {
             playerCache = playerCacheMap.get(uuid);
         }
         if (
+                config.experimental.allowGuestLogin && playerCache.password.isEmpty() &&
+                !(config.experimental.forceRegisterOPs && player.hasPermissionLevel(4))
+        ) {
+                ((PlayerAuth) player).setAuthenticated(true);
+                playerCache.isGuestLogin = true;
+                return;
+        }
+        if (
                 playerCache.isAuthenticated &&
+                        !playerCache.isGuestLogin &&
                         playerCache.validUntil >= System.currentTimeMillis() &&
                         player.getIp().equals(playerCache.lastIp)
         ) {
@@ -126,6 +135,7 @@ public class AuthEventHandler {
             return;
         }
         ((PlayerAuth) player).setAuthenticated(false);
+        playerCache.isGuestLogin = false;
 
 
         // Tries to rescue player from nether portal
@@ -155,7 +165,9 @@ public class AuthEventHandler {
             playerCache.lastIp = player.getIp();
 
             // Setting the session expire time
-            playerCache.validUntil = System.currentTimeMillis() + config.main.sessionTimeoutTime * 1000L;
+            if (!playerCache.isGuestLogin) {
+                playerCache.validUntil = System.currentTimeMillis() + config.main.sessionTimeoutTime * 1000L;
+            }
         } else if (config.main.spawnOnJoin) {
             ((PlayerAuth) player).hidePosition(false);
 

@@ -164,6 +164,18 @@ public class ServerPlayerEntityMixin implements PlayerAuth {
         return server.isOnlineMode() && mojangAccountNamesCache.contains(player.getGameProfile().getName().toLowerCase());
     }
 
+     /**
+     * Checks whether player has logged in as guest
+     *
+     * @return false if player is not guest, otherwise true.
+     */
+    @Override
+    public boolean isGuest() {
+        String uuid = ((PlayerAuth) player).getFakeUuid();
+        return (playerCacheMap.containsKey(uuid) && playerCacheMap.get(uuid).isGuestLogin);
+    }
+
+    
     /**
      * Checks whether player is authenticated.
      *
@@ -210,6 +222,9 @@ public class ServerPlayerEntityMixin implements PlayerAuth {
 
     @Inject(method = "playerTick()V", at = @At("HEAD"), cancellable = true)
     private void playerTick(CallbackInfo ci) {
+        if (this.isGuest() && this.player.hasPermissionLevel(4)){
+            this.setAuthenticated(false);
+        }
         if (!this.isAuthenticated()) {
             // Checking player timer
             if (kickTimer <= 0 && player.networkHandler.isConnectionOpen()) {

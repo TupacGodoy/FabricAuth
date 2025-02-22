@@ -13,7 +13,7 @@
 4) Player allowed to log in even if player with same nickname is already online if they join from same IP
 5) `confirmed-online-players` and `forced-offline-players` is not used anymore. Now they are stored in database for each player separately
 6) Added new option `allow-case-insensitive-username` in `extended.conf` to allow players with same nickname but different case to join (default `false`)
-
+7) Fix bug with respawn while leaving server being dead
 
 7) ToDo: Check migration from offline to online user
 8) ToDo: Check migration when player changes name

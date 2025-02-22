@@ -33,9 +33,6 @@ public interface PlayerAuth {
      */
     boolean easyAuth$isAuthenticated();
 
-    void easyAuth$setAuthenticated();
-
-
     /**
      * Gets the text which tells the player
      * to login or register, depending on account status.
@@ -52,8 +49,6 @@ public interface PlayerAuth {
      * @see <a href="https://samolego.github.io/SimpleAuth/org/samo_lego/simpleauth/mixin/MixinPlayerEntity.html">See implementation</a>
      */
     boolean easyAuth$canSkipAuth();
-
-    void easyAuth$canSkipAuth(boolean cantSkipAuth);
 
     void easyAuth$setSkipAuth();
 
@@ -79,21 +74,9 @@ public interface PlayerAuth {
      */
     void easyAuth$setIpAddress(ClientConnection connection);
 
-    /**
-     * Get PlayerEntryV1 object
-     */
     PlayerEntryV1 easyAuth$getPlayerEntryV1();
-
-    /**
-     * Set PlayerEntryV1 object
-     */
     void easyAuth$setPlayerEntryV1(PlayerEntryV1 playerEntryV1);
-
-    /**
-     * Update PlayerEntryV1 in the database
-     */
-    void easyAuth$updatePlayerEntryV1();
-
+    void easyAuth$canSkipAuth(boolean cantSkipAuth);
     long easyAuth$getKickTimer();
     void easyAuth$setKickTimer(long kickTimer);
     void easyAuth$setIpAddress(String ipAddress);

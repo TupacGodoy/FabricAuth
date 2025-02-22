@@ -96,7 +96,7 @@ public abstract class PlayerManagerMixin {
     @Redirect(method = "respawnPlayer",
     at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;getRespawnTarget(ZLnet/minecraft/world/TeleportTarget$PostDimensionTransition;)Lnet/minecraft/world/TeleportTarget;"))
     private TeleportTarget replaceRespawnTarget(ServerPlayerEntity player, boolean alive, TeleportTarget.PostDimensionTransition postDimensionTransition) {
-        if (!alive && config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
+        if (alive && config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
             return new TeleportTarget(
                 this.server.getWorld(RegistryKey.of(RegistryKeys.WORLD, Identifier.of(config.worldSpawn.dimension))),
                 new Vec3d(config.worldSpawn.x, config.worldSpawn.y, config.worldSpawn.z),

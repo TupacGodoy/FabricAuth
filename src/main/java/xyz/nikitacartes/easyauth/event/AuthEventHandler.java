@@ -80,20 +80,8 @@ public class AuthEventHandler {
             return langConfig.differentUsernameCase.get(incomingPlayerUsername);
         }
 
-        if (config.maxLoginTries != -1) {
-            // We won't load the player cache *into the map* if it is not already present (first join since restart)
-            // because loading the player cache with a null player prevents the last location from being set.
-            // ToDo: Is it needed?
-            /*
-            if (profile.getId() == null) {
-                LogDebug("Player UUID is null, skipping kicking attempt check.");
-                return null;
-            }
-             */
-
-            if (playerEntryV1.lastKicked >= System.currentTimeMillis() - 1000 * config.resetLoginAttemptsTimeout) {
-                return langConfig.loginTriesExceeded.get();
-            }
+        if (config.maxLoginTries != -1 && playerEntryV1.lastKicked >= System.currentTimeMillis() - 1000 * config.resetLoginAttemptsTimeout) {
+            return langConfig.loginTriesExceeded.get();
         }
 
         return null;

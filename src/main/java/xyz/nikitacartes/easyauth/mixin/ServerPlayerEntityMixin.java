@@ -42,8 +42,6 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
     @Shadow
     public MinecraftServer server;
 
-    @Shadow public abstract void playerTick();
-
     @Unique
     private long kickTimer = config.kickTimeout * 20;
 
@@ -98,7 +96,6 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
 
     @Override
     public void easyAuth$restoreTrueLocation() {
-        // ToDo: save player location at the time of connection
         if (lastLocation == null) {
             return;
         }
@@ -261,33 +258,6 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
         return instance.hasVehicle();
     }
 
-    public String easyAuth$getIpAddress() {
-        return ipAddress;
-    }
-
-    public void easyAuth$setIpAddress(ClientConnection connection) {
-        SocketAddress socketAddress = connection.getAddress();
-        ipAddress = socketAddress instanceof InetSocketAddress inetSocketAddress ? InetAddresses.toAddrString(inetSocketAddress.getAddress()) : "<unknown>";
-    }
-
-    public PlayerEntryV1 easyAuth$getPlayerEntryV1() {
-        if (playerEntryV1 == null) {
-            // ToDo: from BD
-        }
-        return playerEntryV1;
-    }
-
-    public void easyAuth$setPlayerEntryV1(PlayerEntryV1 playerEntryV1) {
-        this.playerEntryV1 = playerEntryV1;
-    }
-
-    public void easyAuth$updatePlayerEntryV1() {
-        if (playerEntryV1 != null) {
-            playerEntryV1.update();
-        }
-    }
-
-
     @Inject(method = "copyFrom(Lnet/minecraft/server/network/ServerPlayerEntity;Z)V", at = @At("RETURN"))
     private void copyFrom(ServerPlayerEntity oldPlayer, boolean alive, CallbackInfo ci) {
         PlayerAuth oldPlayerAuth = (PlayerAuth) oldPlayer;
@@ -338,8 +308,26 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
     public void easyAuth$wasDead(boolean wasDead) {
         this.wasDead = wasDead;
     }
+
     public void easyAuth$canSkipAuth(boolean cantSkipAuth) {
         this.canSkipAuth = cantSkipAuth;
+    }
+
+    public String easyAuth$getIpAddress() {
+        return ipAddress;
+    }
+
+    public void easyAuth$setIpAddress(ClientConnection connection) {
+        SocketAddress socketAddress = connection.getAddress();
+        ipAddress = socketAddress instanceof InetSocketAddress inetSocketAddress ? InetAddresses.toAddrString(inetSocketAddress.getAddress()) : "<unknown>";
+    }
+
+    public PlayerEntryV1 easyAuth$getPlayerEntryV1() {
+        return playerEntryV1;
+    }
+
+    public void easyAuth$setPlayerEntryV1(PlayerEntryV1 playerEntryV1) {
+        this.playerEntryV1 = playerEntryV1;
     }
 
 }

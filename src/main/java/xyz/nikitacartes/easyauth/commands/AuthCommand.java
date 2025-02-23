@@ -137,6 +137,24 @@ public class AuthCommand {
                                 ))
                         )
                 )
+                .then(literal("markAsOnline")
+                        .requires(Permissions.require("easyauth.commands.auth.markAsOnline", 3))
+                        .then(argument("username", word())
+                                .executes(ctx -> markAsOnline(
+                                        ctx.getSource(),
+                                        getString(ctx, "username")
+                                ))
+                        )
+                )
+                .then(literal("getPlayerInfo")
+                        .requires(Permissions.require("easyauth.commands.auth.getPlayerInfo", 3))
+                        .then(argument("username", word())
+                                .executes(ctx -> getPlayerInfo(
+                                        ctx.getSource(),
+                                        getString(ctx, "username")
+                                ))
+                        )
+                )
         );
     }
 
@@ -349,6 +367,26 @@ public class AuthCommand {
         });
 
         langConfig.markAsOnline.send(source);
+        return 1;
+    }
+
+    /**
+     * Retrieves information about a player from the database.
+     *
+     * @param source   executioner of the command
+     * @param username username of the player to get information for
+     * @return 0
+     */
+    private static int getPlayerInfo(ServerCommandSource source, String username) {
+        THREADPOOL.submit(() -> {
+            PlayerEntryV1 playerData = DB.getUserData(username);
+            if (playerData == null) {
+                langConfig.userNotRegistered.send(source);
+                return;
+            }
+            // Send player information to the source
+            source.sendMessage(Text.literal("Player Info: " + playerData));
+        });
         return 1;
     }
 

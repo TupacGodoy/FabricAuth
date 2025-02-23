@@ -23,7 +23,7 @@
    - Add `auth markAsOffline <player>` and `auth markAsOnline <player>` commands
    - ToDo: add possibility to players to mark themselves as online players
    - ToDo: add option for disabling online account detection
-
+11) Add `auth getPlayerInfo` command
 
 7) ToDo: Check migration from offline to online user
 8) ToDo: Check migration when player changes name

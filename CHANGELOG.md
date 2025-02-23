@@ -17,12 +17,12 @@
 8) Added single use global password:
    - When `single-use-global-password` is enabled, player can register with global password but not log in with it
    - Default `false`
+9) Add setting `authentication-prompt-interval` in `extended.conf` to set interval between authentication prompts
 
 
 7) ToDo: Check migration from offline to online user
 8) ToDo: Check migration when player changes name
 10) ToDO: Hide inventory
-11) ToDo: Add setting for authentication prompt every x seconds
 12) Add option to enable/disable online account on itself
 13) Add auth fetch to get players data from DB
 14) Add delete from forced offline players

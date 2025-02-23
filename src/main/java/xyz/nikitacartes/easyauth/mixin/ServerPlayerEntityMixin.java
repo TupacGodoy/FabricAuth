@@ -225,7 +225,7 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
                 player.networkHandler.disconnect(langConfig.timeExpired.get());
             } else {
                 // Sending authentication prompt every 10 seconds
-                if (kickTimer % 200 == 0) {
+                if (kickTimer % (extendedConfig.authenticationPromptInterval * 20) == 0) {
                     this.easyAuth$sendAuthMessage();
                 }
                 --kickTimer;

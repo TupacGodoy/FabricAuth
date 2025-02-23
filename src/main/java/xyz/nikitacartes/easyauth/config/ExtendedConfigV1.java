@@ -42,6 +42,7 @@ public class ExtendedConfigV1 extends ConfigTemplate {
     public boolean skipAllAuthChecks = false;
     public boolean allowCaseInsensitiveUsername = false;
     public boolean checkUnmigratedArgon2 = false;
+    public long authenticationPromptInterval = 10;
 
     public ExtendedConfigV1() {
         super("extended.conf");
@@ -86,15 +87,13 @@ public class ExtendedConfigV1 extends ConfigTemplate {
         configValues.put("skipAllAuthChecks", wrapIfNecessary(skipAllAuthChecks));
         configValues.put("allowCaseInsensitiveUsername", wrapIfNecessary(allowCaseInsensitiveUsername));
         configValues.put("checkUnmigratedArgon2", wrapIfNecessary(checkUnmigratedArgon2));
+        configValues.put("authenticationPromptInterval", wrapIfNecessary(authenticationPromptInterval));
         String configTemplate = Resources.toString(getResource("config/" + configPath), UTF_8);
         return new StringSubstitutor(configValues).replace(configTemplate);
     }
 
     @ConfigSerializable
     public static final class Aliases {
-
-        Aliases() {
-        }
 
         Aliases(boolean login, boolean register) {
             this.login = login;

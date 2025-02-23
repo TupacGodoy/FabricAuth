@@ -321,6 +321,9 @@ public class AuthCommand {
                 AtomicInteger i = new AtomicInteger();
                 MutableText message = langConfig.registeredPlayers.get();
                 DB.getAllData().forEach((username, playerData) -> {
+                    if (playerData == null || playerData.password == null) {
+                        return;
+                    }
                     i.getAndIncrement();
                     message.append(Text.translatable(username)
                             .setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, username)))

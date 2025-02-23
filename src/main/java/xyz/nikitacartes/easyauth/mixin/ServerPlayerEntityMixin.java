@@ -138,8 +138,12 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
      */
     @Override
     public void easyAuth$sendAuthMessage() {
-        if (!config.enableGlobalPassword && (playerEntryV1 == null || playerEntryV1.password.isEmpty())) {
-            langConfig.registerRequired.send(player);
+        if ((!config.enableGlobalPassword || config.singleUseGlobalPassword) && (playerEntryV1 == null || playerEntryV1.password.isEmpty())) {
+            if (config.singleUseGlobalPassword) {
+                langConfig.registerRequiredWithGlobalPassword.send(player);
+            } else {
+                langConfig.registerRequired.send(player);
+            }
         } else {
             langConfig.loginRequired.send(player);
         }

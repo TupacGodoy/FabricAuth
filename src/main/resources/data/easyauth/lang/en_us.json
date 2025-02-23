@@ -34,5 +34,7 @@
   "text.easyauth.addToForcedOffline": "Player successfully added into forcedOfflinePlayers list",
   "text.easyauth.validSession": "§aYou have a valid session. No need to log in.",
   "text.easyauth.onlinePlayerLogin": "§aYou are using an online account. No need to log in.",
-  "text.easyauth.differentUsernameCase": "§6You are using a different case of your username. Please use the correct one."
+  "text.easyauth.differentUsernameCase": "§6You are using a different case of your username. Please use the correct one.",
+  "text.easyauth.wrongGlobalPassword": "§4Wrong global password!",
+  "text.easyauth.registerRequiredWithGlobalPassword": "§6Type /register \u003cglobal password\u003e \u003cpassword\u003e \u003cpassword\u003e to claim this account."
 }

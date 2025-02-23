@@ -14,10 +14,13 @@
 5) `confirmed-online-players` and `forced-offline-players` is not used anymore. Now they are stored in database for each player separately
 6) Added new option `allow-case-insensitive-username` in `extended.conf` to allow players with same nickname but different case to join (default `false`)
 7) Fix bug with respawn while leaving server being dead
+8) Added single use global password:
+   - When `single-use-global-password` is enabled, player can register with global password but not log in with it
+   - Default `false`
+
 
 7) ToDo: Check migration from offline to online user
 8) ToDo: Check migration when player changes name
-9) ToDo: Single use global password
 10) ToDO: Hide inventory
 11) ToDo: Add setting for authentication prompt every x seconds
 12) Add option to enable/disable online account on itself

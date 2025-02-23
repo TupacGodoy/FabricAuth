@@ -33,5 +33,7 @@
   "text.easyauth.registeredPlayers": "Список зарегестрированных игроков:",
   "text.easyauth.validSession": "§aВаша сессия действительна. Вы уже авторизованы.",
   "text.easyauth.onlinePlayerLogin": "§aВы используете онлайн аккаунт. Вы уже авторизованы.",
-  "text.easyauth.differentUsernameCase": "§6Вы используете другой регистр вашего никнейма. Пожалуйста, используйте правильный."
+  "text.easyauth.differentUsernameCase": "§6Вы используете другой регистр вашего никнейма. Пожалуйста, используйте правильный.",
+  "text.easyauth.wrongGlobalPassword": "§4Неверный глобальный пароль!",
+  "text.easyauth.registerRequiredWithGlobalPassword": "§6Введите /register \u003cглобальный Пароль\u003e \u003cпароль\u003e \u003cпароль\u003e для регистрации."
 }

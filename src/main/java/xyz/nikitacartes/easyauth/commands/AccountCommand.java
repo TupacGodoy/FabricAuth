@@ -60,7 +60,7 @@ public class AccountCommand {
         ServerPlayerEntity player = source.getPlayerOrThrow();
         PlayerAuth playerAuth = (PlayerAuth) player;
 
-        if (config.enableGlobalPassword) {
+        if (config.enableGlobalPassword && !config.singleUseGlobalPassword) {
             langConfig.cannotUnregister.send(source);
             return 0;
         }
@@ -97,7 +97,7 @@ public class AccountCommand {
         ServerPlayerEntity player = source.getPlayerOrThrow();
         PlayerAuth playerAuth = (PlayerAuth) player;
 
-        if (config.enableGlobalPassword) {
+        if (config.enableGlobalPassword && !config.singleUseGlobalPassword) {
             langConfig.cannotChangePassword.send(source);
             return 0;
         }

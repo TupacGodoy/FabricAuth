@@ -28,7 +28,7 @@ public class AuthHelper {
                 LogDebug("Hashed password (BCrypt): " + HasherBCrypt.hash(password));
             }
         }
-        if (config.enableGlobalPassword) {
+        if (config.enableGlobalPassword && !config.singleUseGlobalPassword) {
             // We have global password enabled
             // Player must know global password or password set by auth register
             char[] passwordCopy = password.clone();
@@ -45,6 +45,10 @@ public class AuthHelper {
 
     public static PasswordOptions checkPassword(PlayerAuth player, char[] password) {
         return checkPassword(player.easyAuth$getPlayerEntryV1(), password);
+    }
+
+    public static boolean checkGlobalPassword(char[] password) {
+        return verifyPassword(password, technicalConfig.globalPassword);
     }
 
     public static String hashPassword(char[] password) {

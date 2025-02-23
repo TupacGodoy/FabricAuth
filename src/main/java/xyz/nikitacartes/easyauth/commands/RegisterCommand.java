@@ -14,6 +14,7 @@ import static com.mojang.brigadier.arguments.StringArgumentType.string;
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
+import static xyz.nikitacartes.easyauth.utils.AuthHelper.checkGlobalPassword;
 import static xyz.nikitacartes.easyauth.utils.AuthHelper.hashPassword;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
 
@@ -32,16 +33,50 @@ public class RegisterCommand {
 
     // Registering the "/register" command
     public static LiteralCommandNode<ServerCommandSource> registerRegister(CommandDispatcher<ServerCommandSource> dispatcher) {
-        return dispatcher.register(literal("register")
-                .requires(Permissions.require("easyauth.commands.register", true))
-                .then(argument("password", string())
-                        .then(argument("passwordAgain", string())
-                                .executes(ctx -> register(ctx.getSource(), getString(ctx, "password"), getString(ctx, "passwordAgain")))
-                        ))
-                .executes(ctx -> {
-                    langConfig.enterPassword.send(ctx.getSource());
-                    return 0;
-                }));
+        if (config.enableGlobalPassword && config.singleUseGlobalPassword) {
+            return dispatcher.register(literal("register")
+                    .requires(Permissions.require("easyauth.commands.register", true))
+                    .then(argument("globalPassword", string())
+                            .then(argument("password", string())
+                                    .then(argument("passwordAgain", string())
+                                            .executes(ctx -> register(ctx.getSource(),
+                                                    getString(ctx, "globalPassword"),
+                                                    getString(ctx, "password"),
+                                                    getString(ctx, "passwordAgain")))
+                                    )
+                            )
+                    )
+                    .executes(ctx -> {
+                        langConfig.enterPassword.send(ctx.getSource());
+                        return 0;
+                    }));
+        } else {
+            return dispatcher.register(literal("register")
+                    .requires(Permissions.require("easyauth.commands.register", true))
+                    .then(argument("password", string())
+                            .then(argument("passwordAgain", string())
+                                    .executes(ctx -> register(ctx.getSource(),
+                                            getString(ctx, "password"),
+                                            getString(ctx, "passwordAgain")))
+                            )
+                    )
+                    .executes(ctx -> {
+                        langConfig.enterPassword.send(ctx.getSource());
+                        return 0;
+                    }));
+        }
+    }
+
+    private static int register(ServerCommandSource source, String globalPassword, String pass1, String pass2) throws CommandSyntaxException {
+        if (config.enableGlobalPassword && config.singleUseGlobalPassword) {
+            if (checkGlobalPassword(globalPassword.toCharArray())) {
+                return register(source, pass1, pass2);
+            } else {
+                langConfig.wrongGlobalPassword.send(source);
+                return 0;
+            }
+        }
+        return 0;
     }
 
     // Method called for hashing the password & writing to DB
@@ -49,7 +84,7 @@ public class RegisterCommand {
         ServerPlayerEntity player = source.getPlayerOrThrow();
         PlayerAuth playerAuth = (PlayerAuth) player;
 
-        if (config.enableGlobalPassword) {
+        if (config.enableGlobalPassword && !config.singleUseGlobalPassword) {
             langConfig.loginRequired.send(source);
             return 0;
         } else if (playerAuth.easyAuth$isAuthenticated()) {

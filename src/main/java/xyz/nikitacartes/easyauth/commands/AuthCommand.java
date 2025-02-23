@@ -24,6 +24,8 @@ import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.mojang.brigadier.arguments.BoolArgumentType.bool;
+import static com.mojang.brigadier.arguments.BoolArgumentType.getBool;
 import static com.mojang.brigadier.arguments.StringArgumentType.*;
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
@@ -48,8 +50,16 @@ public class AuthCommand {
                         .then(argument("password", string())
                                 .executes(ctx -> setGlobalPassword(
                                         ctx.getSource(),
-                                        getString(ctx, "password")
+                                        getString(ctx, "password"),
+                                        false
                                 ))
+                                .then(argument("singleUse", bool())
+                                        .executes(ctx -> setGlobalPassword(
+                                                ctx.getSource(),
+                                                getString(ctx, "password"),
+                                                getBool(ctx, "singleUse")
+                                        ))
+                                )
                         )
                 )
                 .then(literal("setSpawn")
@@ -169,14 +179,16 @@ public class AuthCommand {
      *
      * @param source   executioner of the command
      * @param password password that will be set
+     * @param singleUse whether the global password is single-use
      * @return 0
      */
-    private static int setGlobalPassword(ServerCommandSource source, String password) {
+    private static int setGlobalPassword(ServerCommandSource source, String password, boolean singleUse) {
         // Different thread to avoid lag spikes
         THREADPOOL.submit(() -> {
             // Writing the global pass to config
             technicalConfig.globalPassword = AuthHelper.hashPassword(password.toCharArray());
             config.enableGlobalPassword = true;
+            config.singleUseGlobalPassword = singleUse;
             technicalConfig.save();
             config.save();
         });

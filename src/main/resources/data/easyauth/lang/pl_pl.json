@@ -30,6 +30,5 @@
   "text.easyauth.userNotRegistered": "§cTen gracz nie jest zarejestrowany!",
   "text.easyauth.cannotLogout": "§cNie możesz się wylogować!",
   "text.easyauth.offlineUuid": "Offline UUID dla %s to %s",
-  "text.easyauth.registeredPlayers": "Zarejestrowani gracze:",
-  "text.easyauth.addToForcedOffline": "Gracza pomyślnie dodano do listy forcedOfflinePlayers"
+  "text.easyauth.registeredPlayers": "Zarejestrowani gracze:"
 }

@@ -55,12 +55,14 @@ public class LangConfigV1 extends ConfigTemplate {
     public TranslatableText cannotLogout = new TranslatableText("text.easyauth.cannotLogout", "§cYou cannot logout!");
     public TranslatableText offlineUuid = new TranslatableText("text.easyauth.offlineUuid", "Offline UUID for %s is %s");
     public TranslatableText registeredPlayers = new TranslatableText("text.easyauth.registeredPlayers", "List of registered players:");
-    public TranslatableText addToForcedOffline = new TranslatableText("text.easyauth.addToForcedOffline", "Player successfully added into forcedOfflinePlayers list");
     public TranslatableText validSession = new TranslatableText("text.easyauth.validSession", "§aYou have a valid session. No need to log in.");
     public TranslatableText onlinePlayerLogin = new TranslatableText("text.easyauth.onlinePlayerLogin", "§aYou are using an online account. No need to log in.");
     public TranslatableText differentUsernameCase = new TranslatableText("text.easyauth.diffrentUsernameCase", "§6You are using a different case of your username. Please use the correct one.");
     public TranslatableText wrongGlobalPassword = new TranslatableText("text.easyauth.wrongGlobalPassword", "§4Wrong global password!");
     public TranslatableText registerRequiredWithGlobalPassword = new TranslatableText("text.easyauth.registerRequiredWithGlobalPassword", "§6Type /register <global password> <password> <password> to claim this account.");
+    public TranslatableText markAsOffline = new TranslatableText("text.easyauth.markAsOffline", "§aPlayer %s was marked as offline.");
+    public TranslatableText markAsOnline = new TranslatableText("text.easyauth.markAsOnline", "§aPlayer %s was marked as online.");
+    public TranslatableText selfMarkAsOnline = new TranslatableText("text.easyauth.selfMarkAsOnline", "§aYou marked yourself as online player.");
 
     public LangConfigV1() {
         super("translation.conf");
@@ -110,12 +112,14 @@ public class LangConfigV1 extends ConfigTemplate {
         configValues.put("cannotLogout", wrapIfNecessary(cannotLogout));
         configValues.put("offlineUuid", wrapIfNecessary(offlineUuid));
         configValues.put("registeredPlayers", wrapIfNecessary(registeredPlayers));
-        configValues.put("addToForcedOffline", wrapIfNecessary(addToForcedOffline));
         configValues.put("validSession", wrapIfNecessary(validSession));
         configValues.put("onlinePlayerLogin", wrapIfNecessary(onlinePlayerLogin));
         configValues.put("differentUsernameCase", wrapIfNecessary(differentUsernameCase));
         configValues.put("wrongGlobalPassword", wrapIfNecessary(wrongGlobalPassword));
         configValues.put("registerRequiredWithGlobalPassword", wrapIfNecessary(registerRequiredWithGlobalPassword));
+        configValues.put("markAsOffline", wrapIfNecessary(markAsOffline));
+        configValues.put("markAsOnline", wrapIfNecessary(markAsOnline));
+        configValues.put("selfMarkAsOnline", wrapIfNecessary(selfMarkAsOnline));
 
         String configTemplate = Resources.toString(getResource("config/" + configPath), UTF_8);
         return new StringSubstitutor(configValues).replace(configTemplate);

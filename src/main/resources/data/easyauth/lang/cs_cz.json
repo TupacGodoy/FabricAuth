@@ -30,6 +30,5 @@
   "text.easyauth.userNotRegistered": "§cTento hráč není zaregistrovaný!",
   "text.easyauth.cannotLogout": "§cNemůžete se odhlásit!",
   "text.easyauth.offlineUuid": "Offline UUID pro hráče %s je (kliknutím zkopírujte)\n%s",
-  "text.easyauth.registeredPlayers": "Seznam registrovaných hráčů:",
-  "text.easyauth.addToForcedOffline": "Hráč úspěšně přidán do seznamu forcedOfflinePlayers"
+  "text.easyauth.registeredPlayers": "Seznam registrovaných hráčů:"
 }

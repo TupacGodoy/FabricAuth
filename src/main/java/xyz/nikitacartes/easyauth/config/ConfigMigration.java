@@ -106,7 +106,6 @@ public class ConfigMigration {
         EasyAuth.langConfig.cannotLogout = new TranslatableText("text.easyauth.cannotLogout", notNull(oldConfig.lang.cannotLogout));
         EasyAuth.langConfig.offlineUuid = new TranslatableText("text.easyauth.offlineUuid", notNull(oldConfig.lang.offlineUuid));
         EasyAuth.langConfig.registeredPlayers = new TranslatableText("text.easyauth.registeredPlayers", notNull(oldConfig.lang.registeredPlayers));
-        EasyAuth.langConfig.addToForcedOffline = new TranslatableText("text.easyauth.addToForcedOffline", notNull(oldConfig.lang.addToForcedOffline));
         EasyAuth.langConfig.save();
 
         EasyAuth.technicalConfig = new TechnicalConfigV1();

@@ -128,10 +128,10 @@ public class AuthCommand {
                         .requires(Permissions.require("easyauth.commands.auth.list", 3))
                         .executes(ctx -> getRegisteredPlayers(ctx.getSource()))
                 )
-                .then(literal("addToForcedOffline")
-                        .requires(Permissions.require("easyauth.commands.auth.addToForcedOffline", 3))
+                .then(literal("markAsOffline")
+                        .requires(Permissions.require("easyauth.commands.auth.markAsOffline", 3))
                         .then(argument("username", word())
-                                .executes(ctx -> addPlayerToForcedOffline(
+                                .executes(ctx -> markAsOffline(
                                         ctx.getSource(),
                                         getString(ctx, "username")
                                 ))
@@ -317,20 +317,38 @@ public class AuthCommand {
 
 
     /**
-     * Add player in forcedOfflinePlayers list
+     * Set player as player with offline account
      *
      * @param source   executioner of the command
      * @param username player to add in list
      * @return 0
      */
-    private static int addPlayerToForcedOffline(ServerCommandSource source, String username) {
+    private static int markAsOffline(ServerCommandSource source, String username) {
         THREADPOOL.submit(() -> {
             PlayerEntryV1 entry = DB.getUserData(username);
             entry.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
             entry.update();
         });
 
-        langConfig.addToForcedOffline.send(source);
+        langConfig.markAsOffline.send(source);
+        return 1;
+    }
+
+    /**
+     * Set player as player with online account
+     *
+     * @param source   executioner of the command
+     * @param username player to add in list
+     * @return 0
+     */
+    private static int markAsOnline(ServerCommandSource source, String username) {
+        THREADPOOL.submit(() -> {
+            PlayerEntryV1 entry = DB.getUserData(username);
+            entry.onlineAccount = PlayerEntryV1.OnlineAccount.TRUE;
+            entry.update();
+        });
+
+        langConfig.markAsOnline.send(source);
         return 1;
     }
 

@@ -38,5 +38,6 @@
   "text.easyauth.registerRequiredWithGlobalPassword": "§6Type /register \u003cglobal password\u003e \u003cpassword\u003e \u003cpassword\u003e to claim this account.",
   "text.easyauth.markAsOffline": "§aPlayer %s was marked as offline.",
   "text.easyauth.markAsOnline": "§aPlayer %s was marked as online.",
-  "text.easyauth.selfMarkAsOnline": "§aYou marked yourself as online player."
+  "text.easyauth.selfMarkAsOnline": "§aYou marked yourself as online player.",
+  "text.easyauth.selfMarkAsOnlineWarning": "§6You want to mark yourself as online player.\n§6You will not be able to log in if you don't have an online account.\n§6Data, connected to offline uuid (villagers' discounts, pets) will be lost.\n§aIf you are want to continue, type /account online <password> true."
 }

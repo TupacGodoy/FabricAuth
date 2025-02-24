@@ -336,7 +336,6 @@ public class AuthCommand {
         return 1;
     }
 
-
     /**
      * Set player as player with offline account
      *

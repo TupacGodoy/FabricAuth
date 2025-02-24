@@ -9,6 +9,8 @@ import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.AuthHelper;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
+import static com.mojang.brigadier.arguments.BoolArgumentType.bool;
+import static com.mojang.brigadier.arguments.BoolArgumentType.getBool;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.string;
 import static net.minecraft.server.command.CommandManager.argument;
@@ -46,6 +48,25 @@ public class AccountCommand {
                                                         ctx.getSource(),
                                                         getString(ctx, "old password"),
                                                         getString(ctx, "new password")
+                                                )
+                                        )
+                                )
+                        )
+                )
+                .then(literal("online")
+                        .requires(Permissions.require("easyauth.commands.account.online", true))
+                        .then(argument("password", string())
+                                .executes(ctx -> markAsOnline(
+                                        ctx.getSource(),
+                                        getString(ctx, "password"),
+                                        false
+                                        )
+                                )
+                                .then(argument("confirm", bool())
+                                        .executes(ctx -> markAsOnline(
+                                                ctx.getSource(),
+                                                getString(ctx, "password"),
+                                                getBool(ctx, "confirm")
                                                 )
                                         )
                                 )
@@ -123,5 +144,40 @@ public class AccountCommand {
             }
         });
         return 0;
+    }
+
+    /**
+     * Set player as player with online account
+     *
+     * @param source   executioner of the command
+     * @param password password of the player
+     * @return 0
+     */
+    private static int markAsOnline(ServerCommandSource source, String password) throws CommandSyntaxException {
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        PlayerAuth playerAuth = (PlayerAuth) player;
+
+        THREADPOOL.submit(() -> {
+            if (AuthHelper.checkPassword(playerAuth, password.toCharArray()) == AuthHelper.PasswordOptions.CORRECT) {
+
+                PlayerEntryV1 playerEntry = playerAuth.easyAuth$getPlayerEntryV1();
+                playerEntry.onlineAccount = PlayerEntryV1.OnlineAccount.TRUE;
+                playerEntry.update();
+
+                langConfig.selfMarkAsOnline.send(source);
+            } else {
+                langConfig.wrongPassword.send(source);
+            }
+        });
+
+        return 1;
+    }
+
+    private static int markAsOnline(ServerCommandSource source, String password, boolean confirm) throws CommandSyntaxException {
+        if (!confirm) {
+            langConfig.selfMarkAsOnlineWarning.send(source);
+            return 0;
+        }
+        return markAsOnline(source, password);
     }
 }

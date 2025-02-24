@@ -62,6 +62,9 @@ public abstract class ServerLoginNetworkHandlerMixin {
         PlayerEntryV1 playerData = DB.getUserData(username);
         if (playerData == null) {
             playerData = new PlayerEntryV1(username);
+            if (config.offlineByDefault) {
+                playerData.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
+            }
         }
         playerDataCache.put(username, playerData);
 

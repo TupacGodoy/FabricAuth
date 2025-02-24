@@ -95,6 +95,9 @@ public class ExtendedConfigV1 extends ConfigTemplate {
     @ConfigSerializable
     public static final class Aliases {
 
+        Aliases() {
+        }
+
         Aliases(boolean login, boolean register) {
             this.login = login;
             this.register = register;

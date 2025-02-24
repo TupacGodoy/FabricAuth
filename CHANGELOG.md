@@ -21,15 +21,14 @@
 10) Improve online/offline player separation:
    - Delete `auth addToForcedOffline <player>` command
    - Add `auth markAsOffline <player>` and `auth markAsOnline <player>` commands
-   - ToDo: add possibility to players to mark themselves as online players
-   - ToDo: add option for disabling online account detection
+   - Add `account online` command that mark player as online
+   - Add option `offline-by-default` (default `false`) to mark all players as offline by default
 11) Add `auth getPlayerInfo` command
 
 7) ToDo: Check migration from offline to online user
 8) ToDo: Check migration when player changes name
 10) ToDO: Hide inventory
 13) Todo: Add auth fetch to get players data from DB
-14) Todo: Add delete from forced offline players
 16) Todo: Add settings for mojang connection (URL, timeout, etc.)
 17) Todo: Store date time in bd as DateTimeLocal instead of long
  

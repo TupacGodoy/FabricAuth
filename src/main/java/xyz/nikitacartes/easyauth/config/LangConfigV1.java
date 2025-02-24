@@ -62,7 +62,8 @@ public class LangConfigV1 extends ConfigTemplate {
     public TranslatableText registerRequiredWithGlobalPassword = new TranslatableText("text.easyauth.registerRequiredWithGlobalPassword", "§6Type /register <global password> <password> <password> to claim this account.");
     public TranslatableText markAsOffline = new TranslatableText("text.easyauth.markAsOffline", "§aPlayer %s was marked as offline.");
     public TranslatableText markAsOnline = new TranslatableText("text.easyauth.markAsOnline", "§aPlayer %s was marked as online.");
-    public TranslatableText selfMarkAsOnline = new TranslatableText("text.easyauth.selfMarkAsOnline", "§aYou marked yourself as online player.");
+    public TranslatableText selfMarkAsOnline = new TranslatableText("text.easyauth.selfMarkAsOnline", "§aYou marked yourself as online player. You can rejoin now.");
+    public TranslatableText selfMarkAsOnlineWarning = new TranslatableText("text.easyauth.selfMarkAsOnlineWarning", "§6You want to mark yourself as online player.\n§6You will not be able to log in if you don't have an online account.\n§6Data, connected to offline uuid (villagers' discounts, pets) will be lost.\n§aIf you are want to continue, type /account online <password> true.");
 
     public LangConfigV1() {
         super("translation.conf");

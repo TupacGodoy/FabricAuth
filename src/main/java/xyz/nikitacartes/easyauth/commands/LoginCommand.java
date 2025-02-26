@@ -55,7 +55,6 @@ public class LoginCommand {
         }
         PlayerEntryV1 playerData = playerAuth.easyAuth$getPlayerEntryV1();
 
-        long maxLoginTries = config.maxLoginTries;
         AuthHelper.PasswordOptions passwordResult = AuthHelper.checkPassword(playerData, pass.toCharArray());
 
         if (passwordResult == AuthHelper.PasswordOptions.CORRECT) {
@@ -84,13 +83,13 @@ public class LoginCommand {
             return 0;
         }
         playerData.loginTries++;
-        if (playerData.loginTries >= maxLoginTries && maxLoginTries != -1) { // Player exceeded maxLoginTries
+        if (playerData.loginTries >= config.maxLoginTries && config.maxLoginTries != -1) { // Player exceeded maxLoginTries
             LogDebug("Player " + player.getNameForScoreboard() + " exceeded max login tries");
             // Send the player a different error message if the max login tries is 1.
             playerData.lastKicked = System.currentTimeMillis();
             playerData.loginTries = 0;
             playerData.update();
-            if (maxLoginTries == 1) {
+            if (config.maxLoginTries == 1) {
                 player.networkHandler.disconnect(langConfig.wrongPassword.get());
             } else {
                 player.networkHandler.disconnect(langConfig.loginTriesExceeded.get());

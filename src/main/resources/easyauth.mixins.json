@@ -7,11 +7,12 @@
     "PlayerAdvancementTrackerMixin",
     "PlayerListS2CPacketMixin",
     "PlayerManagerMixin",
+    "PlayerSaveHandlerMixin",
     "ServerLoginNetworkHandlerMixin",
+    "ServerPlayerEntity$1Mixin",
     "ServerPlayerEntityMixin",
     "ServerPlayNetworkHandlerMixin",
-    "SlotMixin",
-    "PlayerSaveHandlerMixin"
+    "SlotMixin"
   ],
   "minVersion": "0.8",
   "injectors": {

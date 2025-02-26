@@ -68,10 +68,24 @@ public class RegisterCommand {
     }
 
     private static int register(ServerCommandSource source, String globalPassword, String pass1, String pass2) throws CommandSyntaxException {
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        PlayerAuth playerAuth = (PlayerAuth) player;
+
         if (config.enableGlobalPassword && config.singleUseGlobalPassword) {
             if (checkGlobalPassword(globalPassword.toCharArray())) {
                 return register(source, pass1, pass2);
             } else {
+                PlayerEntryV1 playerData = playerAuth.easyAuth$getPlayerEntryV1();
+
+                playerData.loginTries++;
+                if (playerData.loginTries >= config.maxLoginTries && config.maxLoginTries != -1) { // Player exceeded maxLoginTries
+                    LogDebug("Player " + player.getNameForScoreboard() + " exceeded global password tries limit.");
+                    playerData.lastKicked = System.currentTimeMillis();
+                    playerData.loginTries = 0;
+                    playerData.update();
+                    player.networkHandler.disconnect(langConfig.wrongGlobalPassword.get());
+                    return 0;
+                }
                 langConfig.wrongGlobalPassword.send(source);
                 return 0;
             }
@@ -119,7 +133,7 @@ public class RegisterCommand {
             playerData.lastIp = playerAuth.easyAuth$getIpAddress();
             playerData.lastAuthenticated = System.currentTimeMillis();
             playerAuth.easyAuth$setPlayerEntryV1(playerData);
-            DB.registerUser(playerData);
+            playerData.update();
 
             LogDebug("Player " + player.getNameForScoreboard() + "{" + player.getUuidAsString() + "} successfully registered with password: " + playerData.password);
         });

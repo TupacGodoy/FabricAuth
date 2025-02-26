@@ -214,6 +214,8 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
             // This is technically not needed, but it cleans the "messed portal" on the client
             world.updateListeners(pos, world.getBlockState(pos), world.getBlockState(pos), 3);
             world.updateListeners(pos.up(), world.getBlockState(pos.up()), world.getBlockState(pos.up()), 3);
+
+           player.currentScreenHandler.syncState();
         }
     }
 
@@ -335,3 +337,4 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
     }
 
 }
+

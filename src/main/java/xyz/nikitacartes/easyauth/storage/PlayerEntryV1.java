@@ -105,7 +105,7 @@ public class PlayerEntryV1 {
      * Update entry in database.
      */
     public void update() {
-        LogDebug("Updating player data for " + username);
+        LogDebug("Updating player data for " + username + " in database: " + toJson());
         THREADPOOL.execute(() -> DB.updateUserData(this));
     }
 

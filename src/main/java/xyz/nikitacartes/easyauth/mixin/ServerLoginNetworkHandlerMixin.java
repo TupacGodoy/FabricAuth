@@ -17,7 +17,7 @@ import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -65,6 +65,7 @@ public abstract class ServerLoginNetworkHandlerMixin {
             if (config.offlineByDefault) {
                 playerData.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
             }
+            DB.registerUser(playerData);
         }
         playerDataCache.put(username, playerData);
 
@@ -96,10 +97,10 @@ public abstract class ServerLoginNetworkHandlerMixin {
                 } else {
                     // Checking account status from API
                     LogDebug("Checking player " + username + " for premium status");
-                    HttpsURLConnection httpsURLConnection = (HttpsURLConnection) new URL("https://api.mojang.com/users/profiles/minecraft/" + username).openConnection();
+                    HttpsURLConnection httpsURLConnection = (HttpsURLConnection) URI.create(extendedConfig.mojangApiSettings.url + username).toURL().openConnection();
                     httpsURLConnection.setRequestMethod("GET");
-                    httpsURLConnection.setConnectTimeout(5000);
-                    httpsURLConnection.setReadTimeout(5000);
+                    httpsURLConnection.setConnectTimeout(extendedConfig.mojangApiSettings.connectionTimeout);
+                    httpsURLConnection.setReadTimeout(extendedConfig.mojangApiSettings.readTimeout);
 
                     int response = httpsURLConnection.getResponseCode();
                     if (response == HttpURLConnection.HTTP_OK) {

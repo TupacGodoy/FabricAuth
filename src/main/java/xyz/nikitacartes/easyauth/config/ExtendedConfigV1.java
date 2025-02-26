@@ -25,6 +25,7 @@ public class ExtendedConfigV1 extends ConfigTemplate {
     public boolean allowItemDropping = false;
     public boolean allowItemMoving = false;
     public boolean allowItemUsing = false;
+    public boolean hideInventory = true;
     public boolean playerInvulnerable = true;
     public boolean playerIgnored = true;
     public long teleportationTimeoutMs = 20;
@@ -43,6 +44,7 @@ public class ExtendedConfigV1 extends ConfigTemplate {
     public boolean allowCaseInsensitiveUsername = false;
     public boolean checkUnmigratedArgon2 = false;
     public long authenticationPromptInterval = 10;
+    public MojangApiSettings mojangApiSettings = new MojangApiSettings();
 
     public ExtendedConfigV1() {
         super("extended.conf");
@@ -70,6 +72,7 @@ public class ExtendedConfigV1 extends ConfigTemplate {
         configValues.put("allowItemDropping", wrapIfNecessary(allowItemDropping));
         configValues.put("allowItemMoving", wrapIfNecessary(allowItemMoving));
         configValues.put("allowItemUsing", wrapIfNecessary(allowItemUsing));
+        configValues.put("hideInventory", wrapIfNecessary(hideInventory));
         configValues.put("playerInvulnerable", wrapIfNecessary(playerInvulnerable));
         configValues.put("playerIgnored", wrapIfNecessary(playerIgnored));
         configValues.put("teleportationTimeoutMs", wrapIfNecessary(teleportationTimeoutMs));
@@ -88,6 +91,9 @@ public class ExtendedConfigV1 extends ConfigTemplate {
         configValues.put("allowCaseInsensitiveUsername", wrapIfNecessary(allowCaseInsensitiveUsername));
         configValues.put("checkUnmigratedArgon2", wrapIfNecessary(checkUnmigratedArgon2));
         configValues.put("authenticationPromptInterval", wrapIfNecessary(authenticationPromptInterval));
+        configValues.put("mojangApiSettings.url", wrapIfNecessary(mojangApiSettings.url));
+        configValues.put("mojangApiSettings.connectionTimeout", wrapIfNecessary(mojangApiSettings.connectionTimeout));
+        configValues.put("mojangApiSettings.readTimeout", wrapIfNecessary(mojangApiSettings.readTimeout));
         String configTemplate = Resources.toString(getResource("config/" + configPath), UTF_8);
         return new StringSubstitutor(configValues).replace(configTemplate);
     }
@@ -105,6 +111,13 @@ public class ExtendedConfigV1 extends ConfigTemplate {
 
         public boolean login;
         public boolean register;
+    }
+
+    @ConfigSerializable
+    public static final class MojangApiSettings {
+        public String url = "https://api.mojang.com/users/profiles/minecraft/";
+        public int connectionTimeout = 5000;
+        public int readTimeout = 5000;
     }
 
 }

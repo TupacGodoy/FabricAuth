@@ -350,7 +350,7 @@ public class AuthCommand {
             entry.update();
         });
 
-        langConfig.markAsOffline.send(source);
+        langConfig.markAsOffline.send(source, username);
         return 1;
     }
 
@@ -368,7 +368,7 @@ public class AuthCommand {
             entry.update();
         });
 
-        langConfig.markAsOnline.send(source);
+        langConfig.markAsOnline.send(source, username);
         return 1;
     }
 

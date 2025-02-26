@@ -1,36 +1,35 @@
 ### 3.1.0
 ##### Minecraft TBA
 
-1) Database overhaul:
+1) Added single use global password:
+   - When `single-use-global-password` is enabled, player can register with global password but not log in with it
+   - Default `false`
+2) Improve online/offline player separation:
+   - Add `account online` command that mark player as online
+   - Add `auth markAsOffline <player>` and `auth markAsOnline <player>` commands
+   - Add option `offline-by-default` (default `false`) to mark all players as offline by default
+   - Delete `auth addToForcedOffline <player>` command
+3) Add `hide-inventory` option in `extended.conf` to hide inventory of unauthenticated players. Default `true`
+4) Player allowed to log in even if player with same nickname is already online if they join from same IP
+5) Database overhaul:
    - Now database key is username instead of uuid
    - SQLite is now default database instead of LevelDB
    - Drop support for LevelDB (data from LevelDB will be migrated to SQLite automatically)
    - Config version is now 2
    - All players from `usercache.json` will be migrated automatically
-2) Change default hash algorithm to Argon2 from BCrypt
+6) Change default hash algorithm to Argon2 from BCrypt
    - If you previously used BCrypt, typed password will be checked both against BCrypt and Argon2 (option `check-unmigrated-argon2` in `extended.conf`)
-3) Increased default `teleportation-timeout-ms` from 5 to 20 ms
-4) Player allowed to log in even if player with same nickname is already online if they join from same IP
-5) `confirmed-online-players` and `forced-offline-players` is not used anymore. Now they are stored in database for each player separately
-6) Added new option `allow-case-insensitive-username` in `extended.conf` to allow players with same nickname but different case to join (default `false`)
-7) Fix bug with respawn while leaving server being dead
-8) Added single use global password:
-   - When `single-use-global-password` is enabled, player can register with global password but not log in with it
-   - Default `false`
-9) Add setting `authentication-prompt-interval` in `extended.conf` to set interval between authentication prompts
-10) Improve online/offline player separation:
-   - Delete `auth addToForcedOffline <player>` command
-   - Add `auth markAsOffline <player>` and `auth markAsOnline <player>` commands
-   - Add `account online` command that mark player as online
-   - Add option `offline-by-default` (default `false`) to mark all players as offline by default
-11) Add `auth getPlayerInfo` command
+7) Increased default `teleportation-timeout-ms` from 5 to 20 ms
+8) `confirmed-online-players` and `forced-offline-players` is not used anymore. Now they are stored in database for each player separately
+9) Added new option `allow-case-insensitive-username` in `extended.conf` to allow players with same nickname but different case to join (default `false`)
+10) Fix bug with respawn while leaving server being dead
+11) Add setting `authentication-prompt-interval` in `extended.conf` to set interval between authentication prompts
+12) Add `auth getPlayerInfo` command
+13) Add `mojang-api-settings` in `extended.conf` for custom Mojang API settings
 
-7) ToDo: Check migration from offline to online user
-8) ToDo: Check migration when player changes name
-10) ToDO: Hide inventory
-13) Todo: Add auth fetch to get players data from DB
-16) Todo: Add settings for mojang connection (URL, timeout, etc.)
-17) Todo: Store date time in bd as DateTimeLocal instead of long
+14) ToDo: Check migration from offline to online user
+15) ToDo: Check migration when player changes name
+16) Todo: Store date time in bd as DateTimeLocal instead of long
  
 ### 3.0.28
 ##### Minecraft 1.21.2 - 1.21.4

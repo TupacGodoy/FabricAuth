@@ -1,10 +1,15 @@
 package xyz.nikitacartes.easyauth.storage.database;
 
+import org.jetbrains.annotations.NotNull;
 import xyz.nikitacartes.easyauth.EasyAuth;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.storage.deprecated.PlayerCacheV0;
 
 import javax.annotation.Nullable;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Locale;
 
@@ -32,18 +37,26 @@ public interface DbApi {
      * Inserts the data for the player.
      *
      * @param data data to put inside database
-     * @return true if operation was successful, otherwise false
      */
-    boolean registerUser(PlayerEntryV1 data);
+    void registerUser(PlayerEntryV1 data);
 
     /**
      * Gets data for the provided username.
      *
      * @param username username of the player to get data for
-     * @return data if player is registered, otherwise empty PlayerEntryV1
+     * @return data if player is registered, otherwise null
      */
     @Nullable
     PlayerEntryV1 getUserData(String username);
+
+    /**
+     * Gets data for the provided username or creates a new entry if it doesn't exist.
+     *
+     * @param username username of the player to get data for
+     * @return data if player is registered, otherwise empty PlayerEntryV1
+     */
+    @NotNull
+    PlayerEntryV1 getUserDataOrCreate(String username);
 
     /**
      * Deletes data for the provided username.
@@ -77,8 +90,8 @@ public interface DbApi {
         PlayerCacheV0 playerCache = PlayerCacheV0.fromJson(data);
         PlayerEntryV1 playerEntry = new PlayerEntryV1(username, lowerCaseUsername, data);
 
-        playerEntry.lastAuthenticated = playerCache.validUntil - EasyAuth.config.sessionTimeout * 1000;
-        playerEntry.registrationDate = -1;
+        playerEntry.lastAuthenticatedDate = LocalDateTime.ofEpochSecond(playerCache.validUntil/1000 - EasyAuth.config.sessionTimeout, 0, ZonedDateTime.now(ZoneId.systemDefault()).getOffset());
+        playerEntry.registrationDate = LocalDateTime.ofEpochSecond(0, 0, ZoneOffset.UTC);
         if (technicalConfig.forcedOfflinePlayers.contains(lowerCaseUsername) || technicalConfig.forcedOfflinePlayers.contains(username)) {
             playerEntry.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
         } else if (technicalConfig.confirmedOnlinePlayers.contains(lowerCaseUsername) || technicalConfig.confirmedOnlinePlayers.contains(username)) {

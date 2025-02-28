@@ -9,6 +9,8 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
+import java.time.LocalDateTime;
+
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.string;
 import static net.minecraft.server.command.CommandManager.argument;
@@ -80,7 +82,7 @@ public class RegisterCommand {
                 playerData.loginTries++;
                 if (playerData.loginTries >= config.maxLoginTries && config.maxLoginTries != -1) { // Player exceeded maxLoginTries
                     LogDebug("Player " + player.getNameForScoreboard() + " exceeded global password tries limit.");
-                    playerData.lastKicked = System.currentTimeMillis();
+                    playerData.lastKickedDate = LocalDateTime.now();
                     playerData.loginTries = 0;
                     playerData.update();
                     player.networkHandler.disconnect(langConfig.wrongGlobalPassword.get());
@@ -129,9 +131,9 @@ public class RegisterCommand {
 
         THREADPOOL.submit(() -> {
             playerData.password = hashPassword(pass1.toCharArray());
-            playerData.registrationDate = System.currentTimeMillis();
+            playerData.registrationDate = LocalDateTime.now();
             playerData.lastIp = playerAuth.easyAuth$getIpAddress();
-            playerData.lastAuthenticated = System.currentTimeMillis();
+            playerData.lastAuthenticatedDate = LocalDateTime.now();
             playerAuth.easyAuth$setPlayerEntryV1(playerData);
             playerData.update();
 

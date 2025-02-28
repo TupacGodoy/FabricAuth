@@ -5,6 +5,7 @@ import xyz.nikitacartes.easyauth.EasyAuth;
 import xyz.nikitacartes.easyauth.config.StorageConfigV1;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.sql.*;
@@ -75,7 +76,7 @@ public class SQLite implements DbApi {
     }
 
     @Override
-    public boolean registerUser(PlayerEntryV1 data) {
+    public void registerUser(PlayerEntryV1 data) {
         try {
             PreparedStatement statement = connection.prepareStatement("INSERT INTO " + config.sqlite.sqliteTable + " (username, username_lower, data) VALUES (?, ?, ?);");
             statement.setString(1, data.username);
@@ -83,11 +84,9 @@ public class SQLite implements DbApi {
             statement.setString(3, data.toJson());
             statement.executeUpdate();
             statement.close();
-            return true;
         } catch (SQLException e) {
             LogError("Error registering user in SQLite database: " + data, e);
         }
-        return false;
     }
 
     @Override
@@ -126,6 +125,15 @@ public class SQLite implements DbApi {
             LogError("Error checking user registration in SQLite database", e);
         }
         return null;
+    }
+
+    public @Nonnull PlayerEntryV1 getUserDataOrCreate(String username) {
+        PlayerEntryV1 playerEntry = getUserData(username);
+        if (playerEntry == null) {
+            playerEntry = new PlayerEntryV1(username);
+            registerUser(playerEntry);
+        }
+        return playerEntry;
     }
 
     @Override

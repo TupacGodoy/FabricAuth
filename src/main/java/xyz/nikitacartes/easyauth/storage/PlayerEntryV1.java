@@ -7,6 +7,8 @@ import com.google.gson.annotations.SerializedName;
 import net.minecraft.server.network.ServerPlayerEntity;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Locale;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.DB;
@@ -38,8 +40,8 @@ public class PlayerEntryV1 {
      * Stores the last time a player was successfully authenticated (unix ms).
      */
     @Expose
-    @SerializedName("last_authenticated")
-    public long lastAuthenticated = 0;
+    @SerializedName("last_authenticated_date")
+    public LocalDateTime lastAuthenticatedDate = LocalDateTime.ofEpochSecond(0, 0, ZoneOffset.UTC);
 
     /**
      * Stores how many times the player has tried to log in.
@@ -53,8 +55,8 @@ public class PlayerEntryV1 {
      * Stores the last time a player was kicked for too many logins (unix ms).
      */
     @Expose
-    @SerializedName("last_kicked")
-    public long lastKicked = 0;
+    @SerializedName("last_kicked_date")
+    public LocalDateTime lastKickedDate = LocalDateTime.ofEpochSecond(0, 0, ZoneOffset.UTC);
 
     /**
      * Does the player have an online account?
@@ -68,7 +70,7 @@ public class PlayerEntryV1 {
      */
     @Expose
     @SerializedName("registration_date")
-    public long registrationDate = -1;
+    public LocalDateTime registrationDate = LocalDateTime.ofEpochSecond(0, 0, ZoneOffset.UTC);
 
     /**
      * Stores version of the player data.
@@ -80,16 +82,17 @@ public class PlayerEntryV1 {
 
     public PlayerEntryV1(String username, String usernameLowerCase, String json) {
         PlayerEntryV1 entry = gson.fromJson(json, PlayerEntryV1.class);
-        this.password = entry.password;
-        this.lastIp = entry.lastIp;
-        this.lastAuthenticated = entry.lastAuthenticated;
+        LocalDateTime startOfTime = LocalDateTime.ofEpochSecond(0, 0, ZoneOffset.UTC);
+        this.password = entry.password == null ? "" : entry.password;
+        this.lastIp = entry.lastIp == null ? "" : entry.lastIp;
+        this.lastAuthenticatedDate = entry.lastAuthenticatedDate == null ? startOfTime : entry.lastAuthenticatedDate;
         this.loginTries = entry.loginTries;
-        this.lastKicked = entry.lastKicked;
+        this.lastKickedDate = entry.lastKickedDate == null ? startOfTime : entry.lastKickedDate;
         this.username = username;
         this.usernameLowerCase = usernameLowerCase;
         this.dataVersion = entry.dataVersion;
-        this.onlineAccount = entry.onlineAccount;
-        this.registrationDate = entry.registrationDate;
+        this.onlineAccount = entry.onlineAccount == null ? OnlineAccount.UNKNOWN : entry.onlineAccount;
+        this.registrationDate = entry.registrationDate == null ? startOfTime : entry.registrationDate;
     }
 
     public PlayerEntryV1(String username) {

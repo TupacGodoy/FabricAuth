@@ -9,6 +9,7 @@ import org.bson.Document;
 import xyz.nikitacartes.easyauth.config.StorageConfigV1;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
 
@@ -46,16 +47,14 @@ public class MongoDB implements DbApi {
     public boolean isClosed() { return mongoClient == null; }
 
     @Override
-    public boolean registerUser(PlayerEntryV1 data) {
+    public void registerUser(PlayerEntryV1 data) {
         Document document = new Document("username", data.username)
                 .append("username_lower", data.usernameLowerCase)
                 .append("data", data.toJson());
         try {
             collection.insertOne(document);
-            return true;
         } catch (MongoCommandException e) {
             LogError("Failed to insert data into MongoDB: " + data, e);
-            return false;
         }
     }
 
@@ -82,6 +81,15 @@ public class MongoDB implements DbApi {
                                                 document.getString("data"));
                 break;
             }
+        }
+        return playerEntry;
+    }
+
+    public @Nonnull PlayerEntryV1 getUserDataOrCreate(String username) {
+        PlayerEntryV1 playerEntry = getUserData(username);
+        if (playerEntry == null) {
+            playerEntry = new PlayerEntryV1(username);
+            registerUser(playerEntry);
         }
         return playerEntry;
     }

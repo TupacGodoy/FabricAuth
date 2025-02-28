@@ -5,6 +5,7 @@ import net.minecraft.util.Uuids;
 import xyz.nikitacartes.easyauth.config.StorageConfigV1;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.sql.*;
 import java.util.HashMap;
@@ -120,10 +121,9 @@ public class MySQL implements DbApi {
      * Inserts the data for the player.
      *
      * @param data data to put inside database
-     * @return true if operation was successful, otherwise false
      */
     @Override
-    public boolean registerUser(PlayerEntryV1 data) {
+    public void registerUser(PlayerEntryV1 data) {
         try {
             reConnect();
             PreparedStatement preparedStatement = MySQLConnection.prepareStatement("INSERT INTO  " + config.mysql.mysqlTable + " (username, username_lower, data) VALUES (?, ?, ?);");
@@ -132,11 +132,9 @@ public class MySQL implements DbApi {
             preparedStatement.setString(3, data.toJson());
             preparedStatement.executeUpdate();
             preparedStatement.close();
-            return true;
         } catch (SQLException e) {
             LogError("Register error: " + data, e);
         }
-        return false;
     }
 
     /**
@@ -181,6 +179,15 @@ public class MySQL implements DbApi {
             LogError("Error checking user registration in MySQL database", e);
         }
         return null;
+    }
+
+    public @Nonnull PlayerEntryV1 getUserDataOrCreate(String username) {
+        PlayerEntryV1 playerEntry = getUserData(username);
+        if (playerEntry == null) {
+            playerEntry = new PlayerEntryV1(username);
+            registerUser(playerEntry);
+        }
+        return playerEntry;
     }
 
     /**

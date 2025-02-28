@@ -20,6 +20,7 @@ import xyz.nikitacartes.easyauth.utils.FloodgateApiHelper;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
 import java.net.SocketAddress;
+import java.time.LocalDateTime;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -80,7 +81,7 @@ public class AuthEventHandler {
             return langConfig.differentUsernameCase.get(incomingPlayerUsername);
         }
 
-        if (config.maxLoginTries != -1 && playerEntryV1.lastKicked >= System.currentTimeMillis() - 1000 * config.resetLoginAttemptsTimeout) {
+        if (config.maxLoginTries != -1 && playerEntryV1.lastKickedDate.plusSeconds(config.resetLoginAttemptsTimeout).isAfter(LocalDateTime.now())) {
             return langConfig.loginTriesExceeded.get();
         }
 
@@ -101,13 +102,13 @@ public class AuthEventHandler {
 
             player.setInvulnerable(false);
             player.setInvisible(false);
-        } else if (cache.lastIp.equals(playerAuth.easyAuth$getIpAddress()) && cache.lastAuthenticated + config.sessionTimeout * 1000 >= System.currentTimeMillis()) {
+        } else if (cache.lastIp.equals(playerAuth.easyAuth$getIpAddress()) && cache.lastAuthenticatedDate.plusSeconds(config.sessionTimeout).isAfter(LocalDateTime.now())) {
             playerAuth.easyAuth$setAuthenticated(true);
 
             player.setInvulnerable(false);
             player.setInvisible(false);
 
-            cache.lastAuthenticated = System.currentTimeMillis();
+            cache.lastAuthenticatedDate = LocalDateTime.now();
             cache.update();
         }
 
@@ -152,7 +153,7 @@ public class AuthEventHandler {
 
         if (playerAuth.easyAuth$isAuthenticated()) {
             PlayerEntryV1 playerCache = playerAuth.easyAuth$getPlayerEntryV1();
-            playerCache.lastAuthenticated = System.currentTimeMillis();
+            playerCache.lastAuthenticatedDate = LocalDateTime.now();
             playerCache.update();
         } else if (config.hidePlayerCoords) {
             ((PlayerAuth) player).easyAuth$restoreTrueLocation();

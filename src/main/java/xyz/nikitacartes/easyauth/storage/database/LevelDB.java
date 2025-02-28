@@ -75,11 +75,15 @@ public class LevelDB implements DbApi {
     }
 
     @Override
-    public boolean registerUser(PlayerEntryV1 data) {
+    public void registerUser(PlayerEntryV1 data) {
         throw new UnsupportedOperationException("LevelDB is not supported anymore");
     }
 
     public @Nullable PlayerEntryV1 getUserData(String username) {
+        throw new UnsupportedOperationException("LevelDB is not supported anymore");
+    }
+
+    public @Nonnull PlayerEntryV1 getUserDataOrCreate(String username) {
         throw new UnsupportedOperationException("LevelDB is not supported anymore");
     }
 

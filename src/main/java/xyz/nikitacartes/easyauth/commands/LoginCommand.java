@@ -10,6 +10,8 @@ import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.AuthHelper;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
+import java.time.LocalDateTime;
+
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.string;
 import static net.minecraft.server.command.CommandManager.argument;
@@ -59,7 +61,7 @@ public class LoginCommand {
 
         if (passwordResult == AuthHelper.PasswordOptions.CORRECT) {
             LogDebug("Player " + player.getNameForScoreboard() + " provide correct password");
-            if (playerData.lastKicked >= System.currentTimeMillis() - 1000 * config.resetLoginAttemptsTimeout) {
+            if (playerData.lastKickedDate.plusSeconds(config.resetLoginAttemptsTimeout).isAfter(LocalDateTime.now())) {
                 LogDebug("Player " + player.getNameForScoreboard() + " will be kicked due to kick timeout");
                 player.networkHandler.disconnect(langConfig.loginTriesExceeded.get());
                 return 0;
@@ -67,7 +69,7 @@ public class LoginCommand {
             langConfig.successfullyAuthenticated.send(source);
             playerAuth.easyAuth$setAuthenticated(true);
             playerAuth.easyAuth$restoreTrueLocation();
-            playerData.lastAuthenticated = System.currentTimeMillis();
+            playerData.lastAuthenticatedDate = LocalDateTime.now();
             playerData.loginTries = 0;
             playerData.lastIp = playerAuth.easyAuth$getIpAddress();
             playerData.update();
@@ -86,7 +88,7 @@ public class LoginCommand {
         if (playerData.loginTries >= config.maxLoginTries && config.maxLoginTries != -1) { // Player exceeded maxLoginTries
             LogDebug("Player " + player.getNameForScoreboard() + " exceeded max login tries");
             // Send the player a different error message if the max login tries is 1.
-            playerData.lastKicked = System.currentTimeMillis();
+            playerData.lastKickedDate = LocalDateTime.now();
             playerData.loginTries = 0;
             playerData.update();
             if (config.maxLoginTries == 1) {

@@ -29,7 +29,7 @@
 
 14) ToDo: Check migration from offline to online user
 15) ToDo: Check migration when player changes name
-16) Todo: Store date time in bd as DateTimeLocal instead of long
+16) ToDo: OTP
  
 ### 3.0.28
 ##### Minecraft 1.21.2 - 1.21.4

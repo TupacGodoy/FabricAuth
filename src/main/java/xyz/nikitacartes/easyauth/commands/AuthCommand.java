@@ -22,6 +22,7 @@ import xyz.nikitacartes.easyauth.storage.database.DBApiException;
 import xyz.nikitacartes.easyauth.utils.AuthHelper;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
+import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.mojang.brigadier.arguments.BoolArgumentType.bool;
@@ -277,9 +278,9 @@ public class AuthCommand {
      */
     private static int registerUser(ServerCommandSource source, String username, String password) {
         THREADPOOL.submit(() -> {
-            PlayerEntryV1 playerData = DB.getUserData(username);
+            PlayerEntryV1 playerData = DB.getUserDataOrCreate(username);
             playerData.password = AuthHelper.hashPassword(password.toCharArray());
-            playerData.registrationDate = System.currentTimeMillis();
+            playerData.registrationDate = LocalDateTime.now();
             playerData.update();
 
             langConfig.userdataUpdated.send(source);
@@ -298,7 +299,7 @@ public class AuthCommand {
     private static int updatePassword(ServerCommandSource source, String username, String password) {
         THREADPOOL.submit(() -> {
             PlayerEntryV1 playerData = DB.getUserData(username);
-            if (playerData.password.isEmpty()) {
+            if (playerData == null || playerData.password.isEmpty()) {
                 langConfig.userNotRegistered.send(source);
                 return;
             }
@@ -345,7 +346,7 @@ public class AuthCommand {
      */
     private static int markAsOffline(ServerCommandSource source, String username) {
         THREADPOOL.submit(() -> {
-            PlayerEntryV1 entry = DB.getUserData(username);
+            PlayerEntryV1 entry = DB.getUserDataOrCreate(username);
             entry.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
             entry.update();
         });
@@ -363,7 +364,7 @@ public class AuthCommand {
      */
     private static int markAsOnline(ServerCommandSource source, String username) {
         THREADPOOL.submit(() -> {
-            PlayerEntryV1 entry = DB.getUserData(username);
+            PlayerEntryV1 entry = DB.getUserDataOrCreate(username);
             entry.onlineAccount = PlayerEntryV1.OnlineAccount.TRUE;
             entry.update();
         });

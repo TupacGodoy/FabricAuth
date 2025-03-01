@@ -130,7 +130,7 @@ public class MySQL implements DbApi {
             PreparedStatement preparedStatement = MySQLConnection.prepareStatement("INSERT INTO  " + config.mysql.mysqlTable + " (username, username_lower, uuid, data) VALUES (?, ?, ?, ?);");
             preparedStatement.setString(1, data.username);
             preparedStatement.setString(2, data.usernameLowerCase);
-            preparedStatement.setObject(3, data.uuid);
+            preparedStatement.setString(3, data.uuid == null ? null : data.uuid.toString());
             preparedStatement.setString(4, data.toJson());
             preparedStatement.executeUpdate();
             preparedStatement.close();
@@ -220,7 +220,7 @@ public class MySQL implements DbApi {
         try {
             reConnect();
             PreparedStatement preparedStatement = MySQLConnection.prepareStatement("UPDATE " + config.mysql.mysqlTable + " SET uuid = ?, data = ? WHERE username = ?;");
-            preparedStatement.setObject(1, data.uuid);
+            preparedStatement.setString(1, data.uuid == null ? null : data.uuid.toString());
             preparedStatement.setString(2, data.toJson());
             preparedStatement.setString(3, data.username);
             preparedStatement.executeUpdate();
@@ -268,9 +268,6 @@ public class MySQL implements DbApi {
                     if (resultSet.next()) {
                         data = resultSet.getString("data");
                     } else {
-                        statement.close();
-                        resultSet.close();
-
                         String lowerCaseUsername = username.toLowerCase(Locale.ENGLISH);
                         String lowerCaseUuid = Uuids.getOfflinePlayerUuid(lowerCaseUsername).toString();
                         statement.setString(1,lowerCaseUuid);
@@ -286,7 +283,7 @@ public class MySQL implements DbApi {
                         PlayerEntryV1 playerEntry = migrateFromV1(data, username);
                         preparedStatement.setString(1, playerEntry.username);
                         preparedStatement.setString(2, playerEntry.usernameLowerCase);
-                        preparedStatement.setObject(3, playerEntry.uuid);
+                        preparedStatement.setString(3, playerEntry.uuid == null ? null : playerEntry.uuid.toString());
                         preparedStatement.setString(4, playerEntry.toJson());
                         preparedStatement.setString(5, playerEntry.toJson());
                         preparedStatement.addBatch();

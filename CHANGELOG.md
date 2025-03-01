@@ -1,3 +1,13 @@
+### ToDo
+1) ToDo: Log registration and logins as info messages. Add config for that
+2) ToDo: Fix hide-players-from-player-list
+3) ToDo: Wiki
+
+### 3.1.1
+##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4
+1) Fix [#178](https://github.com/NikitaCartes/EasyAuth/issues/178), when min-password-chars and max-password-chars weren't sent to players
+2) Fix few bugs with MySql connection
+
 ### 3.1.0
 ##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4
 

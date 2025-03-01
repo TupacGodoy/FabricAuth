@@ -1,5 +1,5 @@
 ### 3.1.0
-##### Minecraft 1.21-1.21.1, 1.21.2 - 1.21.4
+##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4
 
 1) Added single use global password:
    - When `single-use-global-password` is enabled, player can register with global password but not log in with it

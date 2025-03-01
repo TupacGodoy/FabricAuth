@@ -388,7 +388,7 @@ public class AuthCommand {
                 return;
             }
             // Send player information to the source
-            source.sendMessage(Text.literal("Player Info: " + playerData));
+            source.sendMessage(Text.literal("Player Info: " + playerData.toJson()));
         });
         return 1;
     }

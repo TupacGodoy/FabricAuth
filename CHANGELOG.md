@@ -26,6 +26,7 @@
 11) Add setting `authentication-prompt-interval` in `extended.conf` to set interval between authentication prompts
 12) Add `auth getPlayerInfo` command
 13) Add `mojang-api-settings` in `extended.conf` for custom Mojang API settings
+14) Update Turkish translation, thanks to @MemoKing34
  
 ### 3.0.28
 ##### Minecraft 1.21.2 - 1.21.4

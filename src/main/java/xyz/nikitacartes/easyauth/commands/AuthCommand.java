@@ -22,7 +22,7 @@ import xyz.nikitacartes.easyauth.storage.database.DBApiException;
 import xyz.nikitacartes.easyauth.utils.AuthHelper;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.mojang.brigadier.arguments.BoolArgumentType.bool;
@@ -280,7 +280,7 @@ public class AuthCommand {
         THREADPOOL.submit(() -> {
             PlayerEntryV1 playerData = DB.getUserDataOrCreate(username);
             playerData.password = AuthHelper.hashPassword(password.toCharArray());
-            playerData.registrationDate = LocalDateTime.now();
+            playerData.registrationDate = ZonedDateTime.now();
             playerData.update();
 
             langConfig.userdataUpdated.send(source);

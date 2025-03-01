@@ -19,6 +19,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
@@ -194,5 +196,9 @@ public class EasyAuth implements ModInitializer {
         EasyAuth.langConfig.save();
         EasyAuth.extendedConfig.save();
         EasyAuth.storageConfig.save();
+    }
+
+    public static ZonedDateTime getUnixZero() {
+        return ZonedDateTime.of(1970, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
     }
 }

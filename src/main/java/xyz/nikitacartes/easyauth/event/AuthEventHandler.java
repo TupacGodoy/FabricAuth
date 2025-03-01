@@ -20,7 +20,7 @@ import xyz.nikitacartes.easyauth.utils.FloodgateApiHelper;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
 import java.net.SocketAddress;
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -81,7 +81,7 @@ public class AuthEventHandler {
             return langConfig.differentUsernameCase.get(incomingPlayerUsername);
         }
 
-        if (config.maxLoginTries != -1 && playerEntryV1.lastKickedDate.plusSeconds(config.resetLoginAttemptsTimeout).isAfter(LocalDateTime.now())) {
+        if (config.maxLoginTries != -1 && playerEntryV1.lastKickedDate.plusSeconds(config.resetLoginAttemptsTimeout).isAfter(ZonedDateTime.now())) {
             return langConfig.loginTriesExceeded.get();
         }
 
@@ -107,13 +107,13 @@ public class AuthEventHandler {
 
             player.setInvulnerable(false);
             player.setInvisible(false);
-        } else if (cache.lastIp.equals(playerAuth.easyAuth$getIpAddress()) && cache.lastAuthenticatedDate.plusSeconds(config.sessionTimeout).isAfter(LocalDateTime.now())) {
+        } else if (cache.lastIp.equals(playerAuth.easyAuth$getIpAddress()) && cache.lastAuthenticatedDate.plusSeconds(config.sessionTimeout).isAfter(ZonedDateTime.now())) {
             playerAuth.easyAuth$setAuthenticated(true);
 
             player.setInvulnerable(false);
             player.setInvisible(false);
 
-            cache.lastAuthenticatedDate = LocalDateTime.now();
+            cache.lastAuthenticatedDate = ZonedDateTime.now();
             update = true;
         }
 
@@ -162,7 +162,7 @@ public class AuthEventHandler {
 
         if (playerAuth.easyAuth$isAuthenticated()) {
             PlayerEntryV1 playerCache = playerAuth.easyAuth$getPlayerEntryV1();
-            playerCache.lastAuthenticatedDate = LocalDateTime.now();
+            playerCache.lastAuthenticatedDate = ZonedDateTime.now();
             playerCache.update();
         } else if (config.hidePlayerCoords) {
             ((PlayerAuth) player).easyAuth$restoreTrueLocation();

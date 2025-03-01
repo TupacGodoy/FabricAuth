@@ -8,10 +8,8 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-
 import static net.minecraft.server.command.CommandManager.literal;
+import static xyz.nikitacartes.easyauth.EasyAuth.getUnixZero;
 import static xyz.nikitacartes.easyauth.EasyAuth.langConfig;
 
 public class LogoutCommand {
@@ -33,7 +31,7 @@ public class LogoutCommand {
             playerAuth.easyAuth$setAuthenticated(false);
 
             PlayerEntryV1 playerData = playerAuth.easyAuth$getPlayerEntryV1();
-            playerData.lastAuthenticatedDate = LocalDateTime.ofEpochSecond(0, 0, ZoneOffset.UTC);
+            playerData.lastAuthenticatedDate = getUnixZero();
             playerData.update();
 
             langConfig.successfulLogout.send(serverCommandSource);

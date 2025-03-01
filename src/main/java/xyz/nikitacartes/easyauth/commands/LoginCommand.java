@@ -10,7 +10,7 @@ import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.AuthHelper;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.string;
@@ -61,7 +61,7 @@ public class LoginCommand {
 
         if (passwordResult == AuthHelper.PasswordOptions.CORRECT) {
             LogDebug("Player " + player.getNameForScoreboard() + " provide correct password");
-            if (playerData.lastKickedDate.plusSeconds(config.resetLoginAttemptsTimeout).isAfter(LocalDateTime.now())) {
+            if (playerData.lastKickedDate.plusSeconds(config.resetLoginAttemptsTimeout).isAfter(ZonedDateTime.now())) {
                 LogDebug("Player " + player.getNameForScoreboard() + " will be kicked due to kick timeout");
                 player.networkHandler.disconnect(langConfig.loginTriesExceeded.get());
                 return 0;
@@ -69,7 +69,7 @@ public class LoginCommand {
             langConfig.successfullyAuthenticated.send(source);
             playerAuth.easyAuth$setAuthenticated(true);
             playerAuth.easyAuth$restoreTrueLocation();
-            playerData.lastAuthenticatedDate = LocalDateTime.now();
+            playerData.lastAuthenticatedDate = ZonedDateTime.now();
             playerData.loginTries = 0;
             playerData.lastIp = playerAuth.easyAuth$getIpAddress();
             playerData.update();
@@ -88,7 +88,7 @@ public class LoginCommand {
         if (playerData.loginTries >= config.maxLoginTries && config.maxLoginTries != -1) { // Player exceeded maxLoginTries
             LogDebug("Player " + player.getNameForScoreboard() + " exceeded max login tries");
             // Send the player a different error message if the max login tries is 1.
-            playerData.lastKickedDate = LocalDateTime.now();
+            playerData.lastKickedDate = ZonedDateTime.now();
             playerData.loginTries = 0;
             playerData.update();
             if (config.maxLoginTries == 1) {

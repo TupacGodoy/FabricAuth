@@ -1,24 +1,25 @@
 package xyz.nikitacartes.easyauth.storage;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.google.gson.*;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import net.minecraft.server.network.ServerPlayerEntity;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.UUID;
 
-import static xyz.nikitacartes.easyauth.EasyAuth.DB;
-import static xyz.nikitacartes.easyauth.EasyAuth.THREADPOOL;
+import static xyz.nikitacartes.easyauth.EasyAuth.*;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
 
 public class PlayerEntryV1 {
 
-    public static final Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
+    public static final Gson gson = new GsonBuilder()
+            .excludeFieldsWithoutExposeAnnotation()
+            .registerTypeAdapter(ZonedDateTime.class, new ZonedDateTimeAdapter())
+            .create();
 
     public String username;
     public String usernameLowerCase;
@@ -43,7 +44,7 @@ public class PlayerEntryV1 {
      */
     @Expose
     @SerializedName("last_authenticated_date")
-    public LocalDateTime lastAuthenticatedDate = LocalDateTime.ofEpochSecond(0, 0, ZoneOffset.UTC);
+    public ZonedDateTime lastAuthenticatedDate = getUnixZero();
 
     /**
      * Stores how many times the player has tried to log in.
@@ -58,7 +59,7 @@ public class PlayerEntryV1 {
      */
     @Expose
     @SerializedName("last_kicked_date")
-    public LocalDateTime lastKickedDate = LocalDateTime.ofEpochSecond(0, 0, ZoneOffset.UTC);
+    public ZonedDateTime lastKickedDate = getUnixZero();
 
     /**
      * Does the player have an online account?
@@ -72,7 +73,7 @@ public class PlayerEntryV1 {
      */
     @Expose
     @SerializedName("registration_date")
-    public LocalDateTime registrationDate = LocalDateTime.ofEpochSecond(0, 0, ZoneOffset.UTC);
+    public ZonedDateTime registrationDate = getUnixZero();
 
     /**
      * Stores version of the player data.
@@ -84,7 +85,7 @@ public class PlayerEntryV1 {
 
     public PlayerEntryV1(String username, String usernameLowerCase, String uuid, String json) {
         PlayerEntryV1 entry = gson.fromJson(json, PlayerEntryV1.class);
-        LocalDateTime startOfTime = LocalDateTime.ofEpochSecond(0, 0, ZoneOffset.UTC);
+        ZonedDateTime startOfTime = getUnixZero();
 
         this.username = username;
         this.usernameLowerCase = usernameLowerCase;
@@ -122,4 +123,20 @@ public class PlayerEntryV1 {
         FALSE,
         UNKNOWN
     }
+
+    private static class ZonedDateTimeAdapter implements JsonSerializer<ZonedDateTime>, JsonDeserializer<ZonedDateTime> {
+        private static final DateTimeFormatter formatter = DateTimeFormatter.ISO_ZONED_DATE_TIME;
+
+        @Override
+        public JsonElement serialize(ZonedDateTime src, java.lang.reflect.Type typeOfSrc, com.google.gson.JsonSerializationContext context) {
+            return new JsonPrimitive(src.format(formatter));
+        }
+
+        @Override
+        public ZonedDateTime deserialize(JsonElement json, java.lang.reflect.Type typeOfT, com.google.gson.JsonDeserializationContext context) throws JsonParseException {
+            return ZonedDateTime.parse(json.getAsString(), formatter);
+        }
+    }
 }
+
+

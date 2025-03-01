@@ -7,12 +7,13 @@ import xyz.nikitacartes.easyauth.storage.deprecated.PlayerCacheV0;
 
 import javax.annotation.Nullable;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Locale;
 
+import static xyz.nikitacartes.easyauth.EasyAuth.getUnixZero;
 import static xyz.nikitacartes.easyauth.EasyAuth.technicalConfig;
 
 public interface DbApi {
@@ -90,8 +91,9 @@ public interface DbApi {
         PlayerCacheV0 playerCache = PlayerCacheV0.fromJson(data);
         PlayerEntryV1 playerEntry = new PlayerEntryV1(username, lowerCaseUsername, null, data);
 
-        playerEntry.lastAuthenticatedDate = LocalDateTime.ofEpochSecond(playerCache.validUntil/1000 - EasyAuth.config.sessionTimeout, 0, ZonedDateTime.now(ZoneId.systemDefault()).getOffset());
-        playerEntry.registrationDate = LocalDateTime.ofEpochSecond(0, 0, ZoneOffset.UTC);
+        ZoneOffset localOffset = ZonedDateTime.now().getOffset();
+        playerEntry.lastAuthenticatedDate = LocalDateTime.ofEpochSecond(playerCache.validUntil/1000 - EasyAuth.config.sessionTimeout, 0, localOffset).atZone(localOffset);
+        playerEntry.registrationDate = getUnixZero();
         if (technicalConfig.forcedOfflinePlayers.contains(lowerCaseUsername) || technicalConfig.forcedOfflinePlayers.contains(username)) {
             playerEntry.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
         } else if (technicalConfig.confirmedOnlinePlayers.contains(lowerCaseUsername) || technicalConfig.confirmedOnlinePlayers.contains(username)) {

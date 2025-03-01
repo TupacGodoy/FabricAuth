@@ -16,9 +16,9 @@
    - Default `false`
 2) Improve online/offline player separation:
    - Add `account online` command that mark player as online
-   - Add `auth markAsOffline <player>` and `auth markAsOnline <player>` commands
+   - Add `auth markAsOffline <username>` and `auth markAsOnline <username>` commands
    - Add option `offline-by-default` (default `false`) to mark all players as offline by default
-   - Delete `auth addToForcedOffline <player>` command
+   - Delete `auth addToForcedOffline <username>` command
 3) Add `hide-inventory` option in `extended.conf` to hide inventory of unauthenticated players. Default `true`
 4) Player allowed to log in even if player with same nickname is already online if they join from same IP
 5) Database overhaul:

@@ -1,5 +1,5 @@
 ### 3.1.0
-##### Minecraft TBA
+##### Minecraft 1.21-1.21.1, 1.21.2 - 1.21.4
 
 1) Added single use global password:
    - When `single-use-global-password` is enabled, player can register with global password but not log in with it
@@ -26,10 +26,6 @@
 11) Add setting `authentication-prompt-interval` in `extended.conf` to set interval between authentication prompts
 12) Add `auth getPlayerInfo` command
 13) Add `mojang-api-settings` in `extended.conf` for custom Mojang API settings
-
-14) ToDo: Check migration from offline to online user
-15) ToDo: Check migration when player changes name
-16) ToDo: OTP
  
 ### 3.0.28
 ##### Minecraft 1.21.2 - 1.21.4

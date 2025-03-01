@@ -50,6 +50,7 @@ public class MongoDB implements DbApi {
     public void registerUser(PlayerEntryV1 data) {
         Document document = new Document("username", data.username)
                 .append("username_lower", data.usernameLowerCase)
+                .append("uuid", data.uuid)
                 .append("data", data.toJson());
         try {
             collection.insertOne(document);
@@ -70,6 +71,7 @@ public class MongoDB implements DbApi {
             Document document = findIterable.next();
             playerEntry = new PlayerEntryV1(document.getString("username"),
                                             document.getString("username_lower"),
+                                            document.getString("uuid"),
                                             document.getString("data"));
         }
         while (findIterable.hasNext()) {
@@ -78,6 +80,7 @@ public class MongoDB implements DbApi {
             if (dbUsername.equals(username)) {
                 playerEntry = new PlayerEntryV1(dbUsername,
                                                 document.getString("username_lower"),
+                                                document.getString("uuid"),
                                                 document.getString("data"));
                 break;
             }
@@ -102,6 +105,7 @@ public class MongoDB implements DbApi {
     public void updateUserData(PlayerEntryV1 data) {
         Document document = new Document("username", data.username)
                 .append("username_lower", data.usernameLowerCase)
+                .append("uuid", data.uuid)
                 .append("data", data.toJson());
         collection.replaceOne(eq("username", data.username), document);
     }
@@ -113,8 +117,9 @@ public class MongoDB implements DbApi {
             String username = document.getString("username");
             if (username == null) return;
             String username_lower = document.getString("username_lower");
+            String uuid = document.getString("uuid");
             String data = document.getString("data");
-            registeredPlayers.put(username, new PlayerEntryV1(username, username_lower, data));
+            registeredPlayers.put(username, new PlayerEntryV1(username, username_lower, uuid, data));
         });
         return registeredPlayers;
     }
@@ -141,6 +146,7 @@ public class MongoDB implements DbApi {
                 PlayerEntryV1 playerEntry = migrateFromV1(data, username);
                 writeList.add(new InsertOneModel<>(new Document("username", playerEntry.username)
                         .append("username_lower", playerEntry.usernameLowerCase)
+                        .append("uuid", playerEntry.uuid)
                         .append("data", playerEntry.toJson())));
             }
         });

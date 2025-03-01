@@ -88,7 +88,7 @@ public interface DbApi {
         String lowerCaseUsername = username.toLowerCase(Locale.ENGLISH);
 
         PlayerCacheV0 playerCache = PlayerCacheV0.fromJson(data);
-        PlayerEntryV1 playerEntry = new PlayerEntryV1(username, lowerCaseUsername, data);
+        PlayerEntryV1 playerEntry = new PlayerEntryV1(username, lowerCaseUsername, null, data);
 
         playerEntry.lastAuthenticatedDate = LocalDateTime.ofEpochSecond(playerCache.validUntil/1000 - EasyAuth.config.sessionTimeout, 0, ZonedDateTime.now(ZoneId.systemDefault()).getOffset());
         playerEntry.registrationDate = LocalDateTime.ofEpochSecond(0, 0, ZoneOffset.UTC);

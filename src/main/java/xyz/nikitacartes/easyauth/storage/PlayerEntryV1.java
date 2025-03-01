@@ -10,6 +10,7 @@ import xyz.nikitacartes.easyauth.event.AuthEventHandler;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Locale;
+import java.util.UUID;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.DB;
 import static xyz.nikitacartes.easyauth.EasyAuth.THREADPOOL;
@@ -21,6 +22,7 @@ public class PlayerEntryV1 {
 
     public String username;
     public String usernameLowerCase;
+    public UUID uuid = null;
 
     /**
      * Hashed password of player.
@@ -80,19 +82,22 @@ public class PlayerEntryV1 {
     public int dataVersion = 1;
 
 
-    public PlayerEntryV1(String username, String usernameLowerCase, String json) {
+    public PlayerEntryV1(String username, String usernameLowerCase, String uuid, String json) {
         PlayerEntryV1 entry = gson.fromJson(json, PlayerEntryV1.class);
         LocalDateTime startOfTime = LocalDateTime.ofEpochSecond(0, 0, ZoneOffset.UTC);
-        this.password = entry.password == null ? "" : entry.password;
-        this.lastIp = entry.lastIp == null ? "" : entry.lastIp;
-        this.lastAuthenticatedDate = entry.lastAuthenticatedDate == null ? startOfTime : entry.lastAuthenticatedDate;
-        this.loginTries = entry.loginTries;
-        this.lastKickedDate = entry.lastKickedDate == null ? startOfTime : entry.lastKickedDate;
+
         this.username = username;
         this.usernameLowerCase = usernameLowerCase;
-        this.dataVersion = entry.dataVersion;
+        this.uuid = uuid == null ? null : UUID.fromString(uuid);
+
+        this.password = entry.password == null ? "" : entry.password;
+        this.lastIp = entry.lastIp == null ? "" : entry.lastIp;
+        this.loginTries = entry.loginTries;
         this.onlineAccount = entry.onlineAccount == null ? OnlineAccount.UNKNOWN : entry.onlineAccount;
+        this.lastAuthenticatedDate = entry.lastAuthenticatedDate == null ? startOfTime : entry.lastAuthenticatedDate;
+        this.lastKickedDate = entry.lastKickedDate == null ? startOfTime : entry.lastKickedDate;
         this.registrationDate = entry.registrationDate == null ? startOfTime : entry.registrationDate;
+        this.dataVersion = entry.dataVersion;
     }
 
     public PlayerEntryV1(String username) {

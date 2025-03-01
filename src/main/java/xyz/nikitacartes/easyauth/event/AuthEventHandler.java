@@ -92,6 +92,11 @@ public class AuthEventHandler {
         PlayerAuth playerAuth = (PlayerAuth) player;
 
         PlayerEntryV1 cache = playerDataCache.get(player.getNameForScoreboard());
+        boolean update = false;
+        if (cache.uuid == null) {
+            cache.uuid = player.getUuid();
+            update = true;
+        }
         playerAuth.easyAuth$setPlayerEntryV1(cache);
 
         playerAuth.easyAuth$setIpAddress(connection);
@@ -109,6 +114,10 @@ public class AuthEventHandler {
             player.setInvisible(false);
 
             cache.lastAuthenticatedDate = LocalDateTime.now();
+            update = true;
+        }
+
+        if (update) {
             cache.update();
         }
 

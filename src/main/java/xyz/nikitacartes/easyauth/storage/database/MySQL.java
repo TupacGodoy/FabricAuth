@@ -43,6 +43,7 @@ public class MySQL implements DbApi {
                                             `id` INT NOT NULL AUTO_INCREMENT,
                                             `username` VARCHAR(255) NOT NULL,
                                             `username_lower` VARCHAR(255) NOT NULL,
+                                            `uuid` VARCHAR(255) NULL,
                                             `data` JSON NOT NULL,
                                             PRIMARY KEY (`id`), UNIQUE (`username`)
                                         ) ENGINE = InnoDB;""",
@@ -126,10 +127,11 @@ public class MySQL implements DbApi {
     public void registerUser(PlayerEntryV1 data) {
         try {
             reConnect();
-            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("INSERT INTO  " + config.mysql.mysqlTable + " (username, username_lower, data) VALUES (?, ?, ?);");
+            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("INSERT INTO  " + config.mysql.mysqlTable + " (username, username_lower, uuid, data) VALUES (?, ?, ?, ?);");
             preparedStatement.setString(1, data.username);
             preparedStatement.setString(2, data.usernameLowerCase);
-            preparedStatement.setString(3, data.toJson());
+            preparedStatement.setObject(3, data.uuid);
+            preparedStatement.setString(4, data.toJson());
             preparedStatement.executeUpdate();
             preparedStatement.close();
         } catch (SQLException e) {
@@ -148,10 +150,10 @@ public class MySQL implements DbApi {
             reConnect();
             PreparedStatement statement;
             if (extendedConfig.allowCaseInsensitiveUsername) {
-                statement = MySQLConnection.prepareStatement("SELECT username, username_lower, data FROM " + config.mysql.mysqlTable + " WHERE username = ?;");
+                statement = MySQLConnection.prepareStatement("SELECT username, username_lower, uuid, data FROM " + config.mysql.mysqlTable + " WHERE username = ?;");
                 statement.setString(1, username);
             } else {
-                statement = MySQLConnection.prepareStatement("SELECT username, username_lower, data FROM " + config.mysql.mysqlTable + " WHERE username_lower = ?;");
+                statement = MySQLConnection.prepareStatement("SELECT username, username_lower, uuid, data FROM " + config.mysql.mysqlTable + " WHERE username_lower = ?;");
                 statement.setString(1, username.toLowerCase(Locale.ENGLISH));
             }
             ResultSet resultSet = statement.executeQuery();
@@ -160,6 +162,7 @@ public class MySQL implements DbApi {
             if (resultSet.next()) {
                 playerEntry = new PlayerEntryV1(resultSet.getString("username"),
                                                 resultSet.getString("username_lower"),
+                                                resultSet.getString("uuid"),
                                                 resultSet.getString("data"));
             }
             while (resultSet.next()) {
@@ -167,6 +170,7 @@ public class MySQL implements DbApi {
                 if (dbUsername.equals(username)) {
                     playerEntry = new PlayerEntryV1(dbUsername,
                                                     resultSet.getString("username_lower"),
+                                                    resultSet.getString("uuid"),
                                                     resultSet.getString("data"));
                     break;
                 }
@@ -215,9 +219,10 @@ public class MySQL implements DbApi {
     public void updateUserData(PlayerEntryV1 data) {
         try {
             reConnect();
-            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("UPDATE " + config.mysql.mysqlTable + " SET data = ? WHERE username = ?;");
-            preparedStatement.setString(1, data.toJson());
-            preparedStatement.setString(2, data.username);
+            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("UPDATE " + config.mysql.mysqlTable + " SET uuid = ?, data = ? WHERE username = ?;");
+            preparedStatement.setObject(1, data.uuid);
+            preparedStatement.setString(2, data.toJson());
+            preparedStatement.setString(3, data.username);
             preparedStatement.executeUpdate();
             preparedStatement.close();
         } catch (SQLException e) {
@@ -236,8 +241,9 @@ public class MySQL implements DbApi {
                 String username = resultSet.getString("username");
                 if (username == null) continue;
                 String usernameLowerCase = resultSet.getString("username_lower");
+                String uuid = resultSet.getString("uuid");
                 String data = resultSet.getString("data");
-                registeredPlayers.put(username, new PlayerEntryV1(username, usernameLowerCase, data));
+                registeredPlayers.put(username, new PlayerEntryV1(username, usernameLowerCase, uuid, data));
             }
             resultSet.close();
             statement.close();
@@ -251,7 +257,7 @@ public class MySQL implements DbApi {
     public void migrateFromV1(HashMap<String, String> userCache) {
         try {
             reConnect();
-            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("INSERT INTO " + config.mysql.mysqlTable + " (username, username_lower, data) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE data = ?;");
+            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("INSERT INTO " + config.mysql.mysqlTable + " (username, username_lower, uuid, data) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE data = ?;");
             userCache.forEach((username, uuid) -> {
                 try {
                     PreparedStatement statement = MySQLConnection.prepareStatement("SELECT data FROM " + config.mysql.mysqlTable + " WHERE uuid = ?;");
@@ -280,8 +286,9 @@ public class MySQL implements DbApi {
                         PlayerEntryV1 playerEntry = migrateFromV1(data, username);
                         preparedStatement.setString(1, playerEntry.username);
                         preparedStatement.setString(2, playerEntry.usernameLowerCase);
-                        preparedStatement.setString(3, playerEntry.toJson());
+                        preparedStatement.setObject(3, playerEntry.uuid);
                         preparedStatement.setString(4, playerEntry.toJson());
+                        preparedStatement.setString(5, playerEntry.toJson());
                         preparedStatement.addBatch();
                     }
                 } catch (SQLException e) {

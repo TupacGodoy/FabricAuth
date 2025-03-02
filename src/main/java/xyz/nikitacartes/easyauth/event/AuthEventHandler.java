@@ -77,6 +77,19 @@ public class AuthEventHandler {
         // If the player name and registered name are different, kick the player if differentUsernameCase is enabled
         PlayerEntryV1 playerEntryV1 = playerDataCache.get(incomingPlayerUsername);
 
+        // Cache should contain the player's data, but Floodgate players are not cached for some reason
+        if (playerEntryV1 == null) {
+            playerEntryV1 = DB.getUserData(incomingPlayerUsername);
+            if (playerEntryV1 == null) {
+                playerEntryV1 = new PlayerEntryV1(incomingPlayerUsername);
+                if (config.offlineByDefault) {
+                    playerEntryV1.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
+                }
+                DB.registerUser(playerEntryV1);
+            }
+            playerDataCache.put(incomingPlayerUsername, playerEntryV1);
+        }
+
         if (!extendedConfig.allowCaseInsensitiveUsername && !playerEntryV1.username.equals(incomingPlayerUsername)) {
             return langConfig.differentUsernameCase.get(incomingPlayerUsername);
         }

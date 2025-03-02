@@ -121,6 +121,7 @@ public class LangConfigV1 extends ConfigTemplate {
         configValues.put("markAsOffline", wrapIfNecessary(markAsOffline));
         configValues.put("markAsOnline", wrapIfNecessary(markAsOnline));
         configValues.put("selfMarkAsOnline", wrapIfNecessary(selfMarkAsOnline));
+        configValues.put("selfMarkAsOnlineWarning", wrapIfNecessary(selfMarkAsOnlineWarning));
 
         String configTemplate = Resources.toString(getResource("config/" + configPath), UTF_8);
         return new StringSubstitutor(configValues).replace(configTemplate);

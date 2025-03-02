@@ -57,12 +57,14 @@ public class MySQL implements DbApi {
                 DatabaseMetaData metaData = MySQLConnection.getMetaData();
                 ResultSet columns = metaData.getColumns(null, null, config.mysql.mysqlTable, "username");
                 if (!columns.next()) {
-                    try (Statement addColumnStatement = MySQLConnection.createStatement()) {
-                        addColumnStatement.executeUpdate(String.format("ALTER TABLE `%s`.`%s` ADD COLUMN `username` VARCHAR(255) NULL;", config.mysql.mysqlDatabase, config.mysql.mysqlTable));
+                    try (Statement alterTableStatement = MySQLConnection.createStatement()) {
+                        alterTableStatement.executeUpdate(String.format("ALTER TABLE `%s`.`%s` ADD COLUMN `username` VARCHAR(255) NULL;", config.mysql.mysqlDatabase, config.mysql.mysqlTable));
                         LogDebug("Added column 'username' to the existing table.");
-                        addColumnStatement.executeUpdate(String.format("ALTER TABLE `%s`.`%s` ADD COLUMN `username_lower` VARCHAR(255) NULL;", config.mysql.mysqlDatabase, config.mysql.mysqlTable));
+                        alterTableStatement.executeUpdate(String.format("ALTER TABLE `%s`.`%s` ADD COLUMN `username_lower` VARCHAR(255) NULL;", config.mysql.mysqlDatabase, config.mysql.mysqlTable));
                         LogDebug("Added column 'username_lower' to the existing table.");
-                        addColumnStatement.executeUpdate(String.format("ALTER TABLE `%s`.`%s` MODIFY COLUMN `uuid` VARCHAR(255) NULL;", config.mysql.mysqlDatabase, config.mysql.mysqlTable));
+                        alterTableStatement.executeUpdate(String.format("ALTER TABLE `%s`.`%s` DROP INDEX `uuid`;", config.mysql.mysqlDatabase, config.mysql.mysqlTable));
+                        LogDebug("Dropped index 'uuid'.");
+                        alterTableStatement.executeUpdate(String.format("ALTER TABLE `%s`.`%s` MODIFY COLUMN `uuid` VARCHAR(255) NULL;", config.mysql.mysqlDatabase, config.mysql.mysqlTable));
                         LogDebug("Changed column 'uuid' to nullable.");
                     } catch (SQLException e) {
                         MySQLConnection = null;

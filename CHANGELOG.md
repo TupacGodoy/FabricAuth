@@ -6,6 +6,10 @@
 5) ToDo: Check how offline player work if they tried connect with taken online account
 6) ToDo: Add default language option
 
+### 3.1.3
+##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4
+1) Fix MySQL migration bug
+
 ### 3.1.2
 ##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4
 1) Fix bug with missing translation key

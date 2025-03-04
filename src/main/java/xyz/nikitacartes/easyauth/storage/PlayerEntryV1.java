@@ -106,6 +106,11 @@ public class PlayerEntryV1 {
         this.usernameLowerCase = username.toLowerCase(Locale.ENGLISH);
     }
 
+    public PlayerEntryV1(String username, UUID uuid) {
+        new PlayerEntryV1(username);
+        this.uuid = uuid;
+    }
+
     public String toJson() {
         return gson.toJson(this);
     }

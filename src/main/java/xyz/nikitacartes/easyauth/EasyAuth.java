@@ -12,7 +12,6 @@ import net.minecraft.util.Identifier;
 import xyz.nikitacartes.easyauth.commands.*;
 import xyz.nikitacartes.easyauth.config.*;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
-import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.storage.database.*;
 
 import java.io.File;
@@ -21,7 +20,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -41,9 +39,6 @@ public class EasyAuth implements ModInitializer {
 
     // Server properties
     public static final Properties serverProp = new Properties();
-
-    // Cache for player data
-    public static final HashMap<String, PlayerEntryV1> playerDataCache = new HashMap<>();
 
     public static MainConfigV1 config;
     public static ExtendedConfigV1 extendedConfig;

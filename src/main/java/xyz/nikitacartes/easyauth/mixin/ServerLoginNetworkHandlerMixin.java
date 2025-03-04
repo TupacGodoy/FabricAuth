@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
+import xyz.nikitacartes.easyauth.utils.PlayersCache;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
@@ -59,15 +60,7 @@ public abstract class ServerLoginNetworkHandlerMixin {
     private void checkPremium(LoginHelloC2SPacket packet, CallbackInfo ci) {
         String username = packet.name();
 
-        PlayerEntryV1 playerData = DB.getUserData(username);
-        if (playerData == null) {
-            playerData = new PlayerEntryV1(username);
-            if (config.offlineByDefault) {
-                playerData.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
-            }
-            DB.registerUser(playerData);
-        }
-        playerDataCache.put(username, playerData);
+        PlayerEntryV1 playerData = PlayersCache.getOrRegister(username);
 
         if (server.isOnlineMode()) {
             try {

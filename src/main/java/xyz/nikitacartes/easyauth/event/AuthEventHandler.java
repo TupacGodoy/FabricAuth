@@ -18,6 +18,7 @@ import net.minecraft.util.math.BlockPos;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.FloodgateApiHelper;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
+import xyz.nikitacartes.easyauth.utils.PlayersCache;
 
 import java.net.SocketAddress;
 import java.time.ZonedDateTime;
@@ -75,20 +76,8 @@ public class AuthEventHandler {
             return langConfig.disallowedUsername.get(extendedConfig.usernameRegexp);
         }
         // If the player name and registered name are different, kick the player if differentUsernameCase is enabled
-        PlayerEntryV1 playerEntryV1 = playerDataCache.get(incomingPlayerUsername);
-
-        // Cache should contain the player's data, but Floodgate players are not cached for some reason
-        if (playerEntryV1 == null) {
-            playerEntryV1 = DB.getUserData(incomingPlayerUsername);
-            if (playerEntryV1 == null) {
-                playerEntryV1 = new PlayerEntryV1(incomingPlayerUsername);
-                if (config.offlineByDefault) {
-                    playerEntryV1.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
-                }
-                DB.registerUser(playerEntryV1);
-            }
-            playerDataCache.put(incomingPlayerUsername, playerEntryV1);
-        }
+        // Create in case of Floodgate player
+        PlayerEntryV1 playerEntryV1 = PlayersCache.getFloodgate(incomingPlayerUsername);
 
         if (!extendedConfig.allowCaseInsensitiveUsername && !playerEntryV1.username.equals(incomingPlayerUsername)) {
             return langConfig.differentUsernameCase.get(incomingPlayerUsername);
@@ -104,7 +93,8 @@ public class AuthEventHandler {
     public static void loadPlayerData(ServerPlayerEntity player, ClientConnection connection) {
         PlayerAuth playerAuth = (PlayerAuth) player;
 
-        PlayerEntryV1 cache = playerDataCache.get(player.getNameForScoreboard());
+        // Create in case of Carpet player
+        PlayerEntryV1 cache = PlayersCache.getCarpet(player.getNameForScoreboard());
         boolean update = false;
         if (cache.uuid == null) {
             cache.uuid = player.getUuid();
@@ -120,6 +110,7 @@ public class AuthEventHandler {
 
             player.setInvulnerable(false);
             player.setInvisible(false);
+            update = false;
         } else if (cache.lastIp.equals(playerAuth.easyAuth$getIpAddress()) && cache.lastAuthenticatedDate.plusSeconds(config.sessionTimeout).isAfter(ZonedDateTime.now())) {
             playerAuth.easyAuth$setAuthenticated(true);
 

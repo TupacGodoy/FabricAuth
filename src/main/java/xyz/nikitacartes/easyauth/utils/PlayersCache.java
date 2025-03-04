@@ -1,6 +1,5 @@
 package xyz.nikitacartes.easyauth.utils;
 
-import net.minecraft.server.network.ServerPlayerEntity;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 
 import java.util.HashMap;

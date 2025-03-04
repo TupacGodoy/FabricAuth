@@ -8,7 +8,7 @@
 
 ### 3.1.4
 ##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4
-1) Fix bug with Carpet fake players
+1) Fix [#188](https://github.com/NikitaCartes/EasyAuth/issues/188), bug with Carpet fake players
 
 ### 3.1.3
 ##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4
@@ -17,7 +17,7 @@
 ### 3.1.2
 ##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4
 1) Fix bug with missing translation key
-2) Fix bug with linked Floodgate players
+2) Fix [#186](https://github.com/NikitaCartes/EasyAuth/issues/188), bug with linked Floodgate players
 
 ### 3.1.1
 ##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4

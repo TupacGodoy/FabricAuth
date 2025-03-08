@@ -6,6 +6,11 @@
 5) ToDo: Check how offline player work if they tried connect with taken online account
 6) ToDo: Add default language option
 
+### 3.1.5
+##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4
+1) Fix bug with missing translation key
+2) Update Turkish translation, thanks to @MemoKing34
+
 ### 3.1.4
 ##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4
 1) Fix [#188](https://github.com/NikitaCartes/EasyAuth/issues/188), bug with Carpet fake players

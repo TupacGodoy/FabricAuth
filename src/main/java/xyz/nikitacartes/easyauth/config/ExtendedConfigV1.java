@@ -94,7 +94,7 @@ public class ExtendedConfigV1 extends ConfigTemplate {
         configValues.put("mojangApiSettings.url", wrapIfNecessary(mojangApiSettings.url));
         configValues.put("mojangApiSettings.connectionTimeout", wrapIfNecessary(mojangApiSettings.connectionTimeout));
         configValues.put("mojangApiSettings.readTimeout", wrapIfNecessary(mojangApiSettings.readTimeout));
-        String configTemplate = Resources.toString(getResource("config/" + configPath), UTF_8);
+        String configTemplate = Resources.toString(getResource("data/easyauth/config/" + configPath), UTF_8);
         return new StringSubstitutor(configValues).replace(configTemplate);
     }
 

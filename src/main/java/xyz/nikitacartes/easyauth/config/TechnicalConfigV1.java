@@ -44,7 +44,7 @@ public class TechnicalConfigV1 extends ConfigTemplate {
         configValues.put("globalPassword", wrapIfNecessary(globalPassword));
         configValues.put("forcedOfflinePlayers", wrapIfNecessary(forcedOfflinePlayers));
         configValues.put("confirmedOnlinePlayers", wrapIfNecessary(confirmedOnlinePlayers));
-        String configTemplate = Resources.toString(getResource("config/" + configPath), UTF_8);
+        String configTemplate = Resources.toString(getResource("data/easyauth/config/" + configPath), UTF_8);
         return new StringSubstitutor(configValues).replace(configTemplate);
     }
 }

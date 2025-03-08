@@ -123,7 +123,7 @@ public class LangConfigV1 extends ConfigTemplate {
         configValues.put("selfMarkAsOnline", wrapIfNecessary(selfMarkAsOnline));
         configValues.put("selfMarkAsOnlineWarning", wrapIfNecessary(selfMarkAsOnlineWarning));
 
-        String configTemplate = Resources.toString(getResource("config/" + configPath), UTF_8);
+        String configTemplate = Resources.toString(getResource("data/easyauth/config/" + configPath), UTF_8);
         return new StringSubstitutor(configValues).replace(configTemplate);
     }
 

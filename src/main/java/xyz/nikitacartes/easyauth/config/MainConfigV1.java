@@ -61,7 +61,7 @@ public class MainConfigV1 extends ConfigTemplate {
         configValues.put("worldSpawn.pitch", wrapIfNecessary(worldSpawn.pitch));
         configValues.put("debug", wrapIfNecessary(debug));
         configValues.put("configVersion", wrapIfNecessary(configVersion));
-        String configTemplate = Resources.toString(getResource("config/" + configPath), UTF_8);
+        String configTemplate = Resources.toString(getResource("data/easyauth/config/" + configPath), UTF_8);
         return new StringSubstitutor(configValues).replace(configTemplate);
     }
 

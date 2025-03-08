@@ -16,6 +16,18 @@ public class AuthHelper {
      * @return PasswordOptions enum
      */
     public static PasswordOptions checkPassword(PlayerEntryV1 playerEntry, char[] password) {
+        if (config.enableGlobalPassword && !config.singleUseGlobalPassword) {
+            // We have global password enabled
+            // Player must know global password if not registered
+            char[] passwordCopy = password.clone();
+            if (verifyPassword(passwordCopy, technicalConfig.globalPassword)) {
+                return PasswordOptions.CORRECT;
+            } else {
+                if (playerEntry == null || playerEntry.password.isEmpty()) {
+                    return PasswordOptions.WRONG;
+                }
+            }
+        }
         if (playerEntry == null || playerEntry.password.isEmpty()) {
             return PasswordOptions.NOT_REGISTERED;
         }
@@ -28,15 +40,8 @@ public class AuthHelper {
                 LogDebug("Hashed password (BCrypt): " + HasherBCrypt.hash(password));
             }
         }
-        if (config.enableGlobalPassword && !config.singleUseGlobalPassword) {
-            // We have global password enabled
-            // Player must know global password or password set by auth register
-            char[] passwordCopy = password.clone();
-            return verifyPassword(password, technicalConfig.globalPassword) || verifyPassword(passwordCopy, storedPassword) ? PasswordOptions.CORRECT : PasswordOptions.WRONG;
-        } else {
-            // Verify password
-            return verifyPassword(password, storedPassword) ? PasswordOptions.CORRECT : PasswordOptions.WRONG;
-        }
+        // Verify password
+        return verifyPassword(password, storedPassword) ? PasswordOptions.CORRECT : PasswordOptions.WRONG;
     }
 
     public static PasswordOptions checkPassword(String username, char[] password) {
@@ -56,10 +61,11 @@ public class AuthHelper {
     }
 
     private static boolean verifyPassword(char[] pass, String hashed) {
-        if (extendedConfig.checkUnmigratedArgon2 && HasherBCrypt.verify(pass, hashed)) {
+        boolean success = HasherArgon2.verify(pass, hashed);
+        if (!success && extendedConfig.checkUnmigratedArgon2 && HasherBCrypt.verify(pass, hashed)) {
             return true;
         }
-        return HasherArgon2.verify(pass, hashed);
+        return success;
     }
 
     public enum PasswordOptions {

@@ -63,8 +63,7 @@ public abstract class ConfigTemplate {
                 .replace("\t", "\\t")
                 .replace("\b", "\\b")
                 .replace("\f", "\\f")
-                .replace("\"", "\\\"")
-                .replace("'", "\\'");
+                .replace("\"", "\\\"");
     }
 
     protected <T> String wrapIfNecessary(T string) {

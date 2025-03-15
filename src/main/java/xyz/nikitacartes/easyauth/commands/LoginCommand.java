@@ -48,10 +48,9 @@ public class LoginCommand {
         ServerPlayerEntity player = source.getPlayerOrThrow();
         PlayerAuth playerAuth = (PlayerAuth) player;
 
-        String username = player.getNameForScoreboard();
-        LogDebug("Player " + player.getNameForScoreboard() + "{" + username + "} is trying to login");
+        LogDebug("Player " + player.getNameForScoreboard() + " is trying to login");
         if (playerAuth.easyAuth$isAuthenticated()) {
-            LogDebug("Player " + player.getNameForScoreboard() + "{" + username + "} is already authenticated");
+            LogDebug("Player " + player.getNameForScoreboard() + " is already authenticated");
             langConfig.alreadyAuthenticated.send(source);
             return 0;
         }

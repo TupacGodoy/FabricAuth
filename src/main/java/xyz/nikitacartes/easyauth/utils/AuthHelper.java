@@ -34,8 +34,6 @@ public class AuthHelper {
         if (config.debug) {
             LogDebug("Checking password for " + playerEntry.username);
             LogDebug("Stored password's hash: " + storedPassword);
-            LogDebug("Hashed password: " + HasherArgon2.hash(password));
-            LogDebug("Hashed password (BCrypt): " + HasherBCrypt.hash(password));
         }
         // Verify password
         if (!verifyPassword(password, storedPassword)) {
@@ -74,9 +72,10 @@ public class AuthHelper {
 
     private static boolean verifyPassword(char[] pass, String hashed) {
         if (hashed.startsWith("$argon2")) {
+            if (config.debug) LogDebug("Hashed password (Argon2): " + HasherArgon2.hash(pass));
             return HasherArgon2.verify(pass, hashed);
         }
-
+        if (config.debug) LogDebug("Hashed password (BCrypt): " + HasherBCrypt.hash(pass));
         return HasherBCrypt.verify(pass, hashed);
     }
 

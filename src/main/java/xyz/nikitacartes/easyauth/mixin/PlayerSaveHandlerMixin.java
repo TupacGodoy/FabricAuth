@@ -1,5 +1,6 @@
 package xyz.nikitacartes.easyauth.mixin;
 
+import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtIo;
@@ -42,9 +43,9 @@ public class PlayerSaveHandlerMixin {
                     value = "INVOKE",
                     target = "Ljava/io/File;exists()Z"
             ),
-            locals = LocalCapture.CAPTURE_FAILHARD,
-            cancellable = true)
-    private void fileExists(PlayerEntity player, String extension, CallbackInfoReturnable<Optional<NbtCompound>> cir, File mixinFile) {
+            cancellable = true
+    )
+    private void fileExists(PlayerEntity player, String extension, CallbackInfoReturnable<Optional<NbtCompound>> cir, @Local File mixinFile) {
         if (!(mixinFile.exists() && mixinFile.isFile())) {
             String playername = player.getGameProfile().getName().toLowerCase(Locale.ENGLISH);
             PlayerAuth playerAuth = (PlayerAuth) player;

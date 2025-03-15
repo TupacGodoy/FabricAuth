@@ -1,8 +1,19 @@
-## Easy Authentication Mod
+## EasyAuth
+### Authentications mod for your Offline/Online server.
 
-Since samo_lego deprecated his mod, I consider updating it to the latest version.
+EasyAuth disallows players who aren't authenticated to do actions like placing blocks, moving, typing commands or use the inventory.
 
-For Minecraft 1.16 and below you can check [original repository](https://github.com/samolego/SimpleAuth).
+### Feature:
+- Auto login players that have purchased Minecraft
+- Online UUIDs for online players
+- Sessions for auto login if they connect from the same IP
+- Coordinate protection
+- Prevents "Logged in from another location"
+- Server-side translation
+- Support for special characters in password
+- Global password
+- Support Luckperms API
+- Support Floodgate and Carpet players
 
 See [wiki](https://github.com/NikitaCartes/EasyAuth/wiki) for more information.
 
@@ -10,17 +21,16 @@ See [wiki](https://github.com/NikitaCartes/EasyAuth/wiki) for more information.
 
 [Discord](https://discord.gg/UY4nhvUzaK)
 
-[My Whitelist mod](https://github.com/NikitaCartes/EasyWhitelist), that changes whitelist behaviour from uuid-based to name-based, allowing it to be use at offline mode
+[My Whitelist mod](https://github.com/NikitaCartes/EasyWhitelist), that changes whitelist behaviour from uuid-based to name-based, allowing it to be used on offline servers.
 
 ### Dependencies
-
 This mod requires:
-
 - `Fabric API` [CurseForge](https://www.curseforge.com/minecraft/mc-mods/fabric-api), [Modrinth](https://modrinth.com/mod/fabric-api)
 
 ### Contributors
 
 * Many thanks for @samolego, author of SimpleAuth, for his mod, and his permission on creating this fork
+  - For Minecraft 1.16 and below you can check [original repository](https://github.com/samolego/SimpleAuth).
 * Thanks to @were491 for improvement in login system
 * Thanks to @Nikijaz for implementing MySQL database support
 * Thanks to @dmunozv04 for Floodgate support
@@ -30,7 +40,7 @@ This mod requires:
 
 Thank you so much for those who have already helped with translation of the mod!
 
-* Russian: @alphatoasterous
+* Russian: @alphatoasterous, @NikitaCartes
 * Chinese: @Neubulae, @GodGun968, @Sam5440, @CMJNB, @MyBlueHorizon
 * Spanish: @Zailer43
 * Slovene: @Kljunas2
@@ -42,15 +52,3 @@ Thank you so much for those who have already helped with translation of the mod!
 * Ukrainian: @txlbr, @Y0shioSato
 * Polish: @LimakXRobczuk
 * Italian: @Rizzo1812
-
-### License
-
-Libraries that the project is using:
-
-- `Argon2 (LGPLv3)` https://github.com/phxql/argon2-jvm
-- `BCrypt (Apache 2)` https://github.com/patrickfav/bcrypt
-- `Bytes (Apache 2)` https://github.com/patrickfav/bytes-java
-- `leveldb (BSD-3-Clause)` https://github.com/google/leveldb
-- `JNA (Apache 2 || LGPLv3)` https://github.com/java-native-access/jna
-
-This project licensed under the `MIT` license.

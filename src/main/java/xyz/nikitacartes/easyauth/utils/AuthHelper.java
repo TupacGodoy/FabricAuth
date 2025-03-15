@@ -19,8 +19,7 @@ public class AuthHelper {
         if (config.enableGlobalPassword && !config.singleUseGlobalPassword) {
             // We have global password enabled
             // Player must know global password if not registered
-            char[] passwordCopy = password.clone();
-            if (checkGlobalPassword(passwordCopy)) {
+            if (checkGlobalPassword(password)) {
                 return PasswordOptions.CORRECT;
             } else {
                 if (playerEntry == null || playerEntry.password.isEmpty()) {

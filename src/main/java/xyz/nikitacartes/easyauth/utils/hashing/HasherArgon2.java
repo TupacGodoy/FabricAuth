@@ -21,11 +21,8 @@ public class HasherArgon2 {
             return HASHER.verify(hashed, password);
         } catch (Error e) {
             LogError("password verification error", e);
-            return false;
-        } finally {
-            // Wipe confidential data
-            HASHER.wipeArray(password);
         }
+        return false;
     }
 
     /**

@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
@@ -49,6 +50,9 @@ public abstract class ConfigTemplate {
     public void save() {
         Path path = gameDirectory.resolve("config/EasyAuth/" + configPath);
         try {
+            if (Files.exists(path)) {
+                Files.move(path, path.resolveSibling(configPath + "." + LocalDateTime.now().toString().replace(":", "-")));
+            }
             Files.writeString(path, handleTemplate());
         } catch (IOException e) {
             LogError("Failed to save config file", e);

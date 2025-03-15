@@ -5,6 +5,12 @@
 4) ToDo: Add support for changing "invalid session"' message when offline player connect with online nickname
 5) ToDo: Check how offline player work if they tried connect with taken online account
 6) ToDo: Add default language option
+7) ToDo: Save real position in NBT instead of teleporting it?
+
+### 3.1.6
+##### Minecraft 1.17, 1.17.1, 1.18[.1], 1.18.2, 1.19, 1.19.1-1.19.2, 1.19.3, 1.19.4, 1.20[.1], 1.20.2, 1.20.3-1.20.4, 1.20.5-1.20.6, 1.21-1.21.1, 1.21.2-1.21.4
+1) Automatically migrate passwords to BCrypt if they are Argon2
+2) Backup config files before rewriting them
 
 ### 3.1.5
 ##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4

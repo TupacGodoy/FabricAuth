@@ -37,12 +37,9 @@ public class ExtendedConfigV1 extends ConfigTemplate {
     public boolean floodgateBypassRegex = true;
     public boolean hidePlayersFromPlayerList = false;
     public boolean preventAnotherLocationKick = true;
-    @Deprecated
-    public boolean useBcrypt = false;
     public boolean forcedOfflineUuid = false;
     public boolean skipAllAuthChecks = false;
     public boolean allowCaseInsensitiveUsername = false;
-    public boolean checkUnmigratedArgon2 = false;
     public long authenticationPromptInterval = 10;
     public MojangApiSettings mojangApiSettings = new MojangApiSettings();
 
@@ -85,11 +82,9 @@ public class ExtendedConfigV1 extends ConfigTemplate {
         configValues.put("floodgateBypassRegex", wrapIfNecessary(floodgateBypassRegex));
         configValues.put("hidePlayersFromPlayerList", wrapIfNecessary(hidePlayersFromPlayerList));
         configValues.put("preventAnotherLocationKick", wrapIfNecessary(preventAnotherLocationKick));
-        // configValues.put("useBcrypt", wrapIfNecessary(useBcrypt));
         configValues.put("forcedOfflineUuid", wrapIfNecessary(forcedOfflineUuid));
         configValues.put("skipAllAuthChecks", wrapIfNecessary(skipAllAuthChecks));
         configValues.put("allowCaseInsensitiveUsername", wrapIfNecessary(allowCaseInsensitiveUsername));
-        configValues.put("checkUnmigratedArgon2", wrapIfNecessary(checkUnmigratedArgon2));
         configValues.put("authenticationPromptInterval", wrapIfNecessary(authenticationPromptInterval));
         configValues.put("mojangApiSettings.url", wrapIfNecessary(mojangApiSettings.url));
         configValues.put("mojangApiSettings.connectionTimeout", wrapIfNecessary(mojangApiSettings.connectionTimeout));

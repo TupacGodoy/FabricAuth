@@ -42,8 +42,6 @@ public class TechnicalConfigV1 extends ConfigTemplate {
     protected String handleTemplate() throws IOException {
         Map<String, Object> configValues = new HashMap<>();
         configValues.put("globalPassword", wrapIfNecessary(globalPassword));
-        configValues.put("forcedOfflinePlayers", wrapIfNecessary(forcedOfflinePlayers));
-        configValues.put("confirmedOnlinePlayers", wrapIfNecessary(confirmedOnlinePlayers));
         String configTemplate = Resources.toString(getResource("data/easyauth/config/" + configPath), UTF_8);
         return new StringSubstitutor(configValues).replace(configTemplate);
     }

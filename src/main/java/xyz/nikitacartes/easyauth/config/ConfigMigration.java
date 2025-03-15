@@ -67,7 +67,6 @@ public class ConfigMigration {
         EasyAuth.extendedConfig.floodgateBypassRegex = oldConfig.experimental.floodgateBypassUsernameRegex;
         EasyAuth.extendedConfig.hidePlayersFromPlayerList = oldConfig.main.hideUnauthenticatedPLayersFromPlayerList;
         EasyAuth.extendedConfig.preventAnotherLocationKick = oldConfig.experimental.preventAnotherLocationKick;
-        EasyAuth.extendedConfig.checkUnmigratedArgon2 = !oldConfig.experimental.useBCryptLibrary;
         EasyAuth.extendedConfig.forcedOfflineUuid = oldConfig.experimental.forcedOfflineUuids;
         EasyAuth.extendedConfig.skipAllAuthChecks = oldConfig.experimental.skipAllAuthChecks;
         EasyAuth.extendedConfig.save();
@@ -130,9 +129,6 @@ public class ConfigMigration {
     public static void migrateFromV1() {
         LogInfo("Migrating config and DB from v1 to v2");
         long now = System.currentTimeMillis();
-
-        EasyAuth.extendedConfig.checkUnmigratedArgon2 = !EasyAuth.extendedConfig.useBcrypt;
-        EasyAuth.extendedConfig.save();
 
         DbApi db;
         if (EasyAuth.storageConfig.databaseType.equalsIgnoreCase("mysql")) {

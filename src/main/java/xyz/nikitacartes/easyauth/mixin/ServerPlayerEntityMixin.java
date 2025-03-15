@@ -123,7 +123,8 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
             if (world == null) return;
             Entity entity = world.getEntity(ridingEntityUUID);
             if (entity != null) {
-                player.startRiding(entity, true);
+                ((Entity) player).startRiding(entity, true);
+                entity.updatePassengerPosition(player);
             } else {
                 LogDebug("Could not find vehicle for player " + player.getNameForScoreboard());
             }

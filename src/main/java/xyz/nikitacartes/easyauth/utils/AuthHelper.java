@@ -20,7 +20,7 @@ public class AuthHelper {
             // We have global password enabled
             // Player must know global password if not registered
             char[] passwordCopy = password.clone();
-            if (verifyPassword(passwordCopy, technicalConfig.globalPassword)) {
+            if (checkGlobalPassword(passwordCopy)) {
                 return PasswordOptions.CORRECT;
             } else {
                 if (playerEntry == null || playerEntry.password.isEmpty()) {
@@ -36,12 +36,18 @@ public class AuthHelper {
             LogDebug("Checking password for " + playerEntry.username);
             LogDebug("Stored password's hash: " + storedPassword);
             LogDebug("Hashed password: " + HasherArgon2.hash(password));
-            if (extendedConfig.checkUnmigratedArgon2) {
-                LogDebug("Hashed password (BCrypt): " + HasherBCrypt.hash(password));
-            }
+            LogDebug("Hashed password (BCrypt): " + HasherBCrypt.hash(password));
         }
         // Verify password
-        return verifyPassword(password, storedPassword) ? PasswordOptions.CORRECT : PasswordOptions.WRONG;
+        if (!verifyPassword(password, storedPassword)) {
+            return PasswordOptions.WRONG;
+        }
+        // Rehash password if it's using Argon2
+        if (storedPassword.startsWith("$argon2")) {
+            playerEntry.password = HasherBCrypt.hash(password);
+            playerEntry.update();
+        }
+        return PasswordOptions.CORRECT;
     }
 
     public static PasswordOptions checkPassword(String username, char[] password) {
@@ -53,7 +59,14 @@ public class AuthHelper {
     }
 
     public static boolean checkGlobalPassword(char[] password) {
-        return verifyPassword(password, technicalConfig.globalPassword);
+        if (!verifyPassword(password, technicalConfig.globalPassword)) return false;
+
+        // Rehash password if it's using Argon2
+        if (technicalConfig.globalPassword.startsWith("$argon2")) {
+            technicalConfig.globalPassword = HasherBCrypt.hash(password);
+            technicalConfig.save();
+        }
+        return true;
     }
 
     public static String hashPassword(char[] password) {
@@ -61,11 +74,11 @@ public class AuthHelper {
     }
 
     private static boolean verifyPassword(char[] pass, String hashed) {
-        boolean success = HasherArgon2.verify(pass, hashed);
-        if (!success && extendedConfig.checkUnmigratedArgon2 && HasherBCrypt.verify(pass, hashed)) {
-            return true;
+        if (hashed.startsWith("$argon2")) {
+            return HasherArgon2.verify(pass, hashed);
         }
-        return success;
+
+        return HasherBCrypt.verify(pass, hashed);
     }
 
     public enum PasswordOptions {

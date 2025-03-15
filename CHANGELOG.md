@@ -1,82 +1,114 @@
 ### ToDo
-1) ToDo: Log registration and logins as info messages. Add config for that
-2) ToDo: Fix hide-players-from-player-list
-3) ToDo: Wiki
-4) ToDo: Add support for changing "invalid session"' message when offline player connect with online nickname
-5) ToDo: Check how offline player work if they tried connect with taken online account
-6) ToDo: Add default language option
-7) ToDo: Save real position in NBT instead of teleporting it?
+#### Add
+- Log registration and logins as info messages. Add config for that
+- Add support for changing "invalid session" message when offline player connects with online nickname
+- Add default language option
 
+#### Fix
+- Fix hide-players-from-player-list
+- Check how offline players work if they try to connect with a taken online account
+
+#### Change
+- Save real position in NBT instead of teleporting it?
+
+----
 ### 3.1.6
 ##### Minecraft 1.17, 1.17.1, 1.18[.1], 1.18.2, 1.19, 1.19.1-1.19.2, 1.19.3, 1.19.4, 1.20[.1], 1.20.2, 1.20.3-1.20.4, 1.20.5-1.20.6, 1.21-1.21.1, 1.21.2-1.21.4
-1) Automatically migrate passwords to BCrypt if they are Argon2
-2) Backup config files before rewriting them
+#### Added
+- Automatically migrate passwords to BCrypt if they are in Argon2
+- Backup config files before rewriting them
 
+#### Changes
+- Switch to BCrypt as Hash algorithm for passwords
+
+#### Deleted
+- Options `confirmed-online-players`, `forced-offline-players` and `check-unmigrated-argon2`
+
+----
 ### 3.1.5
 ##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4
-1) Fix bug with missing translation key
-2) `'` isn't wrongly escaped in config anymore
-3) Fix global password not working correctly
-4) Update Turkish translation, thanks to @MemoKing34
+#### Fixes
+- Fix bug with missing translation key
+- `'` isn't wrongly escaped in config anymore
+- Fix global password not working correctly
 
+#### Changes
+- Update Turkish translation, thanks to @MemoKing34
+
+----
 ### 3.1.4
 ##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4
-1) Fix [#188](https://github.com/NikitaCartes/EasyAuth/issues/188), bug with Carpet fake players
+#### Fixes
+- Fix [#188](https://github.com/NikitaCartes/EasyAuth/issues/188), bug with Carpet fake players
 
+----
 ### 3.1.3
 ##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4
-1) Fix MySQL migration bug
+#### Fixes
+- Fix MySQL migration bug
 
+----
 ### 3.1.2
 ##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4
-1) Fix bug with missing translation key
-2) Fix [#186](https://github.com/NikitaCartes/EasyAuth/issues/188), bug with linked Floodgate players
+#### Fixes
+- Fix bug with missing translation key
+- Fix [#186](https://github.com/NikitaCartes/EasyAuth/issues/186), bug with linked Floodgate players
 
+----
 ### 3.1.1
 ##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4
-1) Fix [#178](https://github.com/NikitaCartes/EasyAuth/issues/178), when min-password-chars and max-password-chars weren't sent to players
-2) Fix few bugs with MySql connection
+#### Fixes
+- Fix [#178](https://github.com/NikitaCartes/EasyAuth/issues/178), when min-password-chars and max-password-chars weren't sent to players
+- Fix a few bugs with MySQL connection
 
+----
 ### 3.1.0
 ##### Minecraft 1.21 - 1.21.1, 1.21.2 - 1.21.4
+#### Added
+- Option `single-use-global-password` when enabled, player can register with global password but not log in with it
+- Online/offline player separation:
+   - Option `offline-by-default` (default `false`) to mark all players as offline by default
+   - Command `account online` that mark a player as online
+   - Commands `auth markAsOffline <username>` and `auth markAsOnline <username>`
+- Option `hide-inventory` (default `true`) in `extended.conf` to hide inventory of unauthenticated players
+- Command `auth getPlayerInfo`
+- Option `allow-case-insensitive-username` in `extended.conf` to allow players with same nickname but different case to join (default `false`)
+- Option `authentication-prompt-interval` in `extended.conf` to set interval between authentication prompts (default 10 seconds)
+- Option `mojang-api-settings` in `extended.conf` for custom Mojang API settings
 
-1) Added single use global password:
-   - When `single-use-global-password` is enabled, player can register with global password but not log in with it
-   - Default `false`
-2) Improve online/offline player separation:
-   - Add `account online` command that mark player as online
-   - Add `auth markAsOffline <username>` and `auth markAsOnline <username>` commands
-   - Add option `offline-by-default` (default `false`) to mark all players as offline by default
-   - Delete `auth addToForcedOffline <username>` command
-3) Add `hide-inventory` option in `extended.conf` to hide inventory of unauthenticated players. Default `true`
-4) Player allowed to log in even if player with same nickname is already online if they join from same IP
-5) Database overhaul:
+#### Fixes
+- Fix bug with respawn while leaving server being dead
+
+#### Changes
+- Allow players to log in even if a player with the same nickname is already online if they join from the same IP
+- Database overhaul:
    - Now database key is username instead of uuid
    - SQLite is now default database instead of LevelDB
    - Drop support for LevelDB (data from LevelDB will be migrated to SQLite automatically)
    - Config version is now 2
    - All players from `usercache.json` will be migrated automatically
-6) Change default hash algorithm to Argon2 from BCrypt
+- Change default hash algorithm to Argon2 from BCrypt:
    - If you previously used BCrypt, typed password will be checked both against BCrypt and Argon2 (option `check-unmigrated-argon2` in `extended.conf`)
-7) Increased default `teleportation-timeout-ms` from 5 to 20 ms
-8) `confirmed-online-players` and `forced-offline-players` is not used anymore. Now they are stored in database for each player separately
-9) Added new option `allow-case-insensitive-username` in `extended.conf` to allow players with same nickname but different case to join (default `false`)
-10) Fix bug with respawn while leaving server being dead
-11) Add setting `authentication-prompt-interval` in `extended.conf` to set interval between authentication prompts
-12) Add `auth getPlayerInfo` command
-13) Add `mojang-api-settings` in `extended.conf` for custom Mojang API settings
-14) Update Turkish translation, thanks to @MemoKing34
- 
+- Increased default `teleportation-timeout-ms` from 5 to 20 ms
+- Turkish translation update, thanks to @MemoKing34
+
+#### Deleted
+- Command `auth addToForcedOffline <username>`
+- Options `confirmed-online-players` and `forced-offline-players` are now stored in the database for each player separately instead
+
+----
 ### 3.0.28
 ##### Minecraft 1.21.2 - 1.21.4
 
 1) Fix [#164](https://github.com/NikitaCartes/EasyAuth/issues/164), incompatibility with C2ME and hide player coords
 
+----
 ### 3.0.27
 ##### Minecraft 1.21.2 - 1.21.4
 
 1) Fix session issue for real this time
 
+----
 ### 3.0.26
 ##### Minecraft 1.21.2, 1.21.3
 
@@ -86,31 +118,37 @@
 4) Fix uuid wasn't clickable in chat in some languages
 5) Fix connection bug
 
+----
 ### 3.0.25
 ##### Minecraft 1.21-1.21.3
 
 1) Fix toLowerCase() using on PC with Turkish locale
 
+----
 ### 3.0.25
 ##### Minecraft 1.20.5-1.20.6, 1.21
 
 1) Fix premium player being invulnerable after using `/logout` command
 
+----
 ### 3.0.24
 ##### Minecraft 1.20.5-1.20.6
 
 1) Fix spawning in wrong dimension with `hide-player-coords` enabled
 
+----
 ### 3.0.23
 ##### Minecraft 1.20.5-1.20.6
 
 1) Fix `auth list`.
 
+----
 ### 3.0.22-SNAPSHOT
 ##### Minecraft 1.20.3-1.20.4
 
 1) Fix mod not working not in dev environment
 
+----
 ### 3.0.21-SNAPSHOT
 ##### Minecraft 1.20.3-1.20.4
 

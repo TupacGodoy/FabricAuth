@@ -247,7 +247,7 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
         }
     }
 
-    @Redirect(method = "readRootVehicle(Ljava/util/Optional;)V",
+    @Redirect(method = "readRootVehicle(Lnet/minecraft/nbt/NbtCompound;)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;startRiding(Lnet/minecraft/entity/Entity;Z)Z"))
     private boolean onPlayerConnectStartRiding(ServerPlayerEntity instance, Entity entity, boolean force) {
         if (config.hidePlayerCoords && !((PlayerAuth) instance).easyAuth$isAuthenticated()) {
@@ -256,7 +256,7 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
         return instance.startRiding(entity, force);
     }
 
-    @Redirect(method = "readRootVehicle(Ljava/util/Optional;)V",
+    @Redirect(method = "readRootVehicle(Lnet/minecraft/nbt/NbtCompound;)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;hasVehicle()Z"))
     private boolean onPlayerConnectStartRiding(ServerPlayerEntity instance) {
         if (config.hidePlayerCoords && !((PlayerAuth) instance).easyAuth$isAuthenticated()) {

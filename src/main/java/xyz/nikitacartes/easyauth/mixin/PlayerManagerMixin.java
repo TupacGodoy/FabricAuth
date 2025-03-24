@@ -70,10 +70,16 @@ public abstract class PlayerManagerMixin {
         if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
             ((PlayerAuth) player).easyAuth$saveTrueLocation();
 
-            playerManager.loadPlayerData(player)
-                    .flatMap(compound -> compound.getCompound("RootVehicle"))
-                    .flatMap(compound -> compound.get("Attach", Uuids.INT_STREAM_CODEC))
-                    .ifPresent(uUID -> ((PlayerAuth) player).easyAuth$setRidingEntityUUID(uUID));
+            playerManager.loadPlayerData(player).flatMap(compound -> compound.getCompound("RootVehicle")).ifPresent(rootVehicle -> {
+                NbtCompound rootRootVehicle = new NbtCompound();
+                rootRootVehicle.put("RootVehicle", rootVehicle);
+                ((PlayerAuth) player).easyAuth$setRootVehicle(rootRootVehicle);
+
+                rootVehicle.get("Attach", Uuids.INT_STREAM_CODEC).ifPresent(uUID -> {
+                    ((PlayerAuth) player).easyAuth$setRidingEntityUUID(uUID);
+                    LogDebug(String.format("Saving vehicle of player %s as %s", player.getNameForScoreboard(), uUID));
+                });
+            });
 
             LogDebug(String.format("Teleporting player %s", player.getNameForScoreboard()));
             LogDebug(String.format("Spawn position of player %s is %s", player.getNameForScoreboard(), config.worldSpawn));

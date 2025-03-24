@@ -1,5 +1,6 @@
 package xyz.nikitacartes.easyauth.utils;
 
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.world.World;
@@ -82,6 +83,8 @@ public interface PlayerAuth {
     void easyAuth$setIpAddress(String ipAddress);
     LastLocation easyAuth$getLastLocation();
     void easyAuth$setLastLocation(LastLocation lastLocation);
+    NbtCompound easyAuth$getRootVehicle();
+    void easyAuth$setRootVehicle(NbtCompound rootVehicle);
     UUID easyAuth$getRidingEntityUUID();
     void easyAuth$setRidingEntityUUID(UUID ridingEntityUUID);
     boolean easyAuth$wasDead();

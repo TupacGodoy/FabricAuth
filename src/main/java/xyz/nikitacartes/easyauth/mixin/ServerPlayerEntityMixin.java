@@ -2,6 +2,7 @@ package xyz.nikitacartes.easyauth.mixin;
 
 import com.google.common.net.InetAddresses;
 import net.minecraft.entity.Entity;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.packet.s2c.play.PositionFlag;
 import net.minecraft.registry.RegistryKey;
@@ -55,6 +56,9 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
     private UUID ridingEntityUUID = null;
 
     @Unique
+    private NbtCompound rootVehicle = null;
+
+    @Unique
     private boolean wasDead = false;
 
     @Unique
@@ -68,6 +72,10 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
 
     @Unique
     private boolean isUsingMojangAccount = false;
+
+    @Unique
+    // Needed for mounting player to vehicle while they're leaving the server
+    private boolean leavingServer = false;
 
     @Override
     public void easyAuth$saveTrueLocation() {
@@ -116,15 +124,21 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
                 true);
         LogDebug(String.format("Teleported player %s to %s", player.getNameForScoreboard(), lastLocation));
 
-        if (ridingEntityUUID != null) {
+        if (rootVehicle != null) {
+            LogDebug(String.format("Mounting player to vehicle %s", rootVehicle));
+            leavingServer = true;
+            player.readRootVehicle(rootVehicle);
+            leavingServer = false;
+        }
+
+        if (player.getVehicle() == null && ridingEntityUUID != null) {
             LogDebug(String.format("Mounting player to vehicle %s", ridingEntityUUID));
             if (lastLocation.dimension == null) return;
             ServerWorld world = server.getWorld(lastLocation.dimension.getRegistryKey());
             if (world == null) return;
             Entity entity = world.getEntity(ridingEntityUUID);
             if (entity != null) {
-                ((Entity) player).startRiding(entity, true);
-                entity.updatePassengerPosition(player);
+                player.startRiding(entity, true);
             } else {
                 LogDebug("Could not find vehicle for player " + player.getNameForScoreboard());
             }
@@ -250,7 +264,7 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
     @Redirect(method = "readRootVehicle(Lnet/minecraft/nbt/NbtCompound;)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;startRiding(Lnet/minecraft/entity/Entity;Z)Z"))
     private boolean onPlayerConnectStartRiding(ServerPlayerEntity instance, Entity entity, boolean force) {
-        if (config.hidePlayerCoords && !((PlayerAuth) instance).easyAuth$isAuthenticated()) {
+        if (!leavingServer && config.hidePlayerCoords && !((PlayerAuth) instance).easyAuth$isAuthenticated()) {
             return false;
         }
         return instance.startRiding(entity, force);
@@ -259,7 +273,7 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
     @Redirect(method = "readRootVehicle(Lnet/minecraft/nbt/NbtCompound;)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;hasVehicle()Z"))
     private boolean onPlayerConnectStartRiding(ServerPlayerEntity instance) {
-        if (config.hidePlayerCoords && !((PlayerAuth) instance).easyAuth$isAuthenticated()) {
+        if (!leavingServer && config.hidePlayerCoords && !((PlayerAuth) instance).easyAuth$isAuthenticated()) {
             return true;
         }
         return instance.hasVehicle();
@@ -273,6 +287,7 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
         newPlayerAuth.easyAuth$setIpAddress(oldPlayerAuth.easyAuth$getIpAddress());
         newPlayerAuth.easyAuth$setLastLocation(oldPlayerAuth.easyAuth$getLastLocation());
         newPlayerAuth.easyAuth$setRidingEntityUUID(oldPlayerAuth.easyAuth$getRidingEntityUUID());
+        newPlayerAuth.easyAuth$setRootVehicle(oldPlayerAuth.easyAuth$getRootVehicle());
         newPlayerAuth.easyAuth$wasDead(oldPlayerAuth.easyAuth$wasDead());
         newPlayerAuth.easyAuth$canSkipAuth(oldPlayerAuth.easyAuth$canSkipAuth());
         newPlayerAuth.easyAuth$setAuthenticated(oldPlayerAuth.easyAuth$isAuthenticated());
@@ -306,6 +321,14 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
 
     public void easyAuth$setRidingEntityUUID(UUID ridingEntityUUID) {
         this.ridingEntityUUID = ridingEntityUUID;
+    }
+
+    public NbtCompound easyAuth$getRootVehicle() {
+        return rootVehicle;
+    }
+
+    public void easyAuth$setRootVehicle(NbtCompound rootVehicle) {
+        this.rootVehicle = rootVehicle;
     }
 
     public boolean easyAuth$wasDead() {

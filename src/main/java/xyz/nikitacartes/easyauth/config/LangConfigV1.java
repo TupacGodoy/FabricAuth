@@ -16,7 +16,6 @@ import java.util.Map;
 import static com.google.common.io.Resources.getResource;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static net.minecraft.text.Text.translatable;
-import static net.minecraft.text.Text.translatableWithFallback;
 import static xyz.nikitacartes.easyauth.EasyAuth.langConfig;
 
 @ConfigSerializable
@@ -150,7 +149,7 @@ public class LangConfigV1 extends ConfigTemplate {
         public void send(ServerCommandSource commandOutput) {
             if (enabled && commandOutput != null) {
                 if (langConfig.enableServerSideTranslation && serverSide) {
-                    commandOutput.sendMessage(translatableWithFallback(key, fallback));
+                    commandOutput.sendMessage(translatable(key));
                 } else {
                     commandOutput.sendMessage(Text.literal(fallback));
                 }
@@ -160,7 +159,7 @@ public class LangConfigV1 extends ConfigTemplate {
         public void send(ServerPlayerEntity commandOutput) {
             if (enabled && commandOutput != null) {
                 if (langConfig.enableServerSideTranslation && serverSide) {
-                    commandOutput.sendMessage(translatableWithFallback(key, fallback));
+                    commandOutput.sendMessage(translatable(key));
                 } else {
                     commandOutput.sendMessage(Text.literal(fallback));
                 }
@@ -170,7 +169,7 @@ public class LangConfigV1 extends ConfigTemplate {
         public <T extends CommandOutput> void send(T commandOutput) {
             if (enabled && commandOutput != null) {
                 if (langConfig.enableServerSideTranslation && serverSide) {
-                    commandOutput.sendMessage(translatableWithFallback(key, fallback));
+                    commandOutput.sendMessage(translatable(key));
                 } else {
                     commandOutput.sendMessage(Text.literal(fallback));
                 }
@@ -180,7 +179,7 @@ public class LangConfigV1 extends ConfigTemplate {
         public void send(ServerCommandSource commandOutput, Object... args) {
             if (enabled && commandOutput != null) {
                 if (langConfig.enableServerSideTranslation && serverSide) {
-                    commandOutput.sendMessage(translatableWithFallback(key, fallback, args));
+                    commandOutput.sendMessage(translatable(key, args));
                 } else {
                     commandOutput.sendMessage(translatable(fallback, args));
                 }
@@ -190,7 +189,7 @@ public class LangConfigV1 extends ConfigTemplate {
         public MutableText get() {
             if (enabled) {
                 if (langConfig.enableServerSideTranslation && serverSide) {
-                    return translatableWithFallback(key, fallback);
+                    return translatable(key);
                 } else {
                     return Text.literal(fallback);
                 }
@@ -202,7 +201,7 @@ public class LangConfigV1 extends ConfigTemplate {
         public MutableText get(Object... args) {
             if (enabled) {
                 if (langConfig.enableServerSideTranslation && serverSide) {
-                    return translatableWithFallback(key, fallback, args);
+                    return translatable(key, args);
                 } else {
                     return translatable(fallback, args);
                 }

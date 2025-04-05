@@ -45,7 +45,7 @@ Thank you so much for those who have already helped with translation of the mod!
 * Spanish: @Zailer43
 * Slovene: @Kljunas2
 * Hungarian: @Bendimester23
-* Brazilian Portuguese: @luizffgv
+* Brazilian Portuguese: @luizffgv, @guigiffoni
 * French: @Uxzylon, @Sky-NiniKo
 * Czech: @DavidCZ2051, @Thewest123
 * Turkish: @egeesin, @MemoKing34

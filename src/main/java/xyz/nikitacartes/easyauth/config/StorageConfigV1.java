@@ -18,9 +18,6 @@ public class StorageConfigV1 extends ConfigTemplate {
     public MongoDBConfig mongodb = new MongoDBConfig();
     public SQLiteConfig sqlite = new SQLiteConfig();
 
-    @Deprecated
-    public boolean useSimpleauthDb = false; // needed for migration from LevelDB to SQLite
-
     public StorageConfigV1() {
         super("storage.conf");
     }
@@ -54,7 +51,6 @@ public class StorageConfigV1 extends ConfigTemplate {
         configValues.put("mongoDB.database", wrapIfNecessary(mongodb.mongodbDatabase));
         configValues.put("sqlite.path", wrapIfNecessary(sqlite.sqlitePath));
         configValues.put("sqlite.table", wrapIfNecessary(sqlite.sqliteTable));
-        configValues.put("useSimpleAuthDb", wrapIfNecessary(useSimpleauthDb));
         String configTemplate = Resources.toString(getResource("data/easyauth/config/" + configPath), UTF_8);
         return new StringSubstitutor(configValues).replace(configTemplate);
     }

@@ -37,9 +37,13 @@ public class LevelDB implements DbApi {
                 throw new DBApiException("Error creating LevelDB directory", null);
             LogDebug("You are using LevelDB");
             Options options = new Options();
-            levelDBStore = factory.open(new File(EasyAuth.gameDirectory + "/mods/" + (config.useSimpleauthDb ? "SimpleAuth" : "EasyAuth") + "/levelDBStore"), options);
+            File levelDbFolder = new File(EasyAuth.gameDirectory + "/mods/EasyAuth/levelDBStore");
+            if (!levelDbFolder.exists()) {
+                levelDbFolder = new File(EasyAuth.gameDirectory + "/mods/SimpleAuth/levelDBStore");
+            }
+            levelDBStore = factory.open(levelDbFolder, options);
         } catch (IOException e) {
-            throw new DBApiException("Failed setting up LevelDB", e);
+            throw new DBApiException("Failed open up LevelDB", e);
         }
     }
 

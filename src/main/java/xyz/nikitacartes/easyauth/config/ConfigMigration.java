@@ -122,7 +122,6 @@ public class ConfigMigration {
         EasyAuth.storageConfig.mysql.mysqlTable = notNull(oldConfig.main.MySQLTableName);
         EasyAuth.storageConfig.mongodb.mongodbConnectionString = notNull(oldConfig.main.MongoDBConnectionString);
         EasyAuth.storageConfig.mongodb.mongodbDatabase = notNull(oldConfig.main.MongoDBDatabase);
-        EasyAuth.storageConfig.useSimpleauthDb = oldConfig.experimental.useSimpleAuthDatabase;
         EasyAuth.storageConfig.save();
     }
 

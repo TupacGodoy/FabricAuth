@@ -1,6 +1,8 @@
 package xyz.nikitacartes.easyauth.mixin;
 
 import com.google.common.net.InetAddresses;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.ClientConnection;
@@ -19,7 +21,6 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
@@ -73,10 +74,6 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
     @Unique
     private boolean isUsingMojangAccount = false;
 
-    @Unique
-    // Needed for mounting player to vehicle while they're leaving the server
-    private boolean leavingServer = false;
-
     @Override
     public void easyAuth$saveTrueLocation() {
         if (lastLocation == null) {
@@ -126,9 +123,7 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
 
         if (rootVehicle != null) {
             LogDebug(String.format("Mounting player to vehicle %s", rootVehicle));
-            leavingServer = true;
             player.readRootVehicle(rootVehicle);
-            leavingServer = false;
         }
 
         if (player.getVehicle() == null && ridingEntityUUID != null) {
@@ -259,24 +254,6 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
         if (result == ActionResult.FAIL) {
             cir.setReturnValue(false);
         }
-    }
-
-    @Redirect(method = "readRootVehicle(Lnet/minecraft/nbt/NbtCompound;)V",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;startRiding(Lnet/minecraft/entity/Entity;Z)Z"))
-    private boolean onPlayerConnectStartRiding(ServerPlayerEntity instance, Entity entity, boolean force) {
-        if (!leavingServer && config.hidePlayerCoords && !((PlayerAuth) instance).easyAuth$isAuthenticated()) {
-            return false;
-        }
-        return instance.startRiding(entity, force);
-    }
-
-    @Redirect(method = "readRootVehicle(Lnet/minecraft/nbt/NbtCompound;)V",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;hasVehicle()Z"))
-    private boolean onPlayerConnectStartRiding(ServerPlayerEntity instance) {
-        if (!leavingServer && config.hidePlayerCoords && !((PlayerAuth) instance).easyAuth$isAuthenticated()) {
-            return true;
-        }
-        return instance.hasVehicle();
     }
 
     @Inject(method = "copyFrom(Lnet/minecraft/server/network/ServerPlayerEntity;Z)V", at = @At("RETURN"))

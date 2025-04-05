@@ -1,5 +1,7 @@
 package xyz.nikitacartes.easyauth.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.entity.player.PlayerEntity;
@@ -28,11 +30,9 @@ import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import java.io.File;
 import java.net.SocketAddress;
-import java.util.Optional;
 import java.util.UUID;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
@@ -97,17 +97,17 @@ public abstract class PlayerManagerMixin {
         AuthEventHandler.onPlayerJoin(player);
     }
 
-    @Redirect(method = "respawnPlayer",
-    at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;getRespawnTarget(ZLnet/minecraft/world/TeleportTarget$PostDimensionTransition;)Lnet/minecraft/world/TeleportTarget;"))
-    private TeleportTarget replaceRespawnTarget(ServerPlayerEntity player, boolean alive, TeleportTarget.PostDimensionTransition postDimensionTransition) {
-        if (alive && config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
+    @WrapOperation(method = "respawnPlayer",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;getRespawnTarget(ZLnet/minecraft/world/TeleportTarget$PostDimensionTransition;)Lnet/minecraft/world/TeleportTarget;"))
+    private TeleportTarget replaceRespawnTarget(ServerPlayerEntity instance, boolean alive, TeleportTarget.PostDimensionTransition postDimensionTransition, Operation<TeleportTarget> original) {
+        if (alive && config.hidePlayerCoords && !((PlayerAuth) instance).easyAuth$isAuthenticated()) {
             return new TeleportTarget(
                 this.server.getWorld(RegistryKey.of(RegistryKeys.WORLD, Identifier.of(config.worldSpawn.dimension))),
                 new Vec3d(config.worldSpawn.x, config.worldSpawn.y, config.worldSpawn.z),
                 new Vec3d(0.0F, 0.0F, 0.0F), config.worldSpawn.yaw, config.worldSpawn.pitch, postDimensionTransition
             );
         }
-        return player.getRespawnTarget(alive, postDimensionTransition);
+        return original.call(instance, alive, postDimensionTransition);
     }
 
     @Inject(method = "remove(Lnet/minecraft/server/network/ServerPlayerEntity;)V", at = @At("HEAD"))
@@ -145,5 +145,14 @@ public abstract class PlayerManagerMixin {
 
             serverStatHandler.file = onlineFile;
         }
+    }
+
+    @WrapOperation(method = "method_68176(Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/nbt/NbtCompound;)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;readRootVehicle(Lnet/minecraft/nbt/NbtCompound;)V"))
+    private static void doNotMountPlayerToVehicle(ServerPlayerEntity serverPlayerEntity, NbtCompound nbtCompound, Operation<Void> original) {
+        if (!((PlayerAuth) serverPlayerEntity).easyAuth$isAuthenticated()) {
+            return;
+        }
+        original.call(serverPlayerEntity, nbtCompound);
     }
 }

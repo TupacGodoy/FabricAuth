@@ -39,6 +39,8 @@ dependencies {
 
     // Permissions
     include modImplementation("me.lucko:fabric-permissions-api:${project.fabric_permissions_version}")
+    // Provide context for LuckPerms
+    compileOnly "net.luckperms:api:${project.luckperms_version}"
 
     // Mods
     modCompileOnly "org.geysermc.floodgate:api:${floodgate_api_version}"

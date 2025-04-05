@@ -13,6 +13,7 @@ import xyz.nikitacartes.easyauth.commands.*;
 import xyz.nikitacartes.easyauth.config.*;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
 import xyz.nikitacartes.easyauth.storage.database.*;
+import xyz.nikitacartes.easyauth.utils.LuckPermsIntegration;
 
 import java.io.File;
 import java.io.FileReader;
@@ -112,6 +113,11 @@ public class EasyAuth implements ModInitializer {
         if (DB.isClosed()) {
             LogError("Couldn't connect to database. Stopping server");
             server.stop(false);
+        }
+
+        // Register LuckPerms integration if it's loaded
+        if (technicalConfig.luckPermsLoaded) {
+            LuckPermsIntegration.register();
         }
     }
 

@@ -14,6 +14,10 @@
 ----
 ### 3.2.0
 ##### Minecraft 1.21.5
+#### Add
+- Integration with LuckPerms context:
+    - `easyauth:authenticated`: true if player is authenticated
+    - `easyauth:online_account`: true if player is using Mojang account
 #### Fixes
 - Build EasyAuth against Java 17 [#199](https://github.com/NikitaCartes/EasyAuth/issues/199)
 - Fix incompatibilities with mods by getting rid of @Redirect

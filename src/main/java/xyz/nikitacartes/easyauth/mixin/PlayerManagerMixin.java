@@ -150,7 +150,7 @@ public abstract class PlayerManagerMixin {
     @WrapOperation(method = "method_68176(Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/nbt/NbtCompound;)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;readRootVehicle(Lnet/minecraft/nbt/NbtCompound;)V"))
     private static void doNotMountPlayerToVehicle(ServerPlayerEntity serverPlayerEntity, NbtCompound nbtCompound, Operation<Void> original) {
-        if (!((PlayerAuth) serverPlayerEntity).easyAuth$isAuthenticated()) {
+        if (config.hidePlayerCoords && !((PlayerAuth) serverPlayerEntity).easyAuth$isAuthenticated()) {
             return;
         }
         original.call(serverPlayerEntity, nbtCompound);

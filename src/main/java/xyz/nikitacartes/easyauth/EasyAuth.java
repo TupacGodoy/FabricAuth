@@ -138,21 +138,11 @@ public class EasyAuth implements ModInitializer {
 
         switch (version.configVersion) {
             case -1: {
-                EasyAuth.config = MainConfigV1.load();
-                EasyAuth.config.save();
-
-                EasyAuth.technicalConfig = TechnicalConfigV1.load();
-                EasyAuth.technicalConfig.save();
-
-                EasyAuth.langConfig = LangConfigV1.load();
-                EasyAuth.langConfig.save();
-
-                EasyAuth.extendedConfig = ExtendedConfigV1.load();
-                EasyAuth.extendedConfig.save();
-
-                EasyAuth.storageConfig = StorageConfigV1.load();
-                EasyAuth.storageConfig.save();
-
+                EasyAuth.config = MainConfigV1.create();
+                EasyAuth.technicalConfig = TechnicalConfigV1.create();
+                EasyAuth.langConfig = LangConfigV1.create();
+                EasyAuth.extendedConfig = ExtendedConfigV1.create();
+                EasyAuth.storageConfig = StorageConfigV1.create();
                 break;
             }
             case 1: {

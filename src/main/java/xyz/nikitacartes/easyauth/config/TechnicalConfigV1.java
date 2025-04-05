@@ -27,11 +27,22 @@ public class TechnicalConfigV1 extends ConfigTemplate {
         super("technical.conf");
     }
 
-    public static TechnicalConfigV1 load() {
+    public static TechnicalConfigV1 create() {
         TechnicalConfigV1 config = loadConfig(TechnicalConfigV1.class, "technical.conf");
         if (config == null) {
             config = new TechnicalConfigV1();
             config.save();
+        }
+        if (FabricLoader.getInstance().isModLoaded("floodgate")) {
+            config.floodgateLoaded = true;
+        }
+        return config;
+    }
+
+    public static TechnicalConfigV1 load() {
+        TechnicalConfigV1 config = loadConfig(TechnicalConfigV1.class, "technical.conf");
+        if (config == null) {
+            throw new RuntimeException("Failed to load technical.conf");
         }
         if (FabricLoader.getInstance().isModLoaded("floodgate")) {
             config.floodgateLoaded = true;

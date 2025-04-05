@@ -47,11 +47,19 @@ public class ExtendedConfigV1 extends ConfigTemplate {
         super("extended.conf");
     }
 
-    public static ExtendedConfigV1 load() {
+    public static ExtendedConfigV1 create() {
         ExtendedConfigV1 config = loadConfig(ExtendedConfigV1.class, "extended.conf");
         if (config == null) {
             config = new ExtendedConfigV1();
             config.save();
+        }
+        return config;
+    }
+
+    public static ExtendedConfigV1 load() {
+        ExtendedConfigV1 config = loadConfig(ExtendedConfigV1.class, "extended.conf");
+        if (config == null) {
+            throw new RuntimeException("Failed to load extended.conf");
         }
         return config;
     }

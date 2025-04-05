@@ -17,6 +17,7 @@
 #### Fixes
 - Build EasyAuth against Java 17 [#199](https://github.com/NikitaCartes/EasyAuth/issues/199)
 - Fix incompatibilities with mods by getting rid of @Redirect
+- Fix duplicate config files [#196](https://github.com/NikitaCartes/EasyAuth/issues/196)
 
 #### Changes
 - Update brazilian Portuguese translation, thanks to @guigiffoni

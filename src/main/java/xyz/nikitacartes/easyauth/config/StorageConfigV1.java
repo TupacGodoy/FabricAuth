@@ -25,11 +25,19 @@ public class StorageConfigV1 extends ConfigTemplate {
         super("storage.conf");
     }
 
-    public static StorageConfigV1 load() {
+    public static StorageConfigV1 create() {
         StorageConfigV1 config = loadConfig(StorageConfigV1.class, "storage.conf");
         if (config == null) {
             config = new StorageConfigV1();
             config.save();
+        }
+        return config;
+    }
+
+    public static StorageConfigV1 load() {
+        StorageConfigV1 config = loadConfig(StorageConfigV1.class, "storage.conf");
+        if (config == null) {
+            throw new RuntimeException("Failed to load storage.conf");
         }
         return config;
     }

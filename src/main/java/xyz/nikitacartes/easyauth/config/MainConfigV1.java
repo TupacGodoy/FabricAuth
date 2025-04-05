@@ -10,6 +10,7 @@ import java.util.Map;
 
 import static com.google.common.io.Resources.getResource;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogError;
 
 @ConfigSerializable
 public class MainConfigV1 extends ConfigTemplate {
@@ -32,11 +33,19 @@ public class MainConfigV1 extends ConfigTemplate {
         super("main.conf");
     }
 
-    public static MainConfigV1 load() {
+    public static MainConfigV1 create() {
         MainConfigV1 config = loadConfig(MainConfigV1.class, "main.conf");
         if (config == null) {
             config = new MainConfigV1();
             config.save();
+        }
+        return config;
+    }
+
+    public static MainConfigV1 load() {
+        MainConfigV1 config = loadConfig(MainConfigV1.class, "main.conf");
+        if (config == null) {
+            throw new RuntimeException("Failed to load main.conf");
         }
         return config;
     }

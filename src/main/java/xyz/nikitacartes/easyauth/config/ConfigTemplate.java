@@ -51,7 +51,11 @@ public abstract class ConfigTemplate {
         Path path = gameDirectory.resolve("config/EasyAuth/" + configPath);
         try {
             if (Files.exists(path)) {
-                Files.move(path, path.resolveSibling(configPath + "." + LocalDateTime.now().toString().replace(":", "-")));
+                Path backupFolder = gameDirectory.resolve("config/EasyAuth/backup");
+                if (!Files.exists(backupFolder)) {
+                    Files.createDirectories(backupFolder);
+                }
+                Files.move(path, path.resolveSibling("backup/" + configPath + "." + LocalDateTime.now().toString().replace(":", "-")));
             }
             Files.writeString(path, handleTemplate());
         } catch (IOException e) {

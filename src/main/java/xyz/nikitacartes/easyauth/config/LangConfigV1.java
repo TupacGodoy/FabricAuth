@@ -68,11 +68,19 @@ public class LangConfigV1 extends ConfigTemplate {
         super("translation.conf");
     }
 
-    public static LangConfigV1 load() {
+    public static LangConfigV1 create() {
         LangConfigV1 config = loadConfig(LangConfigV1.class, "translation.conf");
         if (config == null) {
             config = new LangConfigV1();
             config.save();
+        }
+        return config;
+    }
+
+    public static LangConfigV1 load() {
+        LangConfigV1 config = loadConfig(LangConfigV1.class, "translation.conf");
+        if (config == null) {
+            throw new RuntimeException("Failed to load translation.conf");
         }
         return config;
     }

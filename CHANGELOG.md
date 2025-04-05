@@ -1,15 +1,10 @@
 ### ToDo
 #### Add
-- Log registration and logins as info messages. Add config for that
 - Add support for changing "invalid session" message when offline player connects with online nickname
-- Add default language option
 
 #### Fix
 - Fix hide-players-from-player-list
 - Check how offline players work if they try to connect with a taken online account
-
-#### Change
-- Save real position in NBT instead of teleporting it?
 
 ----
 ### 3.2.0
@@ -18,6 +13,9 @@
 - Integration with LuckPerms context:
     - `easyauth:authenticated`: true if player is authenticated
     - `easyauth:online_account`: true if player is using Mojang account
+- Add option to log login and registration as info messages:
+    - `log-player-registration` and `log-player-login` in `extended.conf`
+- Add command `auth getOnlinePlayers` to get info about online players
 #### Fixes
 - Build EasyAuth against Java 17 [#199](https://github.com/NikitaCartes/EasyAuth/issues/199)
 - Fix incompatibilities with mods by getting rid of @Redirect

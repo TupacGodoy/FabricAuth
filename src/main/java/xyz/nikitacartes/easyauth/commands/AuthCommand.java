@@ -156,6 +156,10 @@ public class AuthCommand {
                                 ))
                         )
                 )
+                .then(literal("getOnlinePlayers")
+                        .requires(Permissions.require("easyauth.commands.auth.getOnlinePlayers", 3))
+                        .executes(ctx -> getOnlinePlayers(ctx.getSource()))
+                )
         );
     }
 
@@ -393,4 +397,27 @@ public class AuthCommand {
         return 1;
     }
 
+    /**
+     * Gets info about all online players
+     *
+     * @param source executioner of the command
+     */
+    private static int getOnlinePlayers(ServerCommandSource source) {
+        THREADPOOL.submit(() -> {
+            MutableText message = Text.literal("");
+            source.getServer().getPlayerManager().getPlayerList().forEach(player -> {
+                PlayerEntryV1 playerData = DB.getUserData(player.getNameForScoreboard());
+                PlayerAuth playerAuth = (PlayerAuth) player;
+
+                message.append(Text.translatable(player.getNameForScoreboard()).formatted(Formatting.YELLOW)).append(": ");
+                if (playerData == null) {
+                    message.append(Text.literal("No data found\n"));
+                    return;
+                }
+                message.append(Text.literal("authenticated: " + playerAuth.easyAuth$isAuthenticated() + "; Mojang account: " + playerAuth.easyAuth$isUsingMojangAccount() + "\n"));
+            });
+            source.sendMessage(message);
+        });
+        return 1;
+    }
 }

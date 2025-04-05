@@ -48,6 +48,14 @@ public class EasyLogger {
         }
     }
 
+    public static void LogLogin(String message) {
+        log(extendedConfig.logPlayerLogin ? Level.INFO : Level.DEBUG, "[LOGIN]: " + message);
+    }
+
+    public static void LogRegister(String message) {
+        log(extendedConfig.logPlayerRegistration ? Level.INFO : Level.DEBUG, "[REGISTER]: " + message);
+    }
+
     public static void LogError(String message) {
         log(Level.ERROR, message);
     }

@@ -18,6 +18,7 @@ import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
+import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogLogin;
 
 public class LoginCommand {
 
@@ -48,9 +49,9 @@ public class LoginCommand {
         ServerPlayerEntity player = source.getPlayerOrThrow();
         PlayerAuth playerAuth = (PlayerAuth) player;
 
-        LogDebug("Player " + player.getNameForScoreboard() + " is trying to login");
+        LogLogin("Player " + player.getNameForScoreboard() + " is trying to login");
         if (playerAuth.easyAuth$isAuthenticated()) {
-            LogDebug("Player " + player.getNameForScoreboard() + " is already authenticated");
+            LogLogin("Player " + player.getNameForScoreboard() + " is already authenticated");
             langConfig.alreadyAuthenticated.send(source);
             return 0;
         }
@@ -59,9 +60,9 @@ public class LoginCommand {
         AuthHelper.PasswordOptions passwordResult = AuthHelper.checkPassword(playerData, pass.toCharArray());
 
         if (passwordResult == AuthHelper.PasswordOptions.CORRECT) {
-            LogDebug("Player " + player.getNameForScoreboard() + " provide correct password");
+            LogLogin("Player " + player.getNameForScoreboard() + " provide correct password");
             if (playerData.lastKickedDate.plusSeconds(config.resetLoginAttemptsTimeout).isAfter(ZonedDateTime.now())) {
-                LogDebug("Player " + player.getNameForScoreboard() + " will be kicked due to kick timeout");
+                LogLogin("Player " + player.getNameForScoreboard() + " will be kicked due to kick timeout");
                 player.networkHandler.disconnect(langConfig.loginTriesExceeded.get());
                 return 0;
             }
@@ -75,7 +76,7 @@ public class LoginCommand {
             // player.getServer().getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, player));
             return 0;
         } else if (passwordResult == AuthHelper.PasswordOptions.NOT_REGISTERED) {
-            LogDebug("Player " + player.getNameForScoreboard() + " is not registered");
+            LogLogin("Player " + player.getNameForScoreboard() + " is not registered");
             if (config.singleUseGlobalPassword) {
                 langConfig.registerRequiredWithGlobalPassword.send(source);
                 return 0;
@@ -85,7 +86,7 @@ public class LoginCommand {
         }
         playerData.loginTries++;
         if (playerData.loginTries >= config.maxLoginTries && config.maxLoginTries != -1) { // Player exceeded maxLoginTries
-            LogDebug("Player " + player.getNameForScoreboard() + " exceeded max login tries");
+            LogLogin("Player " + player.getNameForScoreboard() + " exceeded max login tries");
             // Send the player a different error message if the max login tries is 1.
             playerData.lastKickedDate = ZonedDateTime.now();
             playerData.loginTries = 0;
@@ -97,7 +98,7 @@ public class LoginCommand {
             }
             return 0;
         }
-        LogDebug("Player " + player.getNameForScoreboard() + " provided wrong password");
+        LogLogin("Player " + player.getNameForScoreboard() + " provided wrong password");
         // Sending wrong pass message
         langConfig.wrongPassword.send(source);
         return 0;

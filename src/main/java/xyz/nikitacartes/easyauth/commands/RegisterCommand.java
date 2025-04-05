@@ -18,7 +18,7 @@ import static net.minecraft.server.command.CommandManager.literal;
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
 import static xyz.nikitacartes.easyauth.utils.AuthHelper.checkGlobalPassword;
 import static xyz.nikitacartes.easyauth.utils.AuthHelper.hashPassword;
-import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
+import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogRegister;
 
 
 public class RegisterCommand {
@@ -81,7 +81,7 @@ public class RegisterCommand {
 
                 playerData.loginTries++;
                 if (playerData.loginTries >= config.maxLoginTries && config.maxLoginTries != -1) { // Player exceeded maxLoginTries
-                    LogDebug("Player " + player.getNameForScoreboard() + " exceeded global password tries limit.");
+                    LogRegister("Player " + player.getNameForScoreboard() + " exceeded global password tries limit.");
                     playerData.lastKickedDate = ZonedDateTime.now();
                     playerData.loginTries = 0;
                     playerData.update();
@@ -137,7 +137,7 @@ public class RegisterCommand {
             playerAuth.easyAuth$setPlayerEntryV1(playerData);
             playerData.update();
 
-            LogDebug("Player " + player.getNameForScoreboard() + "{" + player.getUuidAsString() + "} successfully registered with password: " + playerData.password);
+            LogRegister("Player " + player.getNameForScoreboard() + "{" + player.getUuidAsString() + "} successfully registered with password: " + playerData.password);
         });
         return 0;
     }

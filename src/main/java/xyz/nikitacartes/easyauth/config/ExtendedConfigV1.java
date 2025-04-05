@@ -42,6 +42,8 @@ public class ExtendedConfigV1 extends ConfigTemplate {
     public boolean allowCaseInsensitiveUsername = false;
     public long authenticationPromptInterval = 10;
     public MojangApiSettings mojangApiSettings = new MojangApiSettings();
+    public boolean logPlayerRegistration = false;
+    public boolean logPlayerLogin = false;
 
     public ExtendedConfigV1() {
         super("extended.conf");
@@ -97,6 +99,8 @@ public class ExtendedConfigV1 extends ConfigTemplate {
         configValues.put("mojangApiSettings.url", wrapIfNecessary(mojangApiSettings.url));
         configValues.put("mojangApiSettings.connectionTimeout", wrapIfNecessary(mojangApiSettings.connectionTimeout));
         configValues.put("mojangApiSettings.readTimeout", wrapIfNecessary(mojangApiSettings.readTimeout));
+        configValues.put("logPlayerRegistration", wrapIfNecessary(logPlayerRegistration));
+        configValues.put("logPlayerLogin", wrapIfNecessary(logPlayerLogin));
         String configTemplate = Resources.toString(getResource("data/easyauth/config/" + configPath), UTF_8);
         return new StringSubstitutor(configValues).replace(configTemplate);
     }

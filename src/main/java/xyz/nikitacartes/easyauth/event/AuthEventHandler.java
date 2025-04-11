@@ -65,7 +65,7 @@ public class AuthEventHandler {
             }
 
             if (!((PlayerAuth) onlinePlayer).easyAuth$getIpAddress().equals(string)) {
-                return langConfig.playerAlreadyOnline.get(incomingPlayerUsername);
+                return langConfig.playerAlreadyOnline.getWithFallback(incomingPlayerUsername);
             }
         }
 
@@ -73,18 +73,18 @@ public class AuthEventHandler {
         Matcher matcher = usernamePattern.matcher(incomingPlayerUsername);
 
         if (!(matcher.matches() || (technicalConfig.floodgateLoaded && extendedConfig.floodgateBypassRegex && FloodgateApiHelper.isFloodgatePlayer(profile.getId())))) {
-            return langConfig.disallowedUsername.get(extendedConfig.usernameRegexp);
+            return langConfig.disallowedUsername.getWithFallback(extendedConfig.usernameRegexp);
         }
         // If the player name and registered name are different, kick the player if differentUsernameCase is enabled
         // Create in case of Floodgate player
         PlayerEntryV1 playerEntryV1 = PlayersCache.getFloodgate(incomingPlayerUsername);
 
         if (!extendedConfig.allowCaseInsensitiveUsername && !playerEntryV1.username.equals(incomingPlayerUsername)) {
-            return langConfig.differentUsernameCase.get(incomingPlayerUsername);
+            return langConfig.differentUsernameCase.getWithFallback(incomingPlayerUsername);
         }
 
         if (config.maxLoginTries != -1 && playerEntryV1.lastKickedDate.plusSeconds(config.resetLoginAttemptsTimeout).isAfter(ZonedDateTime.now())) {
-            return langConfig.loginTriesExceeded.get();
+            return langConfig.loginTriesExceeded.getWithFallback();
         }
 
         return null;

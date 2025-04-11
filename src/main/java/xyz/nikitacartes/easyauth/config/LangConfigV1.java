@@ -16,6 +16,7 @@ import java.util.Map;
 import static com.google.common.io.Resources.getResource;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static net.minecraft.text.Text.translatable;
+import static net.minecraft.text.Text.translatableWithFallback;
 import static xyz.nikitacartes.easyauth.EasyAuth.langConfig;
 
 @ConfigSerializable
@@ -210,6 +211,30 @@ public class LangConfigV1 extends ConfigTemplate {
             if (enabled) {
                 if (langConfig.enableServerSideTranslation && serverSide) {
                     return translatable(key, args);
+                } else {
+                    return translatable(fallback, args);
+                }
+            } else {
+                return Text.literal("");
+            }
+        }
+
+        public MutableText getWithFallback() {
+            if (enabled) {
+                if (langConfig.enableServerSideTranslation && serverSide) {
+                    return translatableWithFallback(key, fallback);
+                } else {
+                    return Text.literal(fallback);
+                }
+            } else {
+                return Text.literal("");
+            }
+        }
+
+        public MutableText getWithFallback(Object... args) {
+            if (enabled) {
+                if (langConfig.enableServerSideTranslation && serverSide) {
+                    return translatableWithFallback(key, fallback, args);
                 } else {
                     return translatable(fallback, args);
                 }

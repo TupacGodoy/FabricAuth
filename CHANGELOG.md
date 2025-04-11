@@ -1,14 +1,15 @@
 ### ToDo
 #### Add
 - Add support for changing "invalid session" message when offline player connects with online nickname
+- Add default language option
 
 #### Fix
 - Fix hide-players-from-player-list
 - Check how offline players work if they try to connect with a taken online account
 
 ----
-### 3.2.0
-##### Minecraft 1.21.5
+### 3.2.1
+##### Minecraft 1.20[.1], 1.21.5
 #### Add
 - Integration with LuckPerms context:
     - `easyauth:authenticated`: true if player is authenticated
@@ -23,6 +24,12 @@
 
 #### Changes
 - Update brazilian Portuguese translation, thanks to @guigiffoni
+
+----
+### 3.2.0
+##### Minecraft 1.21.5
+#### Fixes
+- Disconnect text sent as text key
 
 ----
 ### 3.1.11

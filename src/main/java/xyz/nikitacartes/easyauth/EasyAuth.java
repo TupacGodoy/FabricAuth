@@ -52,16 +52,6 @@ public class EasyAuth implements ModInitializer {
         gameDirectory = FabricLoader.getInstance().getGameDir();
         LogInfo("EasyAuth mod by NikitaCartes");
 
-        try {
-            serverProp.load(new FileReader(gameDirectory + "/server.properties"));
-            if (Boolean.parseBoolean(serverProp.getProperty("enforce-secure-profile"))) {
-                LogWarn("Disable enforce-secure-profile to allow offline players to join the server");
-                LogWarn("For more info, see https://github.com/NikitaCartes/EasyAuth/issues/68");
-            }
-        } catch (IOException e) {
-            LogError("Error while reading server properties: ", e);
-        }
-
         File file = new File(gameDirectory + "/config/EasyAuth");
         if (!file.exists()) {
             if (!file.mkdirs()) {
@@ -110,6 +100,15 @@ public class EasyAuth implements ModInitializer {
     }
 
     private void onStartServer(MinecraftServer server) {
+        try {
+            serverProp.load(new FileReader(gameDirectory + "/server.properties"));
+            if (Boolean.parseBoolean(serverProp.getProperty("enforce-secure-profile"))) {
+                LogWarn("Disable enforce-secure-profile to allow offline players to join the server");
+                LogWarn("For more info, see https://github.com/NikitaCartes/EasyAuth/issues/68");
+            }
+        } catch (IOException e) {
+            LogError("Error while reading server properties: ", e);
+        }
         if (DB.isClosed()) {
             LogError("Couldn't connect to database. Stopping server");
             server.stop(false);

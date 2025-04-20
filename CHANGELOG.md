@@ -9,6 +9,12 @@
 
 ----
 ### 3.2.1
+##### Minecraft 1.21.5
+#### Fixes
+- Disconnect text sent as text key
+
+----
+### 3.2.0
 ##### Minecraft 1.20[.1], 1.21.5
 #### Add
 - Integration with LuckPerms context:
@@ -24,12 +30,6 @@
 
 #### Changes
 - Update brazilian Portuguese translation, thanks to @guigiffoni
-
-----
-### 3.2.0
-##### Minecraft 1.21.5
-#### Fixes
-- Disconnect text sent as text key
 
 ----
 ### 3.1.11

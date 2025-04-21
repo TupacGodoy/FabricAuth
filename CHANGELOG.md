@@ -2,10 +2,17 @@
 #### Add
 - Add support for changing "invalid session" message when offline player connects with online nickname
 - Add default language option
+- Delete `hide-players-from-player-list` and replace it with integration with Vanish mode
 
 #### Fix
 - Fix hide-players-from-player-list
 - Check how offline players work if they try to connect with a taken online account
+
+----
+### 3.2.2
+##### Minecraft 1.21.5
+#### Fix
+- Fix unexpected error with spawn position outside of world height limit
 
 ----
 ### 3.2.1

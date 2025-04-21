@@ -222,8 +222,12 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
 
             // Sending updates to portal blocks
             // This is technically not needed, but it cleans the "messed portal" on the client
-            world.updateListeners(pos, world.getBlockState(pos), world.getBlockState(pos), 3);
-            world.updateListeners(pos.up(), world.getBlockState(pos.up()), world.getBlockState(pos.up()), 3);
+            if (world.isInBuildLimit(pos)) {
+                world.updateListeners(pos, world.getBlockState(pos), world.getBlockState(pos), 3);
+            }
+            if (world.isInBuildLimit(pos.up())) {
+                world.updateListeners(pos.up(), world.getBlockState(pos.up()), world.getBlockState(pos.up()), 3);
+            }
 
            player.currentScreenHandler.syncState();
         }

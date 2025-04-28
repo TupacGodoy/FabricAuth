@@ -13,7 +13,8 @@
 ##### Minecraft 1.21.5
 #### Fix
 - Fix unexpected error with spawn position outside of world height limit
-- Fix EasyAuth not sending minPasswordLength and maxPasswordLength to players
+- Fix EasyAuth not sending minPasswordLength and maxPasswordLength to players [#205](https://github.com/NikitaCartes/EasyAuth/issues/205)
+- Fix detecting fake players [#207](https://github.com/NikitaCartes/EasyAuth/issues/207)
 
 ----
 ### 3.2.1

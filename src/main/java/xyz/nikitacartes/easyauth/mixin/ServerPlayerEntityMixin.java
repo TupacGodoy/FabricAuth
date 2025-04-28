@@ -66,10 +66,10 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
     PlayerEntryV1 playerEntryV1 = new PlayerEntryV1(player.getNameForScoreboard());
 
     @Unique
-    private boolean canSkipAuth = false;
+    private boolean canSkipAuth = this.player.getClass() != ServerPlayerEntity.class;
 
     @Unique
-    private boolean isAuthenticated = false;
+    private boolean isAuthenticated = this.player.getClass() != ServerPlayerEntity.class;
 
     @Unique
     private boolean isUsingMojangAccount = false;

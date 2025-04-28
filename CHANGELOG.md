@@ -7,7 +7,7 @@
 - Check how offline players work if they try to connect with a taken online account
 
 ----
-### 3.2.2-SNAPSHOT
+### 3.3.0-SNAPSHOT
 ##### Minecraft 1.21.5
 #### Add
 - Option `vanish-until-auth` to vanish players until they authenticate using [Vanish mod](https://github.com/DrexHD/Vanish)
@@ -19,6 +19,7 @@
 - Fix unexpected error with spawn position outside of world height limit
 - Fix EasyAuth not sending minPasswordLength and maxPasswordLength to players [#205](https://github.com/NikitaCartes/EasyAuth/issues/205)
 - Fix detecting fake players [#207](https://github.com/NikitaCartes/EasyAuth/issues/207)
+- Relocate libs to be compatible with other mods
 
 #### Changes
 - Changed how Invulnerability and Invisibility are handled during login

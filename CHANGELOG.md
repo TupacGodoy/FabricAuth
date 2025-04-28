@@ -9,10 +9,11 @@
 - Check how offline players work if they try to connect with a taken online account
 
 ----
-### 3.2.2
+### 3.2.2-SNAPSHOT
 ##### Minecraft 1.21.5
 #### Fix
 - Fix unexpected error with spawn position outside of world height limit
+- Fix EasyAuth not sending minPasswordLength and maxPasswordLength to players
 
 ----
 ### 3.2.1

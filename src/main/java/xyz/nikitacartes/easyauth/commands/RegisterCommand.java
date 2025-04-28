@@ -112,10 +112,10 @@ public class RegisterCommand {
         }
 
         if (pass1.length() < extendedConfig.minPasswordLength) {
-            langConfig.minPasswordChars.send(source);
+            langConfig.minPasswordChars.send(source, extendedConfig.minPasswordLength);
             return 0;
         } else if (pass1.length() > extendedConfig.maxPasswordLength && extendedConfig.maxPasswordLength != -1) {
-            langConfig.maxPasswordChars.send(source);
+            langConfig.maxPasswordChars.send(source, extendedConfig.maxPasswordLength);
             return 0;
         }
 

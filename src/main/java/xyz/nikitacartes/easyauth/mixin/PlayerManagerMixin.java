@@ -26,6 +26,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
+import xyz.nikitacartes.easyauth.integrations.VanishIntegration;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -113,6 +114,17 @@ public abstract class PlayerManagerMixin {
     @Inject(method = "remove(Lnet/minecraft/server/network/ServerPlayerEntity;)V", at = @At("HEAD"))
     private void onPlayerLeave(ServerPlayerEntity serverPlayerEntity, CallbackInfo ci) {
         AuthEventHandler.onPlayerLeave(serverPlayerEntity);
+    }
+
+    @Inject(method = "remove(Lnet/minecraft/server/network/ServerPlayerEntity;)V", at = @At("RETURN"))
+    private void onPlayerLeaveUnVanish(ServerPlayerEntity player, CallbackInfo ci) {
+        PlayerAuth playerAuth = (PlayerAuth) player;
+        if (playerAuth.easyAuth$canSkipAuth() || playerAuth.easyAuth$isAuthenticated()) {
+            return;
+        }
+        if (config.vanishUntilAuth && technicalConfig.vanishLoaded) {
+            VanishIntegration.setVanished(player, playerAuth.easyAuth$wasVanished());
+        }
     }
 
     @Inject(method = "checkCanJoin(Ljava/net/SocketAddress;Lcom/mojang/authlib/GameProfile;)Lnet/minecraft/text/Text;", at = @At("HEAD"), cancellable = true)

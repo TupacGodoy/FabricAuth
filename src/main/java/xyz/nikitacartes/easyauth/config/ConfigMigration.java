@@ -65,7 +65,6 @@ public class ConfigMigration {
         EasyAuth.extendedConfig.maxPasswordLength = oldConfig.main.maxPasswordChars;
         EasyAuth.extendedConfig.usernameRegexp = notNull(oldConfig.main.usernameRegex);
         EasyAuth.extendedConfig.floodgateBypassRegex = oldConfig.experimental.floodgateBypassUsernameRegex;
-        EasyAuth.extendedConfig.hidePlayersFromPlayerList = oldConfig.main.hideUnauthenticatedPLayersFromPlayerList;
         EasyAuth.extendedConfig.preventAnotherLocationKick = oldConfig.experimental.preventAnotherLocationKick;
         EasyAuth.extendedConfig.forcedOfflineUuid = oldConfig.experimental.forcedOfflineUuids;
         EasyAuth.extendedConfig.skipAllAuthChecks = oldConfig.experimental.skipAllAuthChecks;

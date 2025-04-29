@@ -50,7 +50,6 @@ public class AuthConfig {
         public boolean premiumAutologin = true;
         public boolean floodgateAutologin = false;
         public ArrayList<String> forcedOfflinePlayers = new ArrayList<>();
-        public boolean hideUnauthenticatedPLayersFromPlayerList = false;
 
         public static class WorldSpawn {
             public String dimension = "minecraft:overworld";
@@ -113,14 +112,11 @@ public class AuthConfig {
         public boolean allowItemUse = false;
         public boolean allowEntityPunch = false;
         public boolean debugMode = false;
-        public boolean useBCryptLibrary = false;
         public boolean forcedOfflineUuids = false;
-        public boolean useSimpleAuthDatabase = false;
         public long teleportationTimeoutInMs = 5;
         public boolean enableAliases = true;
         public boolean enableServerSideTranslation = true;
         public long resetLoginAttemptsTime = 120;
-        public boolean floodgateLoaded = false;
         public boolean floodgateBypassUsernameRegex = false;
         public ArrayList<String> verifiedOnlinePlayer = new ArrayList<>();
         public boolean skipAllAuthChecks = false;

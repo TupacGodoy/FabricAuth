@@ -2,15 +2,19 @@
 #### Add
 - Add support for changing "invalid session" message when offline player connects with online nickname
 - Add default language option
-- Delete `hide-players-from-player-list` and replace it with integration with Vanish mode
 
 #### Fix
-- Fix hide-players-from-player-list
 - Check how offline players work if they try to connect with a taken online account
 
 ----
 ### 3.2.2-SNAPSHOT
 ##### Minecraft 1.21.5
+#### Add
+- Option `vanish-until-auth` to vanish players until they authenticate using [Vanish mod](https://github.com/DrexHD/Vanish)
+
+#### Remove
+- Remove `hide-players-from-player-list` option
+
 #### Fix
 - Fix unexpected error with spawn position outside of world height limit
 - Fix EasyAuth not sending minPasswordLength and maxPasswordLength to players [#205](https://github.com/NikitaCartes/EasyAuth/issues/205)
@@ -35,6 +39,7 @@
 - Add option to log login and registration as info messages:
     - `log-player-registration` and `log-player-login` in `extended.conf`
 - Add command `auth getOnlinePlayers` to get info about online players
+
 #### Fixes
 - Build EasyAuth against Java 17 [#199](https://github.com/NikitaCartes/EasyAuth/issues/199)
 - Fix incompatibilities with mods by getting rid of @Redirect

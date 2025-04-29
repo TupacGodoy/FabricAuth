@@ -96,5 +96,6 @@ public interface PlayerAuth {
     void easyAuth$setRidingEntityUUID(UUID ridingEntityUUID);
     boolean easyAuth$wasDead();
     void easyAuth$wasDead(boolean wasDead);
-
+    boolean easyAuth$wasVanished();
+    void easyAuth$wasVanished(boolean wasVanished);
 }

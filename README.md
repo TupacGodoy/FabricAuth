@@ -14,6 +14,7 @@ EasyAuth disallows players who aren't authenticated to do actions like placing b
 - Global password
 - Support Luckperms API and Luckperms Context
 - Support Floodgate and Carpet players
+- Support Vanish mod to hide unauthenticated players
 
 See [wiki](https://github.com/NikitaCartes/EasyAuth/wiki) for more information.
 

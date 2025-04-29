@@ -1,8 +1,6 @@
 package xyz.nikitacartes.easyauth.mixin;
 
 import com.google.common.net.InetAddresses;
-import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.ClientConnection;
@@ -24,6 +22,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
+import xyz.nikitacartes.easyauth.integrations.VanishIntegration;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.*;
 
@@ -73,6 +72,9 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
 
     @Unique
     private boolean isUsingMojangAccount = false;
+
+    @Unique
+    private boolean wasVanished = false;
 
     @Override
     public void easyAuth$saveTrueLocation() {
@@ -226,7 +228,16 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
                 world.updateListeners(pos.up(), world.getBlockState(pos.up()), world.getBlockState(pos.up()), 3);
             }
 
-           player.currentScreenHandler.syncState();
+            player.currentScreenHandler.syncState();
+
+            if (!wasVanished && technicalConfig.vanishLoaded) {
+                VanishIntegration.setVanished(player, false);
+            }
+        } else {
+            if (config.vanishUntilAuth && technicalConfig.vanishLoaded) {
+                wasVanished = VanishIntegration.isVanished(player);
+                VanishIntegration.setVanished(player, true);
+            }
         }
     }
 
@@ -346,6 +357,14 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
 
     public void easyAuth$setPlayerEntryV1(PlayerEntryV1 playerEntryV1) {
         this.playerEntryV1 = playerEntryV1;
+    }
+
+    public boolean easyAuth$wasVanished() {
+        return wasVanished;
+    }
+
+    public void easyAuth$wasVanished(boolean wasVanished) {
+        this.wasVanished = wasVanished;
     }
 
 }

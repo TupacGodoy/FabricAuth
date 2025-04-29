@@ -35,7 +35,6 @@ public class ExtendedConfigV1 extends ConfigTemplate {
     public long maxPasswordLength = -1;
     public String usernameRegexp = "^[a-zA-Z0-9_]{3,16}$";
     public boolean floodgateBypassRegex = true;
-    public boolean hidePlayersFromPlayerList = false;
     public boolean preventAnotherLocationKick = true;
     public boolean forcedOfflineUuid = false;
     public boolean skipAllAuthChecks = false;
@@ -90,7 +89,6 @@ public class ExtendedConfigV1 extends ConfigTemplate {
         configValues.put("maxPasswordLength", wrapIfNecessary(maxPasswordLength));
         configValues.put("usernameRegexp", wrapIfNecessary(usernameRegexp));
         configValues.put("floodgateBypassRegex", wrapIfNecessary(floodgateBypassRegex));
-        configValues.put("hidePlayersFromPlayerList", wrapIfNecessary(hidePlayersFromPlayerList));
         configValues.put("preventAnotherLocationKick", wrapIfNecessary(preventAnotherLocationKick));
         configValues.put("forcedOfflineUuid", wrapIfNecessary(forcedOfflineUuid));
         configValues.put("skipAllAuthChecks", wrapIfNecessary(skipAllAuthChecks));

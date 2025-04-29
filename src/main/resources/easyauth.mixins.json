@@ -4,6 +4,7 @@
   "compatibilityLevel": "JAVA_17",
   "mixins": [
     "CommandManagerMixin",
+    "EntityMixin",
     "PlayerAdvancementTrackerMixin",
     "PlayerListS2CPacketMixin",
     "PlayerManagerMixin",

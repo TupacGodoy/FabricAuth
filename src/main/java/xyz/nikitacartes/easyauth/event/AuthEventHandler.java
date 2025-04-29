@@ -108,14 +108,9 @@ public class AuthEventHandler {
         if (playerAuth.easyAuth$canSkipAuth()) {
             playerAuth.easyAuth$setAuthenticated(true);
 
-            player.setInvulnerable(false);
-            player.setInvisible(false);
             update = false;
         } else if (cache.lastIp.equals(playerAuth.easyAuth$getIpAddress()) && cache.lastAuthenticatedDate.plusSeconds(config.sessionTimeout).isAfter(ZonedDateTime.now())) {
             playerAuth.easyAuth$setAuthenticated(true);
-
-            player.setInvulnerable(false);
-            player.setInvisible(false);
 
             cache.lastAuthenticatedDate = ZonedDateTime.now();
             update = true;
@@ -170,9 +165,6 @@ public class AuthEventHandler {
             playerCache.update();
         } else if (config.hidePlayerCoords) {
             ((PlayerAuth) player).easyAuth$restoreTrueLocation();
-
-            player.setInvulnerable(false);
-            player.setInvisible(false);
         }
     }
 
@@ -217,15 +209,12 @@ public class AuthEventHandler {
     // Player movement
     public static ActionResult onPlayerMove(ServerPlayerEntity player) {
         // Player will fall if enabled (prevent fly kick)
-        boolean auth = ((PlayerAuth) player).easyAuth$isAuthenticated();
         // Otherwise, movement should be disabled
-        if (!auth && !extendedConfig.allowMovement) {
+        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !extendedConfig.allowMovement) {
             if (System.nanoTime() >= lastAcceptedPacket + extendedConfig.teleportationTimeoutMs * 1000000) {
                 player.networkHandler.requestTeleport(player.getX(), player.getY(), player.getZ(), player.getYaw(), player.getPitch());
                 lastAcceptedPacket = System.nanoTime();
             }
-            if (!player.isInvulnerable())
-                player.setInvulnerable(extendedConfig.playerInvulnerable);
             return ActionResult.FAIL;
         }
         return ActionResult.PASS;

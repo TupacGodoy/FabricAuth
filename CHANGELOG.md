@@ -16,6 +16,9 @@
 - Fix EasyAuth not sending minPasswordLength and maxPasswordLength to players [#205](https://github.com/NikitaCartes/EasyAuth/issues/205)
 - Fix detecting fake players [#207](https://github.com/NikitaCartes/EasyAuth/issues/207)
 
+#### Changes
+- Changed how Invulnerability and Invisibility are handled during login
+
 ----
 ### 3.2.1
 ##### Minecraft 1.20[.1], 1.20.2, 1.20.3-1.20.4, 1.20.5-1.20.6, 1.21-1.21.1, 1.21.2-1.21.4, 1.21.5

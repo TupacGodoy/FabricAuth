@@ -36,7 +36,7 @@ import static xyz.nikitacartes.easyauth.EasyAuth.*;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
 
 @Mixin(ServerPlayerEntity.class)
-public abstract class ServerPlayerEntityMixin implements PlayerAuth {
+public abstract class ServerPlayerEntityMixin extends EntityMixin implements PlayerAuth {
     @Unique
     private final ServerPlayerEntity player = (ServerPlayerEntity) (Object) this;
 
@@ -211,9 +211,6 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
     public void easyAuth$setAuthenticated(boolean authenticated) {
         isAuthenticated = authenticated;
 
-        player.setInvulnerable(!authenticated && extendedConfig.playerInvulnerable);
-        player.setInvisible(!authenticated && extendedConfig.playerIgnored);
-
         if (authenticated) {
             kickTimer = config.kickTimeout * 20;
             // Updating blocks if needed (in case if portal rescue action happened)
@@ -274,6 +271,16 @@ public abstract class ServerPlayerEntityMixin implements PlayerAuth {
         newPlayerAuth.easyAuth$setAuthenticated(oldPlayerAuth.easyAuth$isAuthenticated());
 
         newPlayerAuth.easyAuth$setPlayerEntryV1(oldPlayerAuth.easyAuth$getPlayerEntryV1());
+    }
+
+    @Override
+    public boolean easyAuth$isInvisible(boolean original) {
+        return original || (!isAuthenticated && extendedConfig.playerIgnored);
+    }
+
+    @Override
+    public boolean easyAuth$isInvulnerable(boolean original) {
+        return original || (!isAuthenticated && extendedConfig.playerInvulnerable);
     }
 
     public long easyAuth$getKickTimer() {

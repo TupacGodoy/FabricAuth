@@ -22,6 +22,7 @@
 
 #### Changes
 - Changed how Invulnerability and Invisibility are handled during login
+- EasyAuth doesn't include `fabric-permissions-api-v0` anymore
 
 ----
 ### 3.2.1

@@ -24,6 +24,7 @@ public class TechnicalConfigV1 extends ConfigTemplate {
     public transient boolean floodgateLoaded = false;
     public transient boolean luckPermsLoaded = false;
     public transient boolean vanishLoaded = false;
+    public transient boolean permissionsLoaded = false;
 
     public TechnicalConfigV1() {
         super("technical.conf");
@@ -44,6 +45,9 @@ public class TechnicalConfigV1 extends ConfigTemplate {
         if (FabricLoader.getInstance().isModLoaded("melius-vanish")) {
             config.vanishLoaded = true;
         }
+        if (FabricLoader.getInstance().isModLoaded("fabric-permissions-api-v0")) {
+            config.permissionsLoaded = true;
+        }
         return config;
     }
 
@@ -60,6 +64,9 @@ public class TechnicalConfigV1 extends ConfigTemplate {
         }
         if (FabricLoader.getInstance().isModLoaded("melius-vanish")) {
             config.vanishLoaded = true;
+        }
+        if (FabricLoader.getInstance().isModLoaded("fabric-permissions-api-v0")) {
+            config.permissionsLoaded = true;
         }
         return config;
     }

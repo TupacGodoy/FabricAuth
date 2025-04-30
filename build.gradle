@@ -39,7 +39,7 @@ dependencies {
     include modImplementation("xyz.nucleoid:server-translations-api:${project.server_translations_version}")
 
     // Permissions
-    include modImplementation("me.lucko:fabric-permissions-api:${project.fabric_permissions_version}")
+    modImplementation("me.lucko:fabric-permissions-api:${project.fabric_permissions_version}")
     // Provide context for LuckPerms
     compileOnly "net.luckperms:api:${project.luckperms_version}"
 

@@ -11,6 +11,7 @@ repositories {
     maven { name "Permission"; url "https://oss.sonatype.org/content/repositories/snapshots" }
     maven { name "Floodgate Api"; url "https://repo.opencollab.dev/main" }
     maven { name "Modrinth"; url "https://api.modrinth.com/maven" }
+    //mavenLocal()
 }
 
 base.archivesName = "${project.mod_id}-mc${project.minecraft_version}"

@@ -124,11 +124,6 @@ public class AuthEventHandler {
         if (extendedConfig.skipAllAuthChecks) {
             playerAuth.easyAuth$setAuthenticated(true);
         }
-
-        if (config.vanishUntilAuth && technicalConfig.vanishLoaded) {
-            ((PlayerAuth) player).easyAuth$wasVanished(VanishIntegration.isVanished(player));
-            VanishIntegration.setVanished(player, true);
-        }
     }
 
     // Player joining the server

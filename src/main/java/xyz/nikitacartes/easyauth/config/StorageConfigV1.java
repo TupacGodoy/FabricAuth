@@ -1,25 +1,38 @@
 package xyz.nikitacartes.easyauth.config;
 
-import com.google.common.io.Resources;
-import org.apache.commons.text.StringSubstitutor;
 import org.spongepowered.configurate.objectmapping.ConfigSerializable;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
-import static com.google.common.io.Resources.getResource;
-import static java.nio.charset.StandardCharsets.UTF_8;
+import org.spongepowered.configurate.objectmapping.meta.Comment;
 
 @ConfigSerializable
 public class StorageConfigV1 extends ConfigTemplate {
+
+    @Comment("""
+            Database type. Can be sqlite, mysql or mongodb. SQLite is set by default.""")
     public String databaseType = "sqlite";
-    public MySqlConfig mysql = new MySqlConfig();
-    public MongoDBConfig mongodb = new MongoDBConfig();
+
+    @Comment("""
+            
+            SQLite configuration.""")
     public SQLiteConfig sqlite = new SQLiteConfig();
 
+    @Comment("""
+            
+            MySQL configuration.""")
+    public MySqlConfig mysql = new MySqlConfig();
+
+    @Comment("""
+            
+            MongoDB configuration.""")
+    public MongoDBConfig mongodb = new MongoDBConfig();
+
     public StorageConfigV1() {
-        super("storage.conf");
+        super("storage.conf", """
+                ##                          ##
+                ##         EasyAuth         ##
+                ##  Storage Configuration   ##
+                ##                          ##
+                
+                Note: If your string contains special characters, you should enclose it in double quotes.""");
     }
 
     public static StorageConfigV1 create() {
@@ -39,40 +52,62 @@ public class StorageConfigV1 extends ConfigTemplate {
         return config;
     }
 
-    protected String handleTemplate() throws IOException {
-        Map<String, Object> configValues = new HashMap<>();
-        configValues.put("databaseType", wrapIfNecessary(databaseType));
-        configValues.put("mySql.host", wrapIfNecessary(mysql.mysqlHost));
-        configValues.put("mySql.user", wrapIfNecessary(mysql.mysqlUser));
-        configValues.put("mySql.password", wrapIfNecessary(mysql.mysqlPassword));
-        configValues.put("mySql.database", wrapIfNecessary(mysql.mysqlDatabase));
-        configValues.put("mySql.table", wrapIfNecessary(mysql.mysqlTable));
-        configValues.put("mongoDB.connectionString", wrapIfNecessary(mongodb.mongodbConnectionString));
-        configValues.put("mongoDB.database", wrapIfNecessary(mongodb.mongodbDatabase));
-        configValues.put("sqlite.path", wrapIfNecessary(sqlite.sqlitePath));
-        configValues.put("sqlite.table", wrapIfNecessary(sqlite.sqliteTable));
-        String configTemplate = Resources.toString(getResource("data/easyauth/config/" + configPath), UTF_8);
-        return new StringSubstitutor(configValues).replace(configTemplate);
+    @Override
+    public void save() {
+        save(StorageConfigV1.class, this);
     }
 
     @ConfigSerializable
     public static class MySqlConfig {
+        @Comment("""
+                
+                MySQL host.""")
         public String mysqlHost = "localhost";
+
+        @Comment("""
+                
+                MySQL user.""")
         public String mysqlUser = "root";
+
+        @Comment("""
+                
+                MySQL password.""")
         public String mysqlPassword = "password";
+
+        @Comment("""
+                
+                MySQL database.""")
         public String mysqlDatabase = "easyauth";
+
+        @Comment("""
+                
+                MySQL table name.""")
         public String mysqlTable = "easyauth";
     }
 
     @ConfigSerializable
     public static class MongoDBConfig {
+        @Comment("""
+                
+                MongoDB connection string.""")
         public String mongodbConnectionString = "mongodb://username:password@host:port/?options";
+
+        @Comment("""
+                
+                MongoDB database name.""")
         public String mongodbDatabase = "easyauth";
     }
 
     @ConfigSerializable
     public static class SQLiteConfig {
+        @Comment("""
+                
+                SQLite database path.""")
         public String sqlitePath = "EasyAuth/easyauth.db";
+
+        @Comment("""
+                
+                SQLite table name.""")
         public String sqliteTable = "easyauth";
     }
 }

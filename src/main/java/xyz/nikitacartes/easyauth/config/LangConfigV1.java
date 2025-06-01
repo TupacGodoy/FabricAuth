@@ -1,20 +1,13 @@
 package xyz.nikitacartes.easyauth.config;
 
-import com.google.common.io.Resources;
 import net.minecraft.server.command.CommandOutput;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import org.apache.commons.text.StringSubstitutor;
 import org.spongepowered.configurate.objectmapping.ConfigSerializable;
+import org.spongepowered.configurate.objectmapping.meta.Comment;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
-import static com.google.common.io.Resources.getResource;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static net.minecraft.text.Text.translatable;
 import static net.minecraft.text.Text.translatableWithFallback;
 import static xyz.nikitacartes.easyauth.EasyAuth.langConfig;
@@ -22,6 +15,11 @@ import static xyz.nikitacartes.easyauth.EasyAuth.langConfig;
 @ConfigSerializable
 public class LangConfigV1 extends ConfigTemplate {
 
+    @Comment("""
+            Enable server-side translation.
+            While enabaled EasyAuth sends messages, translated to player's client language.
+            List of aviailable languages: https://github.com/NikitaCartes/EasyAuth/tree/HEAD/src/main/resources/data/easyauth/lang
+            Disabling this oprion will force EasyAuth to send all messaged from that file.""")
     public boolean enableServerSideTranslation = true;
     public TranslatableText enterPassword = new TranslatableText("text.easyauth.enterPassword", "§6You need to enter your password!");
     public TranslatableText enterNewPassword = new TranslatableText("text.easyauth.enterNewPassword", "§4You need to enter new password!");
@@ -66,7 +64,11 @@ public class LangConfigV1 extends ConfigTemplate {
     public TranslatableText selfMarkAsOnlineWarning = new TranslatableText("text.easyauth.selfMarkAsOnlineWarning", "§6You want to mark yourself as online player.\n§6You will not be able to log in if you don't have an online account.\n§6Data, connected to offline uuid (villagers' discounts, pets) will be lost.\n§aIf you are want to continue, type /account online <password> true.");
 
     public LangConfigV1() {
-        super("translation.conf");
+        super("translation.conf", """
+                ##                             ##
+                ##          EasyAuth           ##
+                ##  Translation Configuration  ##
+                ##                             ##""");
     }
 
     public static LangConfigV1 create() {
@@ -86,53 +88,9 @@ public class LangConfigV1 extends ConfigTemplate {
         return config;
     }
 
-    protected String handleTemplate() throws IOException {
-        Map<String, Object> configValues = new HashMap<>();
-        configValues.put("enableServerSideTranslation", wrapIfNecessary(enableServerSideTranslation));
-        configValues.put("enterPassword", wrapIfNecessary(enterPassword));
-        configValues.put("enterNewPassword", wrapIfNecessary(enterNewPassword));
-        configValues.put("wrongPassword", wrapIfNecessary(wrongPassword));
-        configValues.put("matchPassword", wrapIfNecessary(matchPassword));
-        configValues.put("passwordUpdated", wrapIfNecessary(passwordUpdated));
-        configValues.put("loginRequired", wrapIfNecessary(loginRequired));
-        configValues.put("loginTriesExceeded", wrapIfNecessary(loginTriesExceeded));
-        configValues.put("globalPasswordSet", wrapIfNecessary(globalPasswordSet));
-        configValues.put("cannotChangePassword", wrapIfNecessary(cannotChangePassword));
-        configValues.put("cannotUnregister", wrapIfNecessary(cannotUnregister));
-        configValues.put("notAuthenticated", wrapIfNecessary(notAuthenticated));
-        configValues.put("alreadyAuthenticated", wrapIfNecessary(alreadyAuthenticated));
-        configValues.put("successfullyAuthenticated", wrapIfNecessary(successfullyAuthenticated));
-        configValues.put("successfulLogout", wrapIfNecessary(successfulLogout));
-        configValues.put("timeExpired", wrapIfNecessary(timeExpired));
-        configValues.put("registerRequired", wrapIfNecessary(registerRequired));
-        configValues.put("alreadyRegistered", wrapIfNecessary(alreadyRegistered));
-        configValues.put("registerSuccess", wrapIfNecessary(registerSuccess));
-        configValues.put("userdataDeleted", wrapIfNecessary(userdataDeleted));
-        configValues.put("userdataUpdated", wrapIfNecessary(userdataUpdated));
-        configValues.put("accountDeleted", wrapIfNecessary(accountDeleted));
-        configValues.put("configurationReloaded", wrapIfNecessary(configurationReloaded));
-        configValues.put("maxPasswordChars", wrapIfNecessary(maxPasswordChars));
-        configValues.put("minPasswordChars", wrapIfNecessary(minPasswordChars));
-        configValues.put("disallowedUsername", wrapIfNecessary(disallowedUsername));
-        configValues.put("playerAlreadyOnline", wrapIfNecessary(playerAlreadyOnline));
-        configValues.put("worldSpawnSet", wrapIfNecessary(worldSpawnSet));
-        configValues.put("corruptedPlayerData", wrapIfNecessary(corruptedPlayerData));
-        configValues.put("userNotRegistered", wrapIfNecessary(userNotRegistered));
-        configValues.put("cannotLogout", wrapIfNecessary(cannotLogout));
-        configValues.put("offlineUuid", wrapIfNecessary(offlineUuid));
-        configValues.put("registeredPlayers", wrapIfNecessary(registeredPlayers));
-        configValues.put("validSession", wrapIfNecessary(validSession));
-        configValues.put("onlinePlayerLogin", wrapIfNecessary(onlinePlayerLogin));
-        configValues.put("differentUsernameCase", wrapIfNecessary(differentUsernameCase));
-        configValues.put("wrongGlobalPassword", wrapIfNecessary(wrongGlobalPassword));
-        configValues.put("registerRequiredWithGlobalPassword", wrapIfNecessary(registerRequiredWithGlobalPassword));
-        configValues.put("markAsOffline", wrapIfNecessary(markAsOffline));
-        configValues.put("markAsOnline", wrapIfNecessary(markAsOnline));
-        configValues.put("selfMarkAsOnline", wrapIfNecessary(selfMarkAsOnline));
-        configValues.put("selfMarkAsOnlineWarning", wrapIfNecessary(selfMarkAsOnlineWarning));
-
-        String configTemplate = Resources.toString(getResource("data/easyauth/config/" + configPath), UTF_8);
-        return new StringSubstitutor(configValues).replace(configTemplate);
+    @Override
+    public void save() {
+        save(LangConfigV1.class, this);
     }
 
     public static final class TranslatableText {

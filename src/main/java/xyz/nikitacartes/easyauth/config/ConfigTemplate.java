@@ -1,5 +1,7 @@
 package xyz.nikitacartes.easyauth.config;
 
+import org.jetbrains.annotations.NotNull;
+import org.spongepowered.configurate.CommentedConfigurationNode;
 import org.spongepowered.configurate.ConfigurateException;
 import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.hocon.HoconConfigurationLoader;
@@ -12,21 +14,18 @@ import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Locale;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.gameDirectory;
-import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogError;
 import static xyz.nikitacartes.easyauth.config.LangConfigV1.TranslatableText;
+import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogError;
 
 public abstract class ConfigTemplate {
-    private transient final Pattern pattern = Pattern.compile("^[^$\"{}\\[\\]:=,+#`^?!@*&\\\\\\s/]+");
     transient final String configPath;
+    transient final String header;
 
-    ConfigTemplate(String configPath) {
+    ConfigTemplate(String configPath, String header) {
         this.configPath = configPath;
+        this.header = header;
     }
 
     public static <Config extends ConfigTemplate> Config loadConfig(Class<Config> configClass, String configPath) {
@@ -47,8 +46,7 @@ public abstract class ConfigTemplate {
         }
     }
 
-    public void save() {
-        Path path = gameDirectory.resolve("config/EasyAuth/" + configPath);
+    void backup(Path path) {
         try {
             if (Files.exists(path)) {
                 Path backupFolder = gameDirectory.resolve("config/EasyAuth/backup");
@@ -57,56 +55,32 @@ public abstract class ConfigTemplate {
                 }
                 Files.move(path, path.resolveSibling("backup/" + configPath + "." + LocalDateTime.now().toString().replace(":", "-")));
             }
-            Files.writeString(path, handleTemplate());
         } catch (IOException e) {
             LogError("Failed to save config file", e);
         }
     }
 
-    private String escapeString(String string) {
-        return string
-                .replace("\\", "\\\\")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t")
-                .replace("\b", "\\b")
-                .replace("\f", "\\f")
-                .replace("\"", "\\\"");
-    }
-
-    protected <T> String wrapIfNecessary(T string) {
-        String escapeString = escapeString(String.valueOf(string));
-        if (!pattern.matcher(escapeString).matches()) {
-            return "\"" + escapeString + "\"";
-        } else {
-            return escapeString;
+    <Config extends ConfigTemplate> void save(Class<Config> configClass, Config config) {
+        Path path = gameDirectory.resolve("config/EasyAuth/" + configPath);
+        backup(path);
+        final HoconConfigurationLoader loader = HoconConfigurationLoader.builder()
+                .defaultOptions(configurationOptions ->
+                        configurationOptions
+                                .serializers(builder ->
+                                        builder.register(LangConfigV1.TranslatableText.class, TranslatableTextSerializer.INSTANCE))
+                                .header(header))
+                .path(path)
+                .build();
+        try {
+            CommentedConfigurationNode rootNode = loader.load();
+            rootNode.set(configClass, config);
+            loader.save(rootNode);
+        } catch (ConfigurateException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    protected String wrapIfNecessary(double string) {
-        return String.format(Locale.US, "%.4f", string);
-    }
-
-    protected String wrapIfNecessary(long string) {
-        return String.valueOf(string);
-    }
-
-    protected <T extends List<String>> String wrapIfNecessary(T strings) {
-        return "[" + strings
-                .stream()
-                .map(this::wrapIfNecessary)
-                .collect(Collectors.joining(",\n  ")) + "]";
-    }
-
-    protected String wrapIfNecessary(TranslatableText text) {
-        return "{\n\t\"text\": " + wrapIfNecessary(text.fallback) +
-                "\n\t\"enabled\": " + text.enabled +
-                "\n\t\"serverSide\": " + text.serverSide +
-                "\n}";
-    }
-
-    protected abstract String handleTemplate() throws IOException;
-
+    abstract public void save();
 
     static final class TranslatableTextSerializer implements TypeSerializer<TranslatableText> {
         static final TranslatableTextSerializer INSTANCE = new TranslatableTextSerializer();
@@ -128,12 +102,12 @@ public abstract class ConfigTemplate {
         }
 
         @Override
-        public TranslatableText deserialize(Type type, ConfigurationNode node) throws SerializationException {
+        public TranslatableText deserialize(@NotNull Type type, ConfigurationNode node) throws SerializationException {
             final String text = node.node(TEXT).getString("");
             final boolean enabled = node.node(ENABLED).getBoolean(true);
             final boolean serverSide = node.node(SERVER_SIDE).getBoolean(true);
 
-            if (text == null || text.isEmpty()) {
+            if (text.isEmpty()) {
                 return new TranslatableText("text.easyauth." + camelCase(node.key()), "", false, serverSide);
             }
 
@@ -141,7 +115,7 @@ public abstract class ConfigTemplate {
         }
 
         @Override
-        public void serialize(Type type, @Nullable TranslatableText obj, ConfigurationNode node) throws SerializationException {
+        public void serialize(@NotNull Type type, @Nullable TranslatableText obj, @NotNull ConfigurationNode node) throws SerializationException {
             if (obj == null || obj.fallback.isEmpty()) {
                 node.node(TEXT).set("");
                 node.node(ENABLED).set(false);

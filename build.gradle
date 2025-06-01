@@ -75,12 +75,7 @@ dependencies {
     include implementation("org.xerial:sqlite-jdbc:${sqlite_version}")
 
     // Hocon config
-    implementation shadow("org.spongepowered:configurate-core:${hocon_version}")
     implementation shadow("org.spongepowered:configurate-hocon:${hocon_version}")
-    implementation shadow("org.apache.commons:commons-text:${commons_text_version}")
-    implementation shadow("com.typesafe:config:${typesafe_config_version}")
-    implementation shadow("io.leangen.geantyref:geantyref:${geantyref_version}")
-    implementation shadow("net.kyori:option:${option_version}")
 
     // JNA lib
     include "net.java.dev.jna:jna:${jna_version}"
@@ -88,8 +83,6 @@ dependencies {
 
 shadowJar {
     relocate "org.spongepowered.configurate", "xyz.nikitacartes.shadow.configurate"
-    relocate "org.apache.commons.text", "xyz.nikitacartes.shadow.commons_text"
-    relocate "org.apache.commons.lang3", "xyz.nikitacartes.shadow.commons_lang3"
     relocate "com.typesafe.config", "xyz.nikitacartes.shadow.config"
     relocate "io.leangen.geantyref", "xyz.nikitacartes.shadow.geantyref"
     relocate "net.kyori.option", "xyz.nikitacartes.shadow.option"

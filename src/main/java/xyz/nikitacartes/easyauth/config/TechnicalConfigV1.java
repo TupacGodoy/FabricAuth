@@ -1,33 +1,57 @@
 package xyz.nikitacartes.easyauth.config;
 
-import com.google.common.io.Resources;
 import net.fabricmc.loader.api.FabricLoader;
-import org.apache.commons.text.StringSubstitutor;
 import org.spongepowered.configurate.objectmapping.ConfigSerializable;
+import org.spongepowered.configurate.objectmapping.meta.Comment;
 
-import java.io.IOException;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-
-import static com.google.common.io.Resources.getResource;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 @ConfigSerializable
 public class TechnicalConfigV1 extends ConfigTemplate {
 
-    public String globalPassword = null;
+    @Comment("""
+            Hashed global password.""")
+    public @Nullable String globalPassword = null;
+
+    @Comment("""
+            
+            List of players forced to offline mode.""")
     @Deprecated
-    public ArrayList<String> forcedOfflinePlayers = new ArrayList<>();
+    public transient ArrayList<String> forcedOfflinePlayers = new ArrayList<>();
+
+    @Comment("""
+            
+            List of players confirmed as online.""")
     @Deprecated
-    public ArrayList<String> confirmedOnlinePlayers = new ArrayList<>();
+    public transient ArrayList<String> confirmedOnlinePlayers = new ArrayList<>();
+
+    @Comment("""
+            
+            Whether Floodgate mod is loaded.""")
     public transient boolean floodgateLoaded = false;
+
+    @Comment("""
+            
+            Whether LuckPerms mod is loaded.""")
     public transient boolean luckPermsLoaded = false;
+
+    @Comment("""
+            
+            Whether Vanish mod is loaded.""")
     public transient boolean vanishLoaded = false;
+
+    @Comment("""
+            
+            Whether Permissions API mod is loaded.""")
     public transient boolean permissionsLoaded = false;
 
     public TechnicalConfigV1() {
-        super("technical.conf");
+        super("technical.conf", """
+                ##                          ##
+                ##         EasyAuth         ##
+                ##     Technical Config     ##
+                ##                          ##""");
     }
 
     public static TechnicalConfigV1 create() {
@@ -36,18 +60,7 @@ public class TechnicalConfigV1 extends ConfigTemplate {
             config = new TechnicalConfigV1();
             config.save();
         }
-        if (FabricLoader.getInstance().isModLoaded("floodgate")) {
-            config.floodgateLoaded = true;
-        }
-        if (FabricLoader.getInstance().isModLoaded("luckperms")) {
-            config.luckPermsLoaded = true;
-        }
-        if (FabricLoader.getInstance().isModLoaded("melius-vanish")) {
-            config.vanishLoaded = true;
-        }
-        if (FabricLoader.getInstance().isModLoaded("fabric-permissions-api-v0")) {
-            config.permissionsLoaded = true;
-        }
+        config.loadedMods();
         return config;
     }
 
@@ -56,25 +69,27 @@ public class TechnicalConfigV1 extends ConfigTemplate {
         if (config == null) {
             throw new RuntimeException("Failed to load technical.conf");
         }
-        if (FabricLoader.getInstance().isModLoaded("floodgate")) {
-            config.floodgateLoaded = true;
-        }
-        if (FabricLoader.getInstance().isModLoaded("luckperms")) {
-            config.luckPermsLoaded = true;
-        }
-        if (FabricLoader.getInstance().isModLoaded("melius-vanish")) {
-            config.vanishLoaded = true;
-        }
-        if (FabricLoader.getInstance().isModLoaded("fabric-permissions-api-v0")) {
-            config.permissionsLoaded = true;
-        }
+        config.loadedMods();
         return config;
     }
 
-    protected String handleTemplate() throws IOException {
-        Map<String, Object> configValues = new HashMap<>();
-        configValues.put("globalPassword", wrapIfNecessary(globalPassword));
-        String configTemplate = Resources.toString(getResource("data/easyauth/config/" + configPath), UTF_8);
-        return new StringSubstitutor(configValues).replace(configTemplate);
+    private void loadedMods() {
+        if (FabricLoader.getInstance().isModLoaded("floodgate")) {
+            floodgateLoaded = true;
+        }
+        if (FabricLoader.getInstance().isModLoaded("luckperms")) {
+            luckPermsLoaded = true;
+        }
+        if (FabricLoader.getInstance().isModLoaded("melius-vanish")) {
+            vanishLoaded = true;
+        }
+        if (FabricLoader.getInstance().isModLoaded("fabric-permissions-api-v0")) {
+            permissionsLoaded = true;
+        }
+    }
+
+    @Override
+    public void save() {
+        save(TechnicalConfigV1.class, this);
     }
 }

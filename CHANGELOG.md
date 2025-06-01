@@ -1,7 +1,7 @@
 ### ToDo
 #### Add
-- Add support for changing "invalid session" message when offline player connects with online nickname
-- Add default language option
+- Add support for a changing "invalid session" message when offline player connects with online nickname
+- Add a default language option
 
 #### Fix
 - Check how offline players work if they try to connect with a taken online account
@@ -24,6 +24,7 @@
 #### Changes
 - Changed how Invulnerability and Invisibility are handled during login
 - EasyAuth doesn't include `fabric-permissions-api-v0` anymore
+- Simplify config system's backend
 
 ----
 ### 3.2.1

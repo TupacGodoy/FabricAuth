@@ -7,7 +7,7 @@ public class VersionConfig extends ConfigTemplate {
     public int configVersion = -1;
 
     public VersionConfig() {
-        super("main.conf");
+        super("main.conf", null);
     }
 
     public static VersionConfig load() {
@@ -15,7 +15,8 @@ public class VersionConfig extends ConfigTemplate {
         return config != null ? config : new VersionConfig();
     }
 
-    protected String handleTemplate() {
-        return null;
+    @Override
+    public void save() {
+        throw new UnsupportedOperationException("VersionConfig should not be saved directly. Use the specific config classes instead.");
     }
 }

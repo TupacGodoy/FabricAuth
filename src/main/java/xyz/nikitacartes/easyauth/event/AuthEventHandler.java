@@ -15,7 +15,6 @@ import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Uuids;
 import net.minecraft.util.math.BlockPos;
-import xyz.nikitacartes.easyauth.integrations.VanishIntegration;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.FloodgateApiHelper;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
@@ -66,7 +65,7 @@ public class AuthEventHandler {
             }
 
             if (!((PlayerAuth) onlinePlayer).easyAuth$getIpAddress().equals(string)) {
-                return langConfig.playerAlreadyOnline.getWithFallback(incomingPlayerUsername);
+                return langConfig.playerAlreadyOnline.getNonTranslatable(incomingPlayerUsername);
             }
         }
 
@@ -74,18 +73,18 @@ public class AuthEventHandler {
         Matcher matcher = usernamePattern.matcher(incomingPlayerUsername);
 
         if (!(matcher.matches() || (technicalConfig.floodgateLoaded && extendedConfig.floodgateBypassRegex && FloodgateApiHelper.isFloodgatePlayer(profile.getId())))) {
-            return langConfig.disallowedUsername.getWithFallback(extendedConfig.usernameRegexp);
+            return langConfig.disallowedUsername.getNonTranslatable(extendedConfig.usernameRegexp);
         }
         // If the player name and registered name are different, kick the player if differentUsernameCase is enabled
         // Create in case of Floodgate player
         PlayerEntryV1 playerEntryV1 = PlayersCache.getFloodgate(incomingPlayerUsername);
 
         if (!extendedConfig.allowCaseInsensitiveUsername && !playerEntryV1.username.equals(incomingPlayerUsername)) {
-            return langConfig.differentUsernameCase.getWithFallback(incomingPlayerUsername);
+            return langConfig.differentUsernameCase.getNonTranslatable(incomingPlayerUsername);
         }
 
         if (config.maxLoginTries != -1 && playerEntryV1.lastKickedDate.plusSeconds(config.resetLoginAttemptsTimeout).isAfter(ZonedDateTime.now())) {
-            return langConfig.loginTriesExceeded.getWithFallback();
+            return langConfig.loginTriesExceeded.getNonTranslatable();
         }
 
         return null;

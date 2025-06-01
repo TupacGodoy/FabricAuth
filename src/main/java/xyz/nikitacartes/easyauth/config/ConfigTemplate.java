@@ -107,18 +107,14 @@ public abstract class ConfigTemplate {
             final boolean enabled = node.node(ENABLED).getBoolean(true);
             final boolean serverSide = node.node(SERVER_SIDE).getBoolean(true);
 
-            if (text.isEmpty()) {
-                return new TranslatableText("text.easyauth." + camelCase(node.key()), "", false, serverSide);
-            }
-
             return new TranslatableText("text.easyauth." + camelCase(node.key()), text, enabled, serverSide);
         }
 
         @Override
         public void serialize(@NotNull Type type, @Nullable TranslatableText obj, @NotNull ConfigurationNode node) throws SerializationException {
-            if (obj == null || obj.fallback.isEmpty()) {
+            if (obj == null) {
                 node.node(TEXT).set("");
-                node.node(ENABLED).set(false);
+                node.node(ENABLED).set(true);
                 node.node(SERVER_SIDE).set(true);
                 return;
             }

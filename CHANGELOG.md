@@ -1,7 +1,6 @@
 ### ToDo
 #### Add
 - Add support for a changing "invalid session" message when offline player connects with online nickname
-- Add a default language option
 
 #### Fix
 - Check how offline players work if they try to connect with a taken online account
@@ -11,6 +10,7 @@
 ##### Minecraft 1.21.5
 #### Add
 - Option `vanish-until-auth` to vanish players until they authenticate using [Vanish mod](https://github.com/DrexHD/Vanish)
+- Option `default-language` to set default language with disabled server-side translation
 
 #### Remove
 - Remove `hide-players-from-player-list` option

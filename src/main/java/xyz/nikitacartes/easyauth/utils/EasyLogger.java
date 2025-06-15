@@ -1,23 +1,22 @@
 package xyz.nikitacartes.easyauth.utils;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.util.Strings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.config;
 import static xyz.nikitacartes.easyauth.EasyAuth.extendedConfig;
 
 public class EasyLogger {
-    private static final Logger logger = LogManager.getLogger("EasyAuth");
+    public static final Logger LOGGER = LoggerFactory.getLogger("EasyAuth");
 
     static void log(Level level, String message) {
-        logger.atLevel(level).log(Strings.concat("[EasyAuth]: ", message));
+        LOGGER.atLevel(level).log(("[EasyAuth]: " + message));
     }
 
     static void log(Level level, String message, Throwable e) {
-        logger.atLevel(level).log("[EasyAuth]: {}\n{}", message, ExceptionUtils.getStackTrace(e));
+        LOGGER.atLevel(level).log("[EasyAuth]: {}\n{}", message, ExceptionUtils.getStackTrace(e));
     }
 
     public static void LogInfo(String message) {

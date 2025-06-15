@@ -2,7 +2,6 @@ package xyz.nikitacartes.easyauth.mixin;
 
 import com.google.common.net.InetAddresses;
 import net.minecraft.entity.Entity;
-import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.packet.s2c.play.PositionFlag;
 import net.minecraft.registry.RegistryKey;
@@ -10,6 +9,7 @@ import net.minecraft.scoreboard.ScoreboardCriterion;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.storage.ReadView;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -41,7 +41,7 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
 
     @Final
     @Shadow
-    public MinecraftServer server;
+    private MinecraftServer server;
 
     @Unique
     private long kickTimer = config.kickTimeout * 20;
@@ -56,7 +56,7 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
     private UUID ridingEntityUUID = null;
 
     @Unique
-    private NbtCompound rootVehicle = null;
+    private ReadView rootVehicle = null;
 
     @Unique
     private boolean wasDead = false;
@@ -107,7 +107,7 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
             return;
         }
         if (wasDead) {
-            player.kill(player.getServerWorld());
+            player.kill(player.getWorld());
             player.getScoreboard().forEachScore(ScoreboardCriterion.DEATH_COUNT, player, (score) -> score.setScore(score.getScore() - 1));
             return;
         }
@@ -216,7 +216,7 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
         if (authenticated) {
             kickTimer = config.kickTimeout * 20;
             // Updating blocks if needed (in case if portal rescue action happened)
-            World world = player.getEntityWorld();
+            World world = player.getWorld();
             BlockPos pos = player.getBlockPos();
 
             // Sending updates to portal blocks
@@ -322,11 +322,11 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
         this.ridingEntityUUID = ridingEntityUUID;
     }
 
-    public NbtCompound easyAuth$getRootVehicle() {
+    public ReadView easyAuth$getRootVehicle() {
         return rootVehicle;
     }
 
-    public void easyAuth$setRootVehicle(NbtCompound rootVehicle) {
+    public void easyAuth$setRootVehicle(ReadView rootVehicle) {
         this.rootVehicle = rootVehicle;
     }
 

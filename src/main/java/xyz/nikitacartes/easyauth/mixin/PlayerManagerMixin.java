@@ -1,5 +1,6 @@
 package xyz.nikitacartes.easyauth.mixin;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
@@ -14,7 +15,10 @@ import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ConnectedClientData;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.stat.ServerStatHandler;
+import net.minecraft.storage.NbtReadView;
+import net.minecraft.storage.ReadView;
 import net.minecraft.text.Text;
+import net.minecraft.util.ErrorReporter;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Uuids;
 import net.minecraft.util.math.Vec3d;
@@ -34,11 +38,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.io.File;
 import java.net.SocketAddress;
+import java.util.Optional;
 import java.util.UUID;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
-import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
-import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogWarn;
+import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
 @Mixin(PlayerManager.class)
 public abstract class PlayerManagerMixin {
@@ -55,14 +59,14 @@ public abstract class PlayerManagerMixin {
         AuthEventHandler.loadPlayerData(player, connection);
     }
 
-    @ModifyVariable(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
-            at = @At("STORE"), ordinal = 0)
-    private RegistryKey<World> onPlayerConnect(RegistryKey<World> world, ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData) {
+    @ModifyExpressionValue(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
+            at = @At(value = "INVOKE", target = "Ljava/util/Optional;flatMap(Ljava/util/function/Function;)Ljava/util/Optional;"))
+    private  Optional<RegistryKey<World>> onPlayerConnect(Optional<RegistryKey<World>> original, @Local(argsOnly = true) ServerPlayerEntity player) {
         if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
-            ((PlayerAuth) player).easyAuth$saveTrueDimension(world);
-            return RegistryKey.of(RegistryKeys.WORLD, Identifier.of(config.worldSpawn.dimension));
+            ((PlayerAuth) player).easyAuth$saveTrueDimension(original.orElse(World.OVERWORLD));
+            return Optional.of(RegistryKey.of(RegistryKeys.WORLD, Identifier.of(config.worldSpawn.dimension)));
         }
-        return world;
+        return original;
     }
 
     @ModifyArgs(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
@@ -71,16 +75,19 @@ public abstract class PlayerManagerMixin {
         if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
             ((PlayerAuth) player).easyAuth$saveTrueLocation();
 
-            playerManager.loadPlayerData(player).flatMap(compound -> compound.getCompound("RootVehicle")).ifPresent(rootVehicle -> {
-                NbtCompound rootRootVehicle = new NbtCompound();
-                rootRootVehicle.put("RootVehicle", rootVehicle);
-                ((PlayerAuth) player).easyAuth$setRootVehicle(rootRootVehicle);
+            try (ErrorReporter.Logging logging = new ErrorReporter.Logging(player.getErrorReporterContext(), LOGGER)) {
+                playerManager.loadPlayerData(player, logging).flatMap(view -> view.getOptionalReadView("RootVehicle")).ifPresent(rootVehicleView -> {
+                    NbtCompound rootRootVehicle = new NbtCompound();
+                    rootRootVehicle.put("RootVehicle", ((NbtReadView) rootVehicleView).nbt);
+                    ReadView rootVehicle = NbtReadView.create(logging, player.getRegistryManager(), rootRootVehicle);
+                    ((PlayerAuth) player).easyAuth$setRootVehicle(rootVehicle);
 
-                rootVehicle.get("Attach", Uuids.INT_STREAM_CODEC).ifPresent(uUID -> {
-                    ((PlayerAuth) player).easyAuth$setRidingEntityUUID(uUID);
-                    LogDebug(String.format("Saving vehicle of player %s as %s", player.getNameForScoreboard(), uUID));
+                    rootVehicleView.read("Attach", Uuids.INT_STREAM_CODEC).ifPresent(uUID -> {
+                        ((PlayerAuth) player).easyAuth$setRidingEntityUUID(uUID);
+                        LogDebug(String.format("Saving vehicle of player %s as %s", player.getNameForScoreboard(), uUID));
+                    });
                 });
-            });
+            }
 
             LogDebug(String.format("Teleporting player %s", player.getNameForScoreboard()));
             LogDebug(String.format("Spawn position of player %s is %s", player.getNameForScoreboard(), config.worldSpawn));
@@ -159,12 +166,12 @@ public abstract class PlayerManagerMixin {
         }
     }
 
-    @WrapOperation(method = "method_68176(Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/nbt/NbtCompound;)V",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;readRootVehicle(Lnet/minecraft/nbt/NbtCompound;)V"))
-    private static void doNotMountPlayerToVehicle(ServerPlayerEntity serverPlayerEntity, NbtCompound nbtCompound, Operation<Void> original) {
-        if (config.hidePlayerCoords && !((PlayerAuth) serverPlayerEntity).easyAuth$isAuthenticated()) {
+    @WrapOperation(method = "method_68176(Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/storage/ReadView;)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;readRootVehicle(Lnet/minecraft/storage/ReadView;)V"))
+    private static void doNotMountPlayerToVehicle(ServerPlayerEntity instance, ReadView view, Operation<Void> original) {
+        if (config.hidePlayerCoords && !((PlayerAuth) instance).easyAuth$isAuthenticated()) {
             return;
         }
-        original.call(serverPlayerEntity, nbtCompound);
+        original.call(instance, view);
     }
 }

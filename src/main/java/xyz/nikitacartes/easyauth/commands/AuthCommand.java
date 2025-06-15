@@ -367,11 +367,18 @@ public class AuthCommand {
      * @return 0
      */
     private static int markAsOnline(ServerCommandSource source, String username) {
-        THREADPOOL.submit(() -> {
-            PlayerEntryV1 entry = DB.getUserDataOrCreate(username);
+        ServerPlayerEntity player = source.getServer().getPlayerManager().getPlayer(username);
+        if (player != null) {
+            PlayerEntryV1 entry = ((PlayerAuth) player).easyAuth$getPlayerEntryV1();
             entry.onlineAccount = PlayerEntryV1.OnlineAccount.TRUE;
             entry.update();
-        });
+        } else {
+            THREADPOOL.submit(() -> {
+                PlayerEntryV1 entry = DB.getUserDataOrCreate(username);
+                entry.onlineAccount = PlayerEntryV1.OnlineAccount.TRUE;
+                entry.update();
+            });
+        }
 
         langConfig.markAsOnline.send(source, username);
         return 1;

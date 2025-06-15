@@ -6,8 +6,14 @@
 - Check how offline players work if they try to connect with a taken online account
 
 ----
+### 3.3.1
+##### Minecraft 1.21.5
+#### Fix
+- Auth markAsOnline doesn't work if a user is on server [#216](https://github.com/NikitaCartes/EasyAuth/issues/216)
+
+----
 ### 3.3.0
-##### Minecraft 1.20[.1], 1.20.2, 1.20.3-1.20.4, 1.20.5-1.20.6, 1.21-1.21.1, 1.21.2-1.21.4, 1.21.5
+##### Minecraft 1.21.5
 #### Add
 - Option `vanish-until-auth` to vanish players until they authenticate using [Vanish mod](https://github.com/DrexHD/Vanish)
 - Option `default-language` to set default language with disabled server-side translation

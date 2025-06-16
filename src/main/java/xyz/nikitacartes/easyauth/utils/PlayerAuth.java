@@ -79,12 +79,6 @@ public interface PlayerAuth {
     PlayerEntryV1 easyAuth$getPlayerEntryV1();
     void easyAuth$setPlayerEntryV1(PlayerEntryV1 playerEntryV1);
     void easyAuth$canSkipAuth(boolean cantSkipAuth);
-
-    @Unique
-    boolean easyAuth$isInvisible(boolean original);
-
-    boolean easyAuth$isInvulnerable(boolean original);
-
     long easyAuth$getKickTimer();
     void easyAuth$setKickTimer(long kickTimer);
     void easyAuth$setIpAddress(String ipAddress);

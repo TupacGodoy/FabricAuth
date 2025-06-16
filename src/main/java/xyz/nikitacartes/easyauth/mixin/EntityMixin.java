@@ -8,12 +8,12 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(Entity.class)
 public class EntityMixin {
     @ModifyReturnValue(method = "isInvisible()Z", at = @At("RETURN"))
-    private boolean easyAuth$isInvisible(boolean original) {
+    public boolean easyAuth$isInvisible(boolean original) {
         return original;
     }
 
     @ModifyReturnValue(method = "isInvulnerable()Z", at = @At("RETURN"))
-    private boolean easyAuth$isInvulnerable(boolean original) {
+    public boolean easyAuth$isInvulnerable(boolean original) {
         return original;
     }
 }

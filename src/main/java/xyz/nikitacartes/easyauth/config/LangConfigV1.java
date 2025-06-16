@@ -39,49 +39,49 @@ public class LangConfigV1 extends ConfigTemplate {
             Note: with server-side translation enabled, this language will be used for non-translatable messages
             Note: with disable server-side translation, message from "text" field have higher priority than defaultLanguage.""")
     public String defaultLanguage = "en_us";
-    public TranslatableText enterPassword = new TranslatableText();
-    public TranslatableText enterNewPassword = new TranslatableText();
-    public TranslatableText wrongPassword = new TranslatableText();
-    public TranslatableText matchPassword = new TranslatableText();
-    public TranslatableText passwordUpdated = new TranslatableText();
-    public TranslatableText loginRequired = new TranslatableText();
-    public TranslatableText loginTriesExceeded = new TranslatableText();
-    public TranslatableText globalPasswordSet = new TranslatableText();
-    public TranslatableText cannotChangePassword = new TranslatableText();
-    public TranslatableText cannotUnregister = new TranslatableText();
-    public TranslatableText notAuthenticated = new TranslatableText();
-    public TranslatableText alreadyAuthenticated = new TranslatableText();
-    public TranslatableText successfullyAuthenticated = new TranslatableText();
-    public TranslatableText successfulLogout = new TranslatableText();
-    public TranslatableText timeExpired = new TranslatableText();
-    public TranslatableText registerRequired = new TranslatableText();
-    public TranslatableText alreadyRegistered = new TranslatableText();
-    public TranslatableText registerSuccess = new TranslatableText();
-    public TranslatableText userdataDeleted = new TranslatableText();
-    public TranslatableText userdataUpdated = new TranslatableText();
-    public TranslatableText accountDeleted = new TranslatableText();
-    public TranslatableText configurationReloaded = new TranslatableText();
-    public TranslatableText maxPasswordChars = new TranslatableText();
-    public TranslatableText minPasswordChars = new TranslatableText();
-    public TranslatableText disallowedUsername = new TranslatableText();
-    public TranslatableText playerAlreadyOnline = new TranslatableText();
-    public TranslatableText worldSpawnSet = new TranslatableText();
-    public TranslatableText corruptedPlayerData = new TranslatableText();
-    public TranslatableText userNotRegistered = new TranslatableText();
-    public TranslatableText cannotLogout = new TranslatableText();
-    public TranslatableText offlineUuid = new TranslatableText();
-    public TranslatableText registeredPlayers = new TranslatableText();
-    public TranslatableText validSession = new TranslatableText();
-    public TranslatableText onlinePlayerLogin = new TranslatableText();
-    public TranslatableText differentUsernameCase = new TranslatableText();
-    public TranslatableText wrongGlobalPassword = new TranslatableText();
-    public TranslatableText registerRequiredWithGlobalPassword = new TranslatableText();
-    public TranslatableText markAsOffline = new TranslatableText();
-    public TranslatableText markAsOnline = new TranslatableText();
-    public TranslatableText selfMarkAsOnline = new TranslatableText();
-    public TranslatableText selfMarkAsOnlineWarning = new TranslatableText();
-    public TranslatableText accountNotFound = new TranslatableText();
-    public TranslatableText accountCheckFailed = new TranslatableText();
+    public TranslatableText enterPassword = new TranslatableText("text.easyauth.enterPassword");
+    public TranslatableText enterNewPassword = new TranslatableText("text.easyauth.enterNewPassword");
+    public TranslatableText wrongPassword = new TranslatableText("text.easyauth.wrongPassword");
+    public TranslatableText matchPassword = new TranslatableText("text.easyauth.matchPassword");
+    public TranslatableText passwordUpdated = new TranslatableText("text.easyauth.passwordUpdated");
+    public TranslatableText loginRequired = new TranslatableText("text.easyauth.loginRequired");
+    public TranslatableText loginTriesExceeded = new TranslatableText("text.easyauth.loginTriesExceeded");
+    public TranslatableText globalPasswordSet = new TranslatableText("text.easyauth.globalPasswordSet");
+    public TranslatableText cannotChangePassword = new TranslatableText("text.easyauth.cannotChangePassword");
+    public TranslatableText cannotUnregister = new TranslatableText("text.easyauth.cannotUnregister");
+    public TranslatableText notAuthenticated = new TranslatableText("text.easyauth.notAuthenticated");
+    public TranslatableText alreadyAuthenticated = new TranslatableText("text.easyauth.alreadyAuthenticated");
+    public TranslatableText successfullyAuthenticated = new TranslatableText("text.easyauth.successfullyAuthenticated");
+    public TranslatableText successfulLogout = new TranslatableText("text.easyauth.successfulLogout");
+    public TranslatableText timeExpired = new TranslatableText("text.easyauth.timeExpired");
+    public TranslatableText registerRequired = new TranslatableText("text.easyauth.registerRequired");
+    public TranslatableText alreadyRegistered = new TranslatableText("text.easyauth.alreadyRegistered");
+    public TranslatableText registerSuccess = new TranslatableText("text.easyauth.registerSuccess");
+    public TranslatableText userdataDeleted = new TranslatableText("text.easyauth.userdataDeleted");
+    public TranslatableText userdataUpdated = new TranslatableText("text.easyauth.userdataUpdated");
+    public TranslatableText accountDeleted = new TranslatableText("text.easyauth.accountDeleted");
+    public TranslatableText configurationReloaded = new TranslatableText("text.easyauth.configurationReloaded");
+    public TranslatableText maxPasswordChars = new TranslatableText("text.easyauth.maxPasswordChars");
+    public TranslatableText minPasswordChars = new TranslatableText("text.easyauth.minPasswordChars");
+    public TranslatableText disallowedUsername = new TranslatableText("text.easyauth.disallowedUsername");
+    public TranslatableText playerAlreadyOnline = new TranslatableText("text.easyauth.playerAlreadyOnline");
+    public TranslatableText worldSpawnSet = new TranslatableText("text.easyauth.worldSpawnSet");
+    public TranslatableText corruptedPlayerData = new TranslatableText("text.easyauth.corruptedPlayerData");
+    public TranslatableText userNotRegistered = new TranslatableText("text.easyauth.userNotRegistered");
+    public TranslatableText cannotLogout = new TranslatableText("text.easyauth.cannotLogout");
+    public TranslatableText offlineUuid = new TranslatableText("text.easyauth.offlineUuid");
+    public TranslatableText registeredPlayers = new TranslatableText("text.easyauth.registeredPlayers");
+    public TranslatableText validSession = new TranslatableText("text.easyauth.validSession");
+    public TranslatableText onlinePlayerLogin = new TranslatableText("text.easyauth.onlinePlayerLogin");
+    public TranslatableText differentUsernameCase = new TranslatableText("text.easyauth.differentUsernameCase");
+    public TranslatableText wrongGlobalPassword = new TranslatableText("text.easyauth.wrongGlobalPassword");
+    public TranslatableText registerRequiredWithGlobalPassword = new TranslatableText("text.easyauth.registerRequiredWithGlobalPassword");
+    public TranslatableText markAsOffline = new TranslatableText("text.easyauth.markAsOffline");
+    public TranslatableText markAsOnline = new TranslatableText("text.easyauth.markAsOnline");
+    public TranslatableText selfMarkAsOnline = new TranslatableText("text.easyauth.selfMarkAsOnline");
+    public TranslatableText selfMarkAsOnlineWarning = new TranslatableText("text.easyauth.selfMarkAsOnlineWarning");
+    public TranslatableText accountNotFound = new TranslatableText("text.easyauth.accountNotFound");
+    public TranslatableText accountCheckFailed = new TranslatableText("text.easyauth.accountCheckFailed");
 
     private static Map<String, String> translations = new HashMap<>();
 
@@ -109,23 +109,21 @@ public class LangConfigV1 extends ConfigTemplate {
             throw new RuntimeException("Failed to load translation.conf");
         }
 
-        Gson gson = new Gson();
-        Type mapType = new TypeToken<Map<String, String>>() {}.getType();
+        ClassLoader classLoader = LangConfigV1.class.getClassLoader();
+        InputStream defaultLanguage = classLoader.getResourceAsStream("data/easyauth/lang/" + config.defaultLanguage + ".json");
 
-        String path = "data/easyauth/lang/" + config.defaultLanguage + ".json";
-        InputStream input = LangConfigV1.class.getClassLoader().getResourceAsStream(path);
-
-        if (input == null) {
+        if (defaultLanguage == null) {
             EasyLogger.LogError("Failed to load default language " + config.defaultLanguage + ".json. Using en_us.json instead.");
-            translations = new HashMap<>();
-            return config;
+            defaultLanguage = classLoader.getResourceAsStream("data/easyauth/lang/en_us.json");
         }
 
-        try (InputStreamReader reader = new InputStreamReader(input)) {
+        try (InputStreamReader reader = new InputStreamReader(defaultLanguage)) {
+            Gson gson = new Gson();
+            Type mapType = new TypeToken<Map<String, String>>() {}.getType();
+
             translations = gson.fromJson(reader, mapType);
         } catch (Exception e) {
-            EasyLogger.LogError("Failed to load default language", e);
-            translations = new HashMap<>();
+            throw new RuntimeException("Failed to load default language", e);
         }
 
         return config;
@@ -144,6 +142,13 @@ public class LangConfigV1 extends ConfigTemplate {
 
         public TranslatableText() {
             this.key = null;
+            this.fallback = "";
+            this.enabled = true;
+            this.serverSide = true;
+        }
+
+        public TranslatableText(String key) {
+            this.key = key;
             this.fallback = "";
             this.enabled = true;
             this.serverSide = true;

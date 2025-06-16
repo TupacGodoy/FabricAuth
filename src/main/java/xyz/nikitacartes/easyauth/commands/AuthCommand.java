@@ -384,9 +384,11 @@ public class AuthCommand {
             try {
                 if (!isValidUsername(username)) {
                     langConfig.accountNotFound.send(source);
+                    return;
                 }
             } catch (IOException e) {
                 langConfig.accountCheckFailed.send(source);
+                return;
             }
 
             ServerPlayerEntity player = source.getServer().getPlayerManager().getPlayer(username);

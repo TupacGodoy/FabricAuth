@@ -22,6 +22,7 @@ import xyz.nikitacartes.easyauth.storage.database.DBApiException;
 import xyz.nikitacartes.easyauth.utils.AuthHelper;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
+import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -31,6 +32,7 @@ import static com.mojang.brigadier.arguments.StringArgumentType.*;
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
+import static xyz.nikitacartes.easyauth.integrations.MojangApi.isValidUsername;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
 public class AuthCommand {
@@ -378,20 +380,27 @@ public class AuthCommand {
      * @return 0
      */
     private static int markAsOnline(ServerCommandSource source, String username) {
-        ServerPlayerEntity player = source.getServer().getPlayerManager().getPlayer(username);
-        if (player != null) {
-            PlayerEntryV1 entry = ((PlayerAuth) player).easyAuth$getPlayerEntryV1();
+        THREADPOOL.submit(() -> {
+            try {
+                if (!isValidUsername(username)) {
+                    langConfig.accountNotFound.send(source);
+                }
+            } catch (IOException e) {
+                langConfig.accountCheckFailed.send(source);
+            }
+
+            ServerPlayerEntity player = source.getServer().getPlayerManager().getPlayer(username);
+            PlayerEntryV1 entry;
+            if (player != null) {
+                entry = ((PlayerAuth) player).easyAuth$getPlayerEntryV1();
+            } else {
+                entry = DB.getUserDataOrCreate(username);
+            }
             entry.onlineAccount = PlayerEntryV1.OnlineAccount.TRUE;
             entry.update();
-        } else {
-            THREADPOOL.submit(() -> {
-                PlayerEntryV1 entry = DB.getUserDataOrCreate(username);
-                entry.onlineAccount = PlayerEntryV1.OnlineAccount.TRUE;
-                entry.update();
-            });
-        }
 
-        langConfig.markAsOnline.send(source, username);
+            langConfig.markAsOnline.send(source, username);
+        });
         return 1;
     }
 

@@ -9,6 +9,8 @@ import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.AuthHelper;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
+import java.io.IOException;
+
 import static com.mojang.brigadier.arguments.BoolArgumentType.bool;
 import static com.mojang.brigadier.arguments.BoolArgumentType.getBool;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
@@ -16,6 +18,7 @@ import static com.mojang.brigadier.arguments.StringArgumentType.string;
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
+import static xyz.nikitacartes.easyauth.integrations.MojangApi.isValidUsername;
 
 public class AccountCommand {
 
@@ -159,6 +162,15 @@ public class AccountCommand {
 
         THREADPOOL.submit(() -> {
             if (AuthHelper.checkPassword(playerAuth, password.toCharArray()) == AuthHelper.PasswordOptions.CORRECT) {
+                try {
+                    if (!isValidUsername(player.getNameForScoreboard())) {
+                        langConfig.accountNotFound.send(source);
+                        return;
+                    }
+                } catch (IOException e) {
+                    langConfig.accountCheckFailed.send(source);
+                    return;
+                }
 
                 PlayerEntryV1 playerEntry = playerAuth.easyAuth$getPlayerEntryV1();
                 playerEntry.onlineAccount = PlayerEntryV1.OnlineAccount.TRUE;

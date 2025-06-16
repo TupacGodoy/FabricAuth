@@ -80,6 +80,8 @@ public class LangConfigV1 extends ConfigTemplate {
     public TranslatableText markAsOnline = new TranslatableText();
     public TranslatableText selfMarkAsOnline = new TranslatableText();
     public TranslatableText selfMarkAsOnlineWarning = new TranslatableText();
+    public TranslatableText accountNotFound = new TranslatableText();
+    public TranslatableText accountCheckFailed = new TranslatableText();
 
     private static Map<String, String> translations = new HashMap<>();
 

@@ -14,6 +14,7 @@
 #### Fix
 - Not being invulnerable and invisible upon logging in
 - Auth markAsOnline doesn't work if a user is on server [#216](https://github.com/NikitaCartes/EasyAuth/issues/216)
+- Check for account existence before marking player as online
 
 #### Changes
 - Update english and russian translations

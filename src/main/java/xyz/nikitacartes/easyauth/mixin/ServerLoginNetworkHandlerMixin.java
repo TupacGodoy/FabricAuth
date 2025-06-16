@@ -15,14 +15,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.PlayersCache;
 
-import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URI;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static xyz.nikitacartes.easyauth.EasyAuth.*;
+import static xyz.nikitacartes.easyauth.integrations.MojangApi.isValidUsername;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogError;
 
@@ -88,27 +85,12 @@ public abstract class ServerLoginNetworkHandlerMixin {
                     this.profile = new GameProfile(Uuids.getOfflinePlayerUuid(packet.name()), packet.name());
                     ci.cancel();
                 } else {
-                    // Checking account status from API
-                    LogDebug("Checking player " + username + " for premium status");
-                    HttpsURLConnection httpsURLConnection = (HttpsURLConnection) URI.create(extendedConfig.mojangApiSettings.url + username).toURL().openConnection();
-                    httpsURLConnection.setRequestMethod("GET");
-                    httpsURLConnection.setConnectTimeout(extendedConfig.mojangApiSettings.connectionTimeout);
-                    httpsURLConnection.setReadTimeout(extendedConfig.mojangApiSettings.readTimeout);
-
-                    int response = httpsURLConnection.getResponseCode();
-                    if (response == HttpURLConnection.HTTP_OK) {
-                        // Player has a Mojang account
-                        httpsURLConnection.disconnect();
-                        LogDebug("Player " + username + " has a Mojang account");
-
+                    if (isValidUsername(username)) {
                         // Caches the request
                         playerData.onlineAccount = PlayerEntryV1.OnlineAccount.TRUE;
                         playerData.update();
-                        // Authentication continues in original method
-                    } else if (response == HttpURLConnection.HTTP_NO_CONTENT || response == HttpURLConnection.HTTP_NOT_FOUND) {
-                        // Player doesn't have a Mojang account
-                        httpsURLConnection.disconnect();
-                        LogDebug("Player " + username + " doesn't have a Mojang account");
+                        // Authentication continues in the original method
+                    } else {
                         state = ServerLoginNetworkHandler.State.VERIFYING;
 
                         playerData.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;

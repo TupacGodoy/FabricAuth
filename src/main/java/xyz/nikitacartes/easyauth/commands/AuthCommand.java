@@ -76,13 +76,24 @@ public class AuthCommand {
                         ))
                         .then(argument("dimension", DimensionArgumentType.dimension())
                                 .then(argument("position", BlockPosArgumentType.blockPos())
+                                        .executes(ctx -> setSpawn(
+                                                        ctx.getSource(),
+                                                        DimensionArgumentType.getDimensionArgument(ctx, "dimension").getRegistryKey().getValue(),
+                                                        BlockPosArgumentType.getLoadedBlockPos(ctx, "position").getX(),
+                                                        // +1 to not spawn player in ground
+                                                        BlockPosArgumentType.getLoadedBlockPos(ctx, "position").getY(),
+                                                        BlockPosArgumentType.getLoadedBlockPos(ctx, "position").getZ(),
+                                                        90,
+                                                        0
+                                                )
+                                        )
                                         .then(argument("angle", RotationArgumentType.rotation())
                                                 .executes(ctx -> setSpawn(
                                                                 ctx.getSource(),
                                                                 DimensionArgumentType.getDimensionArgument(ctx, "dimension").getRegistryKey().getValue(),
                                                                 BlockPosArgumentType.getLoadedBlockPos(ctx, "position").getX(),
                                                                 // +1 to not spawn player in ground
-                                                                BlockPosArgumentType.getLoadedBlockPos(ctx, "position").getY() + 1,
+                                                                BlockPosArgumentType.getLoadedBlockPos(ctx, "position").getY(),
                                                                 BlockPosArgumentType.getLoadedBlockPos(ctx, "position").getZ(),
                                                                 RotationArgumentType.getRotation(ctx, "angle").getRotation(ctx.getSource()).y,
                                                                 RotationArgumentType.getRotation(ctx, "angle").getRotation(ctx.getSource()).x

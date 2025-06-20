@@ -344,7 +344,11 @@ public class AuthCommand {
                     }
                     i.getAndIncrement();
                     message.append(Text.translatable(username)
+                            //? if >= 1.21.5 {
                             .setStyle(Style.EMPTY.withClickEvent(new ClickEvent.CopyToClipboard(username)))
+                            //?} else {
+                            /*.setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, username)))
+                            *///?}
                             .formatted(Formatting.YELLOW))
                             .append(", ");
                 });

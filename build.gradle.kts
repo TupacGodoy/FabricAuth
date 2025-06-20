@@ -23,15 +23,25 @@ repositories {
 base.archivesName = "${property("mod_id")}-mc${property("minecraft_version")}"
 version = "${property("mod_version")}"
 
+val awFile = when {
+    stonecutter.eval(stonecutter.current.version, ">=1.21.6") -> "easyauth.1.21.6.accesswidener"
+    else -> "easyauth.1.21.2.accesswidener"
+}
+
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
 }
 
 loom {
-    accessWidenerPath = file("src/main/resources/easyauth.accesswidener")
+    accessWidenerPath = file("../../src/main/resources/accesswidener/$awFile")
     serverOnlyMinecraftJar()
     log4jConfigs.from(file("log4j.xml"))
+
+    runConfigs.all {
+        ideConfigGenerated(true) // Run configurations are not created for subprojects by default
+        runDir = "../../run" // Use a shared run folder and create separate worlds
+    }
 }
 
 dependencies {
@@ -104,16 +114,12 @@ tasks.jar {
 }
 
 tasks.processResources {
-    inputs.property("id", property("mod_id"))
-    inputs.property("name", property("mod_name"))
-    inputs.property("version", property("version"))
-
     filesMatching("fabric.mod.json") {
         expand(
             mapOf(
-                "id" to property("mod_id"),
-                "name" to property("mod_name"),
-                "version" to property("version")
+                "version" to project.property("mod_version"),
+                "supported_minecraft_version" to project.property("supported_minecraft_version"),
+                "accessWidener" to awFile
             )
         )
     }

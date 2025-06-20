@@ -20,14 +20,14 @@
       "xyz.nikitacartes.easyauth.EasyAuth"
     ]
   },
-  "accessWidener": "easyauth.accesswidener",
+  "accessWidener": "accesswidener/${accessWidener}",
   "mixins": [
     "easyauth.mixins.json"
   ],
   "depends": {
     "fabric-api": "*",
     "fabricloader": "*",
-    "minecraft": ">=1.21.6-"
+    "minecraft": "${supported_minecraft_version}"
   },
   "suggests": {
     "luckperms": "*",

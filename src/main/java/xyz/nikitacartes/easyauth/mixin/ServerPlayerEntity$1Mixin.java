@@ -16,6 +16,7 @@ public class ServerPlayerEntity$1Mixin {
 
     @Final
     @Shadow
+    //? if >= 1.21.5 {
     ServerPlayerEntity field_58075;
 
     @Inject(method = "updateState(Lnet/minecraft/screen/ScreenHandler;Ljava/util/List;Lnet/minecraft/item/ItemStack;[I)V",
@@ -26,4 +27,16 @@ public class ServerPlayerEntity$1Mixin {
             ci.cancel();
         }
     }
+    //?} else {
+    /*ServerPlayerEntity field_29182;
+
+    @Inject(method = "updateState(Lnet/minecraft/screen/ScreenHandler;Lnet/minecraft/util/collection/DefaultedList;Lnet/minecraft/item/ItemStack;[I)V",
+            at = @At("HEAD"),
+            cancellable = true)
+    private void updateStateMixin(CallbackInfo ci) {
+        if (extendedConfig.hideInventory && !((PlayerAuth) field_29182).easyAuth$isAuthenticated()) {
+            ci.cancel();
+        }
+    }
+    *///?}
 }

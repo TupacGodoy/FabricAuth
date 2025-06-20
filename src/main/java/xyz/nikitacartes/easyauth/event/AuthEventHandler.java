@@ -15,6 +15,9 @@ import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Uuids;
 import net.minecraft.util.math.BlockPos;
+//? if < 1.21.5 {
+/*import xyz.nikitacartes.easyauth.integrations.VanishIntegration;
+*///?}
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.FloodgateApiHelper;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
@@ -123,6 +126,13 @@ public class AuthEventHandler {
         if (extendedConfig.skipAllAuthChecks) {
             playerAuth.easyAuth$setAuthenticated(true);
         }
+
+        //? if < 1.21.5 {
+        /*if (config.vanishUntilAuth && technicalConfig.vanishLoaded) {
+            ((PlayerAuth) player).easyAuth$wasVanished(VanishIntegration.isVanished(player));
+            VanishIntegration.setVanished(player, true);
+        }
+        *///?}
     }
 
     // Player joining the server

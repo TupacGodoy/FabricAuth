@@ -12,7 +12,9 @@ import net.minecraft.util.Identifier;
 import xyz.nikitacartes.easyauth.commands.*;
 import xyz.nikitacartes.easyauth.config.*;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
+//? if >= 1.21.5 {
 import xyz.nikitacartes.easyauth.integrations.VanishIntegration;
+//?}
 import xyz.nikitacartes.easyauth.storage.database.*;
 import xyz.nikitacartes.easyauth.utils.LuckPermsIntegration;
 
@@ -119,9 +121,11 @@ public class EasyAuth implements ModInitializer {
         if (technicalConfig.luckPermsLoaded) {
             LuckPermsIntegration.register();
         }
-        if (technicalConfig.vanishLoaded) {
-            VanishIntegration.listenJoinEvent();
-        }
+        //? if >= 1.21.5 {
+         if (technicalConfig.vanishLoaded) {
+             VanishIntegration.listenJoinEvent();
+         }
+        //?}
     }
 
     private void onStopServer(MinecraftServer server) {

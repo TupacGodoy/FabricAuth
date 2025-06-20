@@ -2,6 +2,9 @@ package xyz.nikitacartes.easyauth.mixin;
 
 import com.google.common.net.InetAddresses;
 import net.minecraft.entity.Entity;
+//? if < 1.21.6 {
+/*import net.minecraft.nbt.NbtCompound;
+*///?}
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.packet.s2c.play.PositionFlag;
 import net.minecraft.registry.RegistryKey;
@@ -9,7 +12,9 @@ import net.minecraft.scoreboard.ScoreboardCriterion;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+//? if >= 1.21.6 {
 import net.minecraft.storage.ReadView;
+//?}
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -29,6 +34,9 @@ import xyz.nikitacartes.easyauth.utils.*;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.EnumSet;
+//? if < 1.21.5 {
+/*import java.util.Optional;
+*///?}
 import java.util.UUID;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
@@ -41,7 +49,11 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
 
     @Final
     @Shadow
+    //? if >= 1.21.6 {
     private MinecraftServer server;
+    //?} else {
+    /*public MinecraftServer server;
+    *///?}
 
     @Unique
     private long kickTimer = config.kickTimeout * 20;
@@ -56,7 +68,11 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
     private UUID ridingEntityUUID = null;
 
     @Unique
+    //? if >= 1.21.6 {
     private ReadView rootVehicle = null;
+    //?} else {
+    /*private NbtCompound rootVehicle = null;
+    *///?}
 
     @Unique
     private boolean wasDead = false;
@@ -107,7 +123,11 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
             return;
         }
         if (wasDead) {
+            //? if >= 1.21.6 {
             player.kill(player.getWorld());
+            //?} else {
+            /*player.kill(player.getServerWorld());
+            *///?}
             player.getScoreboard().forEachScore(ScoreboardCriterion.DEATH_COUNT, player, (score) -> score.setScore(score.getScore() - 1));
             return;
         }
@@ -125,7 +145,11 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
 
         if (rootVehicle != null) {
             LogDebug(String.format("Mounting player to vehicle %s", rootVehicle));
+            //? if >= 1.21.5 {
             player.readRootVehicle(rootVehicle);
+            //?} else {
+            /*player.readRootVehicle(Optional.of(rootVehicle));
+            *///?}
         }
 
         if (player.getVehicle() == null && ridingEntityUUID != null) {
@@ -216,7 +240,11 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
         if (authenticated) {
             kickTimer = config.kickTimeout * 20;
             // Updating blocks if needed (in case if portal rescue action happened)
+            //? if >= 1.21.6 {
             World world = player.getWorld();
+            //?} else {
+            /*World world = player.getEntityWorld();
+            *///?}
             BlockPos pos = player.getBlockPos();
 
             // Sending updates to portal blocks
@@ -322,6 +350,7 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
         this.ridingEntityUUID = ridingEntityUUID;
     }
 
+    //? if >= 1.21.6 {
     public ReadView easyAuth$getRootVehicle() {
         return rootVehicle;
     }
@@ -329,6 +358,15 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
     public void easyAuth$setRootVehicle(ReadView rootVehicle) {
         this.rootVehicle = rootVehicle;
     }
+    //?} else {
+    /*public NbtCompound easyAuth$getRootVehicle() {
+        return rootVehicle;
+    }
+
+    public void easyAuth$setRootVehicle(NbtCompound rootVehicle) {
+        this.rootVehicle = rootVehicle;
+    }
+    *///?}
 
     public boolean easyAuth$wasDead() {
         return wasDead;

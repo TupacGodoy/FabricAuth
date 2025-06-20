@@ -25,8 +25,13 @@ public abstract class SlotMixin {
                     new ScreenHandlerSlotUpdateS2CPacket(
                             -2,
                             0,
+                            //? if >= 1.21.5 {
                             player.getInventory().getSelectedSlot(),
                             player.getInventory().getStack(player.getInventory().getSelectedSlot()))
+                            //?} else {
+                            /*player.getInventory().selectedSlot,
+                            player.getInventory().getStack(player.getInventory().selectedSlot))
+                            *///?}
             );
             cir.setReturnValue(false);
         }

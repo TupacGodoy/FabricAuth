@@ -1,10 +1,14 @@
 package xyz.nikitacartes.easyauth.utils;
 
+//? if >= 1.21.2 && < 1.21.6 {
+/*import net.minecraft.nbt.NbtCompound;
+*///?}
 import net.minecraft.network.ClientConnection;
 import net.minecraft.registry.RegistryKey;
+//? if >= 1.21.6 {
 import net.minecraft.storage.ReadView;
+//?}
 import net.minecraft.world.World;
-import org.spongepowered.asm.mixin.Unique;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 
 import java.util.UUID;
@@ -84,8 +88,14 @@ public interface PlayerAuth {
     void easyAuth$setIpAddress(String ipAddress);
     LastLocation easyAuth$getLastLocation();
     void easyAuth$setLastLocation(LastLocation lastLocation);
+    //? if >= 1.21.2 && < 1.21.6 {
+    /*NbtCompound easyAuth$getRootVehicle();
+    void easyAuth$setRootVehicle(NbtCompound rootVehicle);
+    *///?}
+    //? if >= 1.21.6 {
     ReadView easyAuth$getRootVehicle();
     void easyAuth$setRootVehicle(ReadView rootVehicle);
+    //?}
     UUID easyAuth$getRidingEntityUUID();
     void easyAuth$setRidingEntityUUID(UUID ridingEntityUUID);
     boolean easyAuth$wasDead();

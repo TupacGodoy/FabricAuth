@@ -21,9 +21,7 @@ import net.minecraft.util.ActionResult;
 *///?}
 import net.minecraft.util.Uuids;
 import net.minecraft.util.math.BlockPos;
-//? if < 1.21.5 {
-/*import xyz.nikitacartes.easyauth.integrations.VanishIntegration;
-*///?}
+import xyz.nikitacartes.easyauth.integrations.VanishIntegration;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.FloodgateApiHelper;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
@@ -114,6 +112,10 @@ public class AuthEventHandler {
         playerAuth.easyAuth$setIpAddress(connection);
         playerAuth.easyAuth$setSkipAuth();
 
+        if (config.vanishUntilAuth && technicalConfig.vanishLoaded) {
+            ((PlayerAuth) player).easyAuth$wasVanished(VanishIntegration.isVanished(player));
+        }
+
         if (playerAuth.easyAuth$canSkipAuth()) {
             playerAuth.easyAuth$setAuthenticated(true);
 
@@ -133,12 +135,9 @@ public class AuthEventHandler {
             playerAuth.easyAuth$setAuthenticated(true);
         }
 
-        //? if < 1.21.5 {
-        /*if (config.vanishUntilAuth && technicalConfig.vanishLoaded) {
-            ((PlayerAuth) player).easyAuth$wasVanished(VanishIntegration.isVanished(player));
+        if (config.vanishUntilAuth && technicalConfig.vanishLoaded && !playerAuth.easyAuth$isAuthenticated()) {
             VanishIntegration.setVanished(player, true);
         }
-        *///?}
     }
 
     // Player joining the server

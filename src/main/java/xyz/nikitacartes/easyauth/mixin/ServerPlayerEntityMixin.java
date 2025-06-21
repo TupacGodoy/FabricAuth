@@ -2,11 +2,16 @@ package xyz.nikitacartes.easyauth.mixin;
 
 import com.google.common.net.InetAddresses;
 import net.minecraft.entity.Entity;
+//? if < 1.21.2 {
+/*import net.minecraft.entity.EntityType;
+*///?}
 //? if < 1.21.6 {
 /*import net.minecraft.nbt.NbtCompound;
 *///?}
 import net.minecraft.network.ClientConnection;
+//? if >= 1.21.2 {
 import net.minecraft.network.packet.s2c.play.PositionFlag;
+//?}
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.scoreboard.ScoreboardCriterion;
 import net.minecraft.server.MinecraftServer;
@@ -33,8 +38,12 @@ import xyz.nikitacartes.easyauth.utils.*;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+//? if >= 1.21.2 {
 import java.util.EnumSet;
-//? if < 1.21.5 {
+//?} else {
+/*import java.util.Iterator;
+*///?}
+//? if = 1.21.2 {
 /*import java.util.Optional;
 *///?}
 import java.util.UUID;
@@ -125,8 +134,10 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
         if (wasDead) {
             //? if >= 1.21.6 {
             player.kill(player.getWorld());
-            //?} else {
+            //?} else if >= 1.21.2 {
             /*player.kill(player.getServerWorld());
+            *///?} else {
+            /*player.kill();
             *///?}
             player.getScoreboard().forEachScore(ScoreboardCriterion.DEATH_COUNT, player, (score) -> score.setScore(score.getScore() - 1));
             return;
@@ -137,18 +148,51 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
                 lastLocation.position.getX(),
                 lastLocation.position.getY(),
                 lastLocation.position.getZ(),
+                //? if >= 1.21.2 {
                 EnumSet.noneOf(PositionFlag.class),
+                //?}
                 lastLocation.yaw,
+                //? if >= 1.21.2 {
                 lastLocation.pitch,
                 true);
+                //?} else {
+                /*lastLocation.pitch);
+                *///?}
         LogDebug(String.format("Teleported player %s to %s", player.getNameForScoreboard(), lastLocation));
 
         if (rootVehicle != null) {
             LogDebug(String.format("Mounting player to vehicle %s", rootVehicle));
             //? if >= 1.21.5 {
             player.readRootVehicle(rootVehicle);
-            //?} else {
+            //?} else >= 1.21.2 {
             /*player.readRootVehicle(Optional.of(rootVehicle));
+            *///?} else {
+            /*NbtCompound nbtCompound = rootVehicle.getCompound("RootVehicle");
+            Entity entity = EntityType.loadEntityWithPassengers(nbtCompound.getCompound("Entity"), player.getServerWorld(), (vehicle) -> !player.getServerWorld().tryLoadEntity(vehicle) ? null : vehicle);
+            if (entity != null) {
+                UUID uUID;
+                if (nbtCompound.containsUuid("Attach")) {
+                    uUID = nbtCompound.getUuid("Attach");
+                } else {
+                    uUID = null;
+                }
+
+                Iterator var23;
+                Entity entity2;
+                if (entity.getUuid().equals(uUID)) {
+                    player.startRiding(entity, true);
+                } else {
+                    var23 = entity.getPassengersDeep().iterator();
+
+                    while(var23.hasNext()) {
+                        entity2 = (Entity)var23.next();
+                        if (entity2.getUuid().equals(uUID)) {
+                            player.startRiding(entity2, true);
+                            break;
+                        }
+                    }
+                }
+            }
             *///?}
         }
 

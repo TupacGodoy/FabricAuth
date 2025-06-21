@@ -1,6 +1,6 @@
 package xyz.nikitacartes.easyauth.utils;
 
-//? if >= 1.21.2 && < 1.21.6 {
+//? if < 1.21.6 {
 /*import net.minecraft.nbt.NbtCompound;
 *///?}
 import net.minecraft.network.ClientConnection;
@@ -88,14 +88,13 @@ public interface PlayerAuth {
     void easyAuth$setIpAddress(String ipAddress);
     LastLocation easyAuth$getLastLocation();
     void easyAuth$setLastLocation(LastLocation lastLocation);
-    //? if >= 1.21.2 && < 1.21.6 {
-    /*NbtCompound easyAuth$getRootVehicle();
-    void easyAuth$setRootVehicle(NbtCompound rootVehicle);
-    *///?}
     //? if >= 1.21.6 {
     ReadView easyAuth$getRootVehicle();
     void easyAuth$setRootVehicle(ReadView rootVehicle);
-    //?}
+    //?} else {
+    /*NbtCompound easyAuth$getRootVehicle();
+    void easyAuth$setRootVehicle(NbtCompound rootVehicle);
+    *///?}
     UUID easyAuth$getRidingEntityUUID();
     void easyAuth$setRidingEntityUUID(UUID ridingEntityUUID);
     boolean easyAuth$wasDead();

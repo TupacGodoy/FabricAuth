@@ -19,6 +19,9 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ConnectedClientData;
 import net.minecraft.server.network.ServerPlayerEntity;
+//? if < 1.21 {
+/*import net.minecraft.server.world.ServerWorld;
+*///?}
 import net.minecraft.stat.ServerStatHandler;
 //? if >= 1.21.6 {
 import net.minecraft.storage.NbtReadView;
@@ -30,8 +33,13 @@ import net.minecraft.util.ErrorReporter;
 //?}
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Uuids;
+//? if < 1.21 {
+/*import net.minecraft.util.math.BlockPos;
+*///?}
 import net.minecraft.util.math.Vec3d;
+//? if >= 1.21 {
 import net.minecraft.world.TeleportTarget;
+//?}
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Shadow;
@@ -88,7 +96,11 @@ public abstract class PlayerManagerMixin {
     private RegistryKey<World> onPlayerConnect(RegistryKey<World> world, ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData) {
         if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
             ((PlayerAuth) player).easyAuth$saveTrueDimension(world);
+            //? if < 1.21 {
+            /^return RegistryKey.of(RegistryKeys.WORLD, new Identifier(config.worldSpawn.dimension));
+            ^///?} else {
             return RegistryKey.of(RegistryKeys.WORLD, Identifier.of(config.worldSpawn.dimension));
+            //?}
         }
         return world;
     }
@@ -158,7 +170,7 @@ public abstract class PlayerManagerMixin {
     private void onPlayerConnectReturn(ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData, CallbackInfo ci) {
         AuthEventHandler.onPlayerJoin(player);
     }
-
+    //? if >=1.21 {
     @WrapOperation(method = "respawnPlayer",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;getRespawnTarget(ZLnet/minecraft/world/TeleportTarget$PostDimensionTransition;)Lnet/minecraft/world/TeleportTarget;"))
     private TeleportTarget replaceRespawnTarget(ServerPlayerEntity instance, boolean alive, TeleportTarget.PostDimensionTransition postDimensionTransition, Operation<TeleportTarget> original) {
@@ -175,6 +187,34 @@ public abstract class PlayerManagerMixin {
         }
         return original.call(instance, alive, postDimensionTransition);
     }
+    //?} else {
+    /*@WrapOperation(method = "respawnPlayer(Lnet/minecraft/server/network/ServerPlayerEntity;Z)Lnet/minecraft/server/network/ServerPlayerEntity;",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/player/PlayerEntity;findRespawnPosition(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/util/math/BlockPos;FZZ)Ljava/util/Optional;"))
+    private Optional<Vec3d> respawnPlayer(ServerWorld world, BlockPos pos, float angle, boolean forced, boolean alive, Operation<Optional<Vec3d>> original, ServerPlayerEntity player) {
+        if (!alive && config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
+            return Optional.of(new Vec3d(config.worldSpawn.x, config.worldSpawn.y, config.worldSpawn.z));
+        }
+        return original.call(world, pos, angle, forced, alive);
+    }
+
+    @WrapOperation(method = "respawnPlayer(Lnet/minecraft/server/network/ServerPlayerEntity;Z)Lnet/minecraft/server/network/ServerPlayerEntity;",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;getSpawnPointPosition()Lnet/minecraft/util/math/BlockPos;"))
+    private BlockPos respawnPlayerBlockPos(ServerPlayerEntity instance, Operation<BlockPos> original, ServerPlayerEntity player, boolean alive) {
+        if (!alive && config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
+            return new BlockPos((int) config.worldSpawn.x, (int) config.worldSpawn.y, (int) config.worldSpawn.z);
+        }
+        return original.call(instance);
+    }
+
+    @WrapOperation(method = "respawnPlayer(Lnet/minecraft/server/network/ServerPlayerEntity;Z)Lnet/minecraft/server/network/ServerPlayerEntity;",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;getSpawnPointDimension()Lnet/minecraft/registry/RegistryKey;"))
+    private RegistryKey<World> respawnPlayerDimension(ServerPlayerEntity instance, Operation<RegistryKey<World>> original, ServerPlayerEntity player, boolean alive) {
+        if (!alive && config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
+            return RegistryKey.of(RegistryKeys.WORLD, new Identifier(config.worldSpawn.dimension));
+        }
+        return original.call(instance);
+    }
+    *///?}
 
     @Inject(method = "remove(Lnet/minecraft/server/network/ServerPlayerEntity;)V", at = @At("HEAD"))
     private void onPlayerLeave(ServerPlayerEntity serverPlayerEntity, CallbackInfo ci) {

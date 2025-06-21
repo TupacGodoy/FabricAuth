@@ -1,5 +1,5 @@
-//? if >=1.21 {
-package xyz.nikitacartes.easyauth.mixin;
+//? if <1.21 {
+/*package xyz.nikitacartes.easyauth.mixin;
 
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.entity.player.PlayerEntity;
@@ -7,14 +7,13 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtSizeTracker;
 import net.minecraft.util.Uuids;
-import net.minecraft.world.PlayerSaveHandler;
+import net.minecraft.world.WorldSaveHandler;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
 import java.io.File;
@@ -26,18 +25,18 @@ import static xyz.nikitacartes.easyauth.EasyAuth.*;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogWarn;
 
-@Mixin(PlayerSaveHandler.class)
-public class PlayerSaveHandlerMixin {
+@Mixin(WorldSaveHandler.class)
+public class WorldSaveHandlerMixin {
     @Final
     @Shadow
     private File playerDataDir;
 
-    /**
+    /^*
      * Loads offline-uuid player data to compoundTag in order to migrate from offline to online.
      *
      * @param cir
      * @param mixinFile
-     */
+     ^/
     @Inject(
             method = "loadPlayerData(Lnet/minecraft/entity/player/PlayerEntity;Ljava/lang/String;)Ljava/util/Optional;",
             at = @At(
@@ -67,4 +66,4 @@ public class PlayerSaveHandlerMixin {
         }
     }
 }
-//?}
+*///?}

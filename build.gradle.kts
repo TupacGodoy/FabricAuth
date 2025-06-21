@@ -1,4 +1,5 @@
 plugins {
+    id("dev.kikugie.j52j") version "2.0"
     id("java")
     id("java-library")
     id("fabric-loom") version "1.10-SNAPSHOT"
@@ -162,5 +163,11 @@ publishMods {
         embeds("server-translation-api")
         optional("luckperms")
         optional("meliusvanish")
+    }
+}
+
+j52j {
+    params {
+        prettyPrinting = true
     }
 }

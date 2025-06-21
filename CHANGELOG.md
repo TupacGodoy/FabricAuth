@@ -6,8 +6,14 @@
 - Check how offline players work if they try to connect with a taken online account
 
 ----
-### 3.3.2
+### 3.3.3
 ##### Minecraft 1.20[.1], 1.20.2, 1.20.3-1.20.4, 1.20.5-1.20.6, 1.21-1.21.1, 1.21.2-1.21.4, 1.21.5, 1.21.6
+#### Fix
+- Player joins vanished with enabled `vanish-until-auth` and valid session
+
+----
+### 3.3.2
+##### Minecraft 1.21.2-1.21.4, 1.21.5, 1.21.6
 #### Add
 - `auth setSpawn` command only with coordinates, without yaw and pitch
 

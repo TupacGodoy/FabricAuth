@@ -28,7 +28,7 @@ public class VanishIntegration {
     //? if >= 1.21.5 {
     public static void listenJoinEvent() {
         VanishEvents.JOIN_EVENT.register(player -> {
-            if (config.vanishUntilAuth) {
+            if (config.vanishUntilAuth && player instanceof PlayerAuth && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
                 ((PlayerAuth) player).easyAuth$wasVanished(VanishIntegration.isVanished(player));
                 return TriState.TRUE;
             }

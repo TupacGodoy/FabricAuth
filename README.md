@@ -53,3 +53,4 @@ Thank you so much for those who have already helped with translation of the mod!
 * Ukrainian: @txlbr, @Y0shioSato
 * Polish: @LimakXRobczuk
 * Italian: @Rizzo1812
+* Vietnamese: @Toibithieunang123

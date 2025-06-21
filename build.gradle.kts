@@ -1,15 +1,9 @@
-import com.matthewprenger.cursegradle.CurseArtifact
-import com.matthewprenger.cursegradle.CurseProject
-import com.matthewprenger.cursegradle.CurseRelation
-import com.matthewprenger.cursegradle.Options
-
 plugins {
     id("java")
     id("java-library")
     id("fabric-loom") version "1.10-SNAPSHOT"
-    id("com.modrinth.minotaur") version "2.+"
-    id("com.matthewprenger.cursegradle") version "1.4.0"
     id("com.gradleup.shadow") version "9.0.0-beta13"
+    id("me.modmuss50.mod-publish-plugin") version "0.8.4"
 }
 
 repositories {
@@ -134,51 +128,39 @@ java {
     withSourcesJar()
 }
 
-modrinth {
-    token.set(System.getenv("MODRINTH_TOKEN"))
-    projectId.set("aZj58GfX")
-    versionNumber.set("${property("version")}")
-    versionName = "${property("display_name")} ${property("version")}"
-    versionType = "release"
-    changelog.set("Release notes:\nhttps://github.com/NikitaCartes/EasyAuth/releases/tag/${property("version")}\n\nChangelog:\nhttps://github.com/NikitaCartes/EasyAuth/tree/HEAD/CHANGELOG.md")
-    uploadFile.set(tasks.remapJar)
-    gameVersions.addAll(property("supported_versions").toString().split(","))
-    loaders.add("fabric")
-    dependencies {
-        required.project("P7dR8mSH") // Fabric API
+publishMods {
+    val modrinthToken = System.getenv("MODRINTH_TOKEN") ?: ""
+    val curseforgeToken = System.getenv("CURSEFORGE_TOKEN") ?: ""
+
+    file = project.tasks.remapJar.get().archiveFile
+    dryRun = modrinthToken.isEmpty() || curseforgeToken.isEmpty()
+
+    displayName = "${property("display_name")} ${property("version")}"
+    version = "${property("version")}"
+    changelog = "Release notes:\nhttps://github.com/NikitaCartes/EasyAuth/releases/tag/${property("version")}\n\nChangelog:\nhttps://github.com/NikitaCartes/EasyAuth/tree/HEAD/CHANGELOG.md"
+    type = STABLE
+    modLoaders.add("fabric")
+
+    val targets = property("supported_versions").toString().split(",")
+
+    modrinth {
+        projectId = "aZj58GfX"
+        accessToken = modrinthToken
+
+        targets.forEach(minecraftVersions::add)
+        requires("fabric-api")
+        optional("luckperms")
+        optional("vanish")
     }
-}
 
-curseforge {
-    apiKey = System.getenv("CURSEFORGE_TOKEN") ?: ""
-    curseforge.project(closureOf<CurseProject> {
-        id = "503866"
-        changelogType = "markdown"
-        changelog = "Release notes:\nhttps://github.com/NikitaCartes/EasyAuth/releases/tag/${property("version")}\n\nChangelog:\nhttps://github.com/NikitaCartes/EasyAuth/tree/HEAD/CHANGELOG.md"
-        releaseType = "release"
+    curseforge {
+        projectId = "503866"
+        accessToken = curseforgeToken.toString()
 
-        addGameVersion("Fabric")
-
-        addGameVersion("Java 21")
-
-        property("supported_versions").toString().split(",").forEach { addGameVersion(it) }
-
-        mainArtifact(tasks.remapJar, closureOf<CurseArtifact> {
-            displayName = "${property("display_name")} ${property("version")}"
-            relations(closureOf<CurseRelation> {
-                requiredDependency("fabric-api")
-                embeddedLibrary("server-translation-api")
-            })
-        })
-    })
-    options(closureOf<Options> {
-        javaVersionAutoDetect = false
-        javaIntegration = false
-        forgeGradleIntegration = false
-    })
-}
-
-tasks.register("publish") {
-    dependsOn("modrinth")
-    dependsOn("curseforge")
+        targets.forEach(minecraftVersions::add)
+        requires("fabric-api")
+        embeds("server-translation-api")
+        optional("luckperms")
+        optional("meliusvanish")
+    }
 }

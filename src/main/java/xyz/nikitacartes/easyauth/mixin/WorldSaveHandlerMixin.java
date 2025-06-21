@@ -19,7 +19,9 @@ import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 import java.io.File;
 import java.io.IOException;
 import java.util.Locale;
+//? if >= 1.20.5 {
 import java.util.Optional;
+//?}
 
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
@@ -38,25 +40,44 @@ public class WorldSaveHandlerMixin {
      * @param mixinFile
      ^/
     @Inject(
+            //? if >= 1.20.5 {
             method = "loadPlayerData(Lnet/minecraft/entity/player/PlayerEntity;Ljava/lang/String;)Ljava/util/Optional;",
+            //?} else {
+            /^method = "loadPlayerData(Lnet/minecraft/entity/player/PlayerEntity;)Lnet/minecraft/nbt/NbtCompound;",
+            ^///?}
             at = @At(
                     value = "INVOKE",
                     target = "Ljava/io/File;exists()Z"
             ),
             cancellable = true
     )
+    //? if >= 1.20.5 {
     private void fileExists(PlayerEntity player, String extension, CallbackInfoReturnable<Optional<NbtCompound>> cir, @Local File mixinFile) {
+    //?} else {
+    /^private void fileExists(PlayerEntity player, CallbackInfoReturnable<NbtCompound> cir, @Local File mixinFile) {
+    ^///?}
         if (!(mixinFile.exists() && mixinFile.isFile())) {
             String playername = player.getGameProfile().getName().toLowerCase(Locale.ENGLISH);
             PlayerAuth playerAuth = (PlayerAuth) player;
             if (Boolean.parseBoolean(serverProp.getProperty("online-mode")) && playerAuth.easyAuth$isUsingMojangAccount()) {
                 LogDebug(String.format("Migrating data for %s", playername));
+                //? if >= 1.20.5 {
                 File file = new File(this.playerDataDir, Uuids.getOfflinePlayerUuid(player.getGameProfile().getName()) + extension);
                 if (file.exists() && file.isFile()) try {
                     cir.setReturnValue(Optional.of(NbtIo.readCompressed(file.toPath(), NbtSizeTracker.ofUnlimitedBytes())));
                 } catch (IOException e) {
                     LogWarn(String.format("Failed to load player data for: %s", playername));
                 }
+                //?} else {
+                /^File file = new File(this.playerDataDir, Uuids.getOfflinePlayerUuid(player.getGameProfile().getName()) + ".dat");
+                if (file.exists() && file.isFile()) {
+                    try {
+                        cir.setReturnValue(NbtIo.readCompressed(file.toPath(), NbtSizeTracker.ofUnlimitedBytes()));
+                    } catch (IOException e) {
+                        LogWarn(String.format("Failed to load player data for: %s", playername));
+                    }
+                }
+                ^///?}
             } else {
                 LogDebug(
                         String.format("Not migrating %s, as premium status is '%s' and data file is %s present.",

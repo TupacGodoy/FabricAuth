@@ -138,9 +138,15 @@ public abstract class PlayerManagerMixin {
                 });
             });
             *///?} else {
-            /*Optional<NbtCompound> nbtCompound = playerManager.loadPlayerData(player);
+            /*//? if >= 1.20.5 {
+            Optional<NbtCompound> nbtCompound = playerManager.loadPlayerData(player);
             if(nbtCompound.isPresent() && nbtCompound.get().contains("RootVehicle", 10)) {
                 NbtCompound rootVehicle = nbtCompound.get().getCompound("RootVehicle");
+            //?} else {
+            /^NbtCompound nbtCompound = playerManager.loadPlayerData(player);
+            if(nbtCompound != null && nbtCompound.contains("RootVehicle", 10)) {
+                NbtCompound rootVehicle = nbtCompound.getCompound("RootVehicle");
+            ^///?}
                 NbtCompound rootRootVehicle = new NbtCompound();
                 rootRootVehicle.put("RootVehicle", rootVehicle);
                 ((PlayerAuth) player).easyAuth$setRootVehicle(rootRootVehicle);

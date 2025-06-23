@@ -32,6 +32,7 @@ import static com.mojang.brigadier.arguments.StringArgumentType.*;
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
+import static xyz.nikitacartes.easyauth.commands.RegisterCommand.registerRegister;
 import static xyz.nikitacartes.easyauth.integrations.MojangApi.isValidUsername;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
@@ -188,31 +189,11 @@ public class AuthCommand {
      * @return 0
      */
     public static int reloadConfig(ServerCommandSource sender) {
-        DB.close();
-        EasyAuth.loadConfigs();
-
-        try {
-            DB.connect();
-        } catch (DBApiException e) {
-            LogError("onInitialize error: ", e);
-        }
+        reloadConfigs(sender.getServer());
 
         langConfig.configurationReloaded.send(sender);
 
         return Command.SINGLE_SUCCESS;
-    }
-
-    public static void reloadConfig(MinecraftServer sender) {
-        DB.close();
-        EasyAuth.loadConfigs();
-
-        try {
-            DB.connect();
-        } catch (DBApiException e) {
-            LogError("onInitialize error: ", e);
-        }
-
-        langConfig.configurationReloaded.send(sender);
     }
 
     /**
@@ -224,15 +205,14 @@ public class AuthCommand {
      * @return 0
      */
     private static int setGlobalPassword(ServerCommandSource source, String password, boolean singleUse) {
-        // Different thread to avoid lag spikes
-        THREADPOOL.submit(() -> {
-            // Writing the global pass to config
-            technicalConfig.globalPassword = AuthHelper.hashPassword(password.toCharArray());
-            config.enableGlobalPassword = true;
-            config.singleUseGlobalPassword = singleUse;
-            technicalConfig.save();
-            config.save();
-        });
+        // Writing the global pass to config
+        technicalConfig.globalPassword = AuthHelper.hashPassword(password.toCharArray());
+        config.enableGlobalPassword = true;
+        config.singleUseGlobalPassword = singleUse;
+        technicalConfig.save();
+        config.save();
+
+        reloadConfigs(source.getServer(), true);
 
         langConfig.globalPasswordSet.send(source);
         return 1;

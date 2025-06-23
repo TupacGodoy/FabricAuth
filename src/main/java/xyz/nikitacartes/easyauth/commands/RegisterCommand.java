@@ -73,6 +73,11 @@ public class RegisterCommand {
         ServerPlayerEntity player = source.getPlayerOrThrow();
         PlayerAuth playerAuth = (PlayerAuth) player;
 
+        if (playerAuth.easyAuth$isAuthenticated()) {
+            langConfig.alreadyAuthenticated.send(source);
+            return 0;
+        }
+
         if (config.enableGlobalPassword && config.singleUseGlobalPassword) {
             if (checkGlobalPassword(globalPassword.toCharArray())) {
                 return register(source, pass1, pass2);

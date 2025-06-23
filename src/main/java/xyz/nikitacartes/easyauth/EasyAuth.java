@@ -8,6 +8,8 @@ import net.fabricmc.fabric.api.event.player.*;
 import net.fabricmc.fabric.api.networking.v1.ServerLoginConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.command.CommandManager;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import xyz.nikitacartes.easyauth.commands.*;
 import xyz.nikitacartes.easyauth.config.*;
@@ -27,6 +29,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
+import static xyz.nikitacartes.easyauth.commands.RegisterCommand.registerRegister;
 import static xyz.nikitacartes.easyauth.config.ConfigMigration.migrateFromV1;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
@@ -90,7 +93,10 @@ public class EasyAuth implements ModInitializer {
         UseItemCallback.EVENT.register((player, world, hand) -> AuthEventHandler.onUseItem(player));
         AttackEntityCallback.EVENT.register((player, world, hand, entity, entityHitResult) -> AuthEventHandler.onAttackEntity(player));
         UseEntityCallback.EVENT.register((player, world, hand, entity, entityHitResult) -> AuthEventHandler.onUseEntity(player));
-        ServerLifecycleEvents.START_DATA_PACK_RELOAD.register((server, serverResourceManager) -> AuthCommand.reloadConfig(server));
+        ServerLifecycleEvents.START_DATA_PACK_RELOAD.register((server, serverResourceManager) -> {
+            reloadConfigs(server);
+            langConfig.configurationReloaded.send(server);
+        });
         ServerLifecycleEvents.SERVER_STARTED.register(this::onStartServer);
         ServerLifecycleEvents.SERVER_STOPPED.register(this::onStopServer);
 
@@ -186,6 +192,36 @@ public class EasyAuth implements ModInitializer {
         EasyAuth.langConfig.save();
         EasyAuth.extendedConfig.save();
         EasyAuth.storageConfig.save();
+    }
+
+    public static void reloadConfigs(MinecraftServer server) {
+        reloadConfigs(server, false);
+    }
+
+    public static void reloadConfigs(MinecraftServer server, boolean reloadCommands) {
+        DB.close();
+        boolean singleUseGlobalPassword = config.enableGlobalPassword && config.singleUseGlobalPassword;
+        boolean regAlias = extendedConfig.aliases.register;
+
+        EasyAuth.loadConfigs();
+
+        try {
+            DB.connect();
+        } catch (DBApiException e) {
+            LogError("onInitialize error: ", e);
+        }
+
+        if (reloadCommands || (singleUseGlobalPassword != (config.enableGlobalPassword && config.singleUseGlobalPassword))) {
+            LogInfo("Global password settings changed, reloading commands");
+
+            CommandManager serverCommandManager = server.getCommandManager();
+
+            serverCommandManager.getDispatcher().getRoot().getChildren().removeIf(node -> node.getName().equals("register") || (regAlias && node.getName().equals("reg")));
+            registerRegister(serverCommandManager.getDispatcher());
+            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+                serverCommandManager.sendCommandTree(player);
+            }
+        }
     }
 
     public static ZonedDateTime getUnixZero() {

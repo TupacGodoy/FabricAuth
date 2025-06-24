@@ -120,6 +120,12 @@ tasks.processResources {
             )
         )
     }
+
+    filesMatching("easyauth.mixins.json5") {
+        filter {
+            it.replace("\${refmap}", "${base.archivesName}-${version}-refmap.json")
+        }
+    }
 }
 
 tasks.withType<JavaCompile>().configureEach {

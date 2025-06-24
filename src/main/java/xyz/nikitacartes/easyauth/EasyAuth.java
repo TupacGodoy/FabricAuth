@@ -15,7 +15,7 @@ import xyz.nikitacartes.easyauth.commands.*;
 import xyz.nikitacartes.easyauth.config.*;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
 import xyz.nikitacartes.easyauth.storage.database.*;
-import xyz.nikitacartes.easyauth.utils.LuckPermsIntegration;
+import xyz.nikitacartes.easyauth.integrations.LuckPermsIntegration;
 
 import java.io.File;
 import java.io.FileReader;

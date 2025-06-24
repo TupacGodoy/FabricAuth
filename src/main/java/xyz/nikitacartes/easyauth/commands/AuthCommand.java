@@ -210,7 +210,7 @@ public class AuthCommand {
         technicalConfig.save();
         config.save();
 
-        reloadConfigs(source.getServer(), true);
+        reloadConfigs(source.getServer());
 
         langConfig.globalPasswordSet.send(source);
         return 1;

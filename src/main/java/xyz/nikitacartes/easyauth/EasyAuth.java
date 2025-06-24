@@ -1,6 +1,7 @@
 package xyz.nikitacartes.easyauth;
 
 import com.mojang.brigadier.tree.CommandNode;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.Event;
@@ -10,18 +11,19 @@ import net.fabricmc.fabric.api.networking.v1.ServerLoginConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandManager;
+import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import xyz.nikitacartes.easyauth.commands.*;
 import xyz.nikitacartes.easyauth.config.*;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
+import xyz.nikitacartes.easyauth.mixin.CommandNodeAccessor;
 import xyz.nikitacartes.easyauth.storage.database.*;
 import xyz.nikitacartes.easyauth.integrations.LuckPermsIntegration;
 
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -32,7 +34,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import static xyz.nikitacartes.easyauth.commands.RegisterCommand.registerCommand;
 import static xyz.nikitacartes.easyauth.config.ConfigMigration.migrateFromV1;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
@@ -83,7 +84,7 @@ public class EasyAuth implements ModInitializer {
 
         // Registering the commands
         CommandRegistrationCallback.EVENT.register((dispatcher, dedicated, environment) -> {
-            registerCommand(dispatcher);
+            RegisterCommand.registerCommand(dispatcher);
             LoginCommand.registerCommand(dispatcher);
             LogoutCommand.registerCommand(dispatcher);
             AuthCommand.registerCommand(dispatcher);
@@ -198,13 +199,10 @@ public class EasyAuth implements ModInitializer {
     }
 
     public static void reloadConfigs(MinecraftServer server) {
-        reloadConfigs(server, false);
-    }
-
-    public static void reloadConfigs(MinecraftServer server, boolean reloadCommands) {
         DB.close();
-        boolean singleUseGlobalPassword = config.enableGlobalPassword && config.singleUseGlobalPassword;
+
         boolean regAlias = extendedConfig.aliases.register;
+        boolean loginAlias = extendedConfig.aliases.login;
 
         EasyAuth.loadConfigs();
 
@@ -214,30 +212,30 @@ public class EasyAuth implements ModInitializer {
             LogError("onInitialize error: ", e);
         }
 
-        if (reloadCommands || (singleUseGlobalPassword != (config.enableGlobalPassword && config.singleUseGlobalPassword))) {
-            LogInfo("Global password settings changed, reloading commands");
+        CommandManager serverCommandManager = server.getCommandManager();
 
-            CommandManager serverCommandManager = server.getCommandManager();
+        CommandNode <ServerCommandSource> rootNode = serverCommandManager.getDispatcher().getRoot();
+        Map<String, LiteralCommandNode<?>> literals = ((CommandNodeAccessor)(rootNode)).getLiterals();
+        literals.remove("register");
+        literals.remove("login");
+        if (regAlias) {
+            literals.remove("reg");
+        }
+        if (loginAlias) {
+            literals.remove("log");
+        }
 
-            try {
-                Field literalsField = CommandNode.class.getDeclaredField("literals");
-                literalsField.setAccessible(true);
+        rootNode.getChildren().removeIf(node ->
+                node.getName().equals("register") ||
+                node.getName().equals("login") ||
+                (regAlias && node.getName().equals("reg")) ||
+                (loginAlias && node.getName().equals("log")));
 
-                // noinspection unchecked
-                Map<String, ?> literals = (Map<String, ?>) literalsField.get(serverCommandManager.getDispatcher().getRoot());
-                literals.remove("register");
-                if (regAlias) {
-                    literals.remove("reg");
-                }
-                serverCommandManager.getDispatcher().getRoot().getChildren().removeIf(node -> node.getName().equals("register") || (regAlias && node.getName().equals("reg")));
+        RegisterCommand.registerCommand(serverCommandManager.getDispatcher());
+        LoginCommand.registerCommand(serverCommandManager.getDispatcher());
 
-                registerCommand(serverCommandManager.getDispatcher());
-                for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-                    serverCommandManager.sendCommandTree(player);
-                }
-            } catch (NoSuchFieldException | IllegalAccessException e) {
-                LogError("Error while reloading commands: ", e);
-            }
+        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            serverCommandManager.sendCommandTree(player);
         }
     }
 

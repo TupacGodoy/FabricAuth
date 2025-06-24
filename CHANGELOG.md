@@ -8,9 +8,12 @@
 ----
 ### 3.3.4
 ##### Minecraft 1.20[.X], 1.21[.X]
+##### Add
+- Disable register command if `enable-global-password` enabled with `single-use-global-password` disabled
+
 #### Fix
 - Re-register `register` command if `single-use-global-password` was changed
-- Wrong log in message with enabled `single-use-global-password` and disabled `enable-global-password`
+- Wrong log-in message with enabled `single-use-global-password` and disabled `enable-global-password`
 
 ----
 ### 3.3.3

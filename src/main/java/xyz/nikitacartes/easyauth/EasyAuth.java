@@ -29,7 +29,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import static xyz.nikitacartes.easyauth.commands.RegisterCommand.registerRegister;
+import static xyz.nikitacartes.easyauth.commands.RegisterCommand.registerCommand;
 import static xyz.nikitacartes.easyauth.config.ConfigMigration.migrateFromV1;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
@@ -80,7 +80,7 @@ public class EasyAuth implements ModInitializer {
 
         // Registering the commands
         CommandRegistrationCallback.EVENT.register((dispatcher, dedicated, environment) -> {
-            RegisterCommand.registerCommand(dispatcher);
+            registerCommand(dispatcher);
             LoginCommand.registerCommand(dispatcher);
             LogoutCommand.registerCommand(dispatcher);
             AuthCommand.registerCommand(dispatcher);
@@ -217,7 +217,7 @@ public class EasyAuth implements ModInitializer {
             CommandManager serverCommandManager = server.getCommandManager();
 
             serverCommandManager.getDispatcher().getRoot().getChildren().removeIf(node -> node.getName().equals("register") || (regAlias && node.getName().equals("reg")));
-            registerRegister(serverCommandManager.getDispatcher());
+            registerCommand(serverCommandManager.getDispatcher());
             for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
                 serverCommandManager.sendCommandTree(player);
             }

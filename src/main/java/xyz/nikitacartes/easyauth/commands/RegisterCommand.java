@@ -25,6 +25,9 @@ public class RegisterCommand {
 
     // Registering the "/reg" alias
     public static void registerCommand(CommandDispatcher<ServerCommandSource> dispatcher) {
+        if (config.enableGlobalPassword && !config.singleUseGlobalPassword) {
+            return;
+        }
         LiteralCommandNode<ServerCommandSource> node = registerRegister(dispatcher);
         if (extendedConfig.aliases.register) {
             dispatcher.register(literal("reg")

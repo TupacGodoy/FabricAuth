@@ -20,7 +20,9 @@ version = "${property("mod_version")}"
 
 val awFile = when {
     stonecutter.eval(stonecutter.current.version, ">=1.21.6") -> "easyauth.1.21.6.accesswidener"
-    else -> "easyauth.1.21.2.accesswidener"
+    stonecutter.eval(stonecutter.current.version, ">=1.20.3") -> "easyauth.1.20.3.accesswidener"
+    stonecutter.eval(stonecutter.current.version, ">=1.20.2") -> "easyauth.1.20.2.accesswidener"
+    else -> "easyauth.1.20.accesswidener"
 }
 
 java {
@@ -140,7 +142,7 @@ publishMods {
     displayName = "${property("display_name")} ${property("version")}"
     version = "${property("version")}"
 
-    changelog = "Release notes:\n${file("RELEASE_NOTE.md").readText()}\n\nFull Changelog:\nhttps://github.com/NikitaCartes/EasyAuth/tree/HEAD/CHANGELOG.md"
+    changelog = "Release notes:\n${file("../../RELEASE_NOTE.md").readText()}\n\nFull Changelog:\nhttps://github.com/NikitaCartes/EasyAuth/tree/HEAD/CHANGELOG.md"
     type = STABLE
     modLoaders.add("fabric")
 

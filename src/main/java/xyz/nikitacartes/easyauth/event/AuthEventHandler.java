@@ -19,7 +19,9 @@ import net.minecraft.util.ActionResult;
 //? if < 1.21.2 {
 /*import net.minecraft.util.TypedActionResult;
 *///?}
+//? if >= 1.20.3 {
 import net.minecraft.util.Uuids;
+//?}
 import net.minecraft.util.math.BlockPos;
 import xyz.nikitacartes.easyauth.integrations.VanishIntegration;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
@@ -101,7 +103,12 @@ public class AuthEventHandler {
         PlayerAuth playerAuth = (PlayerAuth) player;
 
         // Create in case of Carpet player
-        PlayerEntryV1 cache = PlayersCache.getCarpet(player.getNameForScoreboard());
+        //? if >= 1.20.3 {
+        String username = player.getNameForScoreboard();
+        //?} else {
+        /*String username = player.getName().getString();
+        *///?}
+        PlayerEntryV1 cache = PlayersCache.getCarpet(username);
         boolean update = false;
         if (cache.uuid == null) {
             cache.uuid = player.getUuid();
@@ -201,13 +208,18 @@ public class AuthEventHandler {
             return ActionResult.PASS;
         }
         if (!((PlayerAuth) player).easyAuth$isAuthenticated()) {
+            //? if >= 1.20.3 {
+            String username = player.getNameForScoreboard();
+            //?} else {
+            /*String username = player.getName().getString();
+            *///?}
             for (String allowedCommand : extendedConfig.allowedCommands) {
                 if (command.startsWith(allowedCommand)) {
-                    LogDebug("Player " + player.getNameForScoreboard() + " executed command " + command + " without being authenticated.");
+                    LogDebug("Player " + username + " executed command " + command + " without being authenticated.");
                     return ActionResult.PASS;
                 }
             }
-            LogDebug("Player " + player.getNameForScoreboard() + " tried to execute command " + command + " without being authenticated.");
+            LogDebug("Player " + username + " tried to execute command " + command + " without being authenticated.");
             ((PlayerAuth) player).easyAuth$sendAuthMessage();
             return ActionResult.FAIL;
         }
@@ -317,7 +329,13 @@ public class AuthEventHandler {
 
     public static void onPreLogin(ServerLoginNetworkHandler netHandler, MinecraftServer server, PacketSender packetSender, ServerLoginNetworking.LoginSynchronizer sync) {
         if (extendedConfig.forcedOfflineUuid && netHandler.profile != null) {
+            //? if >= 1.20.3 {
             netHandler.profile = Uuids.getOfflinePlayerProfile(netHandler.profile.getName());
+            //?} else if >= 1.20.2 {
+            //netHandler.profile = ServerLoginNetworkHandler.createOfflineProfile(netHandler.profile.getName());
+            //?} else {
+            /*netHandler.profile = netHandler.toOfflineProfile(netHandler.profile);
+            *///?}
         }
     }
 

@@ -86,7 +86,12 @@ public class RegisterCommand {
 
                 playerData.loginTries++;
                 if (playerData.loginTries >= config.maxLoginTries && config.maxLoginTries != -1) { // Player exceeded maxLoginTries
-                    LogRegister("Player " + player.getNameForScoreboard() + " exceeded global password tries limit.");
+                    //? if >= 1.20.3 {
+                    String username = player.getNameForScoreboard();
+                    //?} else {
+                    /*String username = player.getName().getString();
+                    *///?}
+                    LogRegister("Player " + username + " exceeded global password tries limit.");
                     playerData.lastKickedDate = ZonedDateTime.now();
                     playerData.loginTries = 0;
                     playerData.update();
@@ -142,7 +147,12 @@ public class RegisterCommand {
             playerAuth.easyAuth$setPlayerEntryV1(playerData);
             playerData.update();
 
-            LogRegister("Player " + player.getNameForScoreboard() + "{" + player.getUuidAsString() + "} successfully registered with password: " + playerData.password);
+            //? if >= 1.20.3 {
+            String username = player.getNameForScoreboard();
+            //?} else {
+            /*String username = player.getName().getString();
+            *///?}
+            LogRegister("Player " + username + "{" + player.getUuidAsString() + "} successfully registered with password: " + playerData.password);
         });
         return 0;
     }

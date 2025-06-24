@@ -87,7 +87,11 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
     private boolean wasDead = false;
 
     @Unique
+    //? if >= 1.20.3 {
     PlayerEntryV1 playerEntryV1 = new PlayerEntryV1(player.getNameForScoreboard());
+    //?} else {
+    /*PlayerEntryV1 playerEntryV1 = new PlayerEntryV1(player.getName().getString());
+    *///?}
 
     @Unique
     private boolean canSkipAuth = this.player.getClass() != ServerPlayerEntity.class;
@@ -112,9 +116,14 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
 
         ridingEntityUUID = player.getVehicle() != null ? player.getVehicle().getUuid() : null;
         wasDead = player.isDead();
-        LogDebug(String.format("Saving position of player %s as %s", player.getNameForScoreboard(), lastLocation));
+        //? if >= 1.20.3 {
+        String username = player.getNameForScoreboard();
+        //?} else {
+        /*String username = player.getName().getString();
+        *///?}
+        LogDebug(String.format("Saving position of player %s as %s", username, lastLocation));
         if (ridingEntityUUID != null) {
-            LogDebug(String.format("Saving vehicle of player %s as %s", player.getNameForScoreboard(), ridingEntityUUID));
+            LogDebug(String.format("Saving vehicle of player %s as %s", username, ridingEntityUUID));
         }
     }
 
@@ -139,7 +148,11 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
             *///?} else {
             /*player.kill();
             *///?}
+            //? if >= 1.20.3 {
             player.getScoreboard().forEachScore(ScoreboardCriterion.DEATH_COUNT, player, (score) -> score.setScore(score.getScore() - 1));
+            //?} else {
+            /*player.getScoreboard().forEachScore(ScoreboardCriterion.DEATH_COUNT, player.getName().getString(), (score) -> score.setScore(score.getScore() - 1));
+            *///?}
             return;
         }
         // Puts player to last saved position
@@ -158,7 +171,12 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
                 //?} else {
                 /*lastLocation.pitch);
                 *///?}
-        LogDebug(String.format("Teleported player %s to %s", player.getNameForScoreboard(), lastLocation));
+        //? if >= 1.20.3 {
+        String username = player.getNameForScoreboard();
+        //?} else {
+        /*String username = player.getName().getString();
+        *///?}
+        LogDebug(String.format("Teleported player %s to %s", username, lastLocation));
 
         if (rootVehicle != null) {
             LogDebug(String.format("Mounting player to vehicle %s", rootVehicle));
@@ -205,7 +223,7 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
             if (entity != null) {
                 player.startRiding(entity, true);
             } else {
-                LogDebug("Could not find vehicle for player " + player.getNameForScoreboard());
+                LogDebug("Could not find vehicle for player " + username);
             }
         }
     }

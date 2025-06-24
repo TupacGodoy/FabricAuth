@@ -424,10 +424,15 @@ public class AuthCommand {
         THREADPOOL.submit(() -> {
             MutableText message = Text.literal("");
             source.getServer().getPlayerManager().getPlayerList().forEach(player -> {
-                PlayerEntryV1 playerData = DB.getUserData(player.getNameForScoreboard());
+                //? if >= 1.20.3 {
+                String username = player.getNameForScoreboard();
+                //?} else {
+                /*String username = player.getName().getString();
+                *///?}
+                PlayerEntryV1 playerData = DB.getUserData(username);
                 PlayerAuth playerAuth = (PlayerAuth) player;
 
-                message.append(Text.translatable(player.getNameForScoreboard()).formatted(Formatting.YELLOW)).append(": ");
+                message.append(Text.translatable(username).formatted(Formatting.YELLOW)).append(": ");
                 if (playerData == null) {
                     message.append(Text.literal("No data found\n"));
                     return;

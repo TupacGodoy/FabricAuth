@@ -1,5 +1,6 @@
 package xyz.nikitacartes.easyauth;
 
+import com.mojang.brigadier.tree.CommandNode;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.Event;
@@ -20,9 +21,11 @@ import xyz.nikitacartes.easyauth.integrations.LuckPermsIntegration;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -216,10 +219,24 @@ public class EasyAuth implements ModInitializer {
 
             CommandManager serverCommandManager = server.getCommandManager();
 
-            serverCommandManager.getDispatcher().getRoot().getChildren().removeIf(node -> node.getName().equals("register") || (regAlias && node.getName().equals("reg")));
-            registerCommand(serverCommandManager.getDispatcher());
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-                serverCommandManager.sendCommandTree(player);
+            try {
+                Field literalsField = CommandNode.class.getDeclaredField("literals");
+                literalsField.setAccessible(true);
+
+                // noinspection unchecked
+                Map<String, ?> literals = (Map<String, ?>) literalsField.get(serverCommandManager.getDispatcher().getRoot());
+                literals.remove("register");
+                if (regAlias) {
+                    literals.remove("reg");
+                }
+                serverCommandManager.getDispatcher().getRoot().getChildren().removeIf(node -> node.getName().equals("register") || (regAlias && node.getName().equals("reg")));
+
+                registerCommand(serverCommandManager.getDispatcher());
+                for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+                    serverCommandManager.sendCommandTree(player);
+                }
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                LogError("Error while reloading commands: ", e);
             }
         }
     }

@@ -32,9 +32,7 @@ import static com.mojang.brigadier.arguments.StringArgumentType.*;
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
-import static xyz.nikitacartes.easyauth.commands.RegisterCommand.registerRegister;
 import static xyz.nikitacartes.easyauth.integrations.MojangApi.isValidUsername;
-import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
 public class AuthCommand {
     /**

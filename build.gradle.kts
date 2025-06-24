@@ -123,7 +123,7 @@ tasks.processResources {
 
     filesMatching("easyauth.mixins.json5") {
         filter {
-            it.replace("\${refmap}", "${base.archivesName}-${version}-refmap.json")
+            it.replace("\${refmap}", "${base.archivesName.get()}-refmap.json")
         }
     }
 }
@@ -138,12 +138,11 @@ java {
 }
 
 publishMods {
-    val githubToken = System.getenv("GITHUB_TOKEN") ?: ""
     val modrinthToken = System.getenv("MODRINTH_TOKEN") ?: ""
     val curseforgeToken = System.getenv("CURSEFORGE_TOKEN") ?: ""
 
     file = project.tasks.remapJar.get().archiveFile
-    dryRun = githubToken.isEmpty() || modrinthToken.isEmpty() || curseforgeToken.isEmpty()
+    dryRun = modrinthToken.isEmpty() || curseforgeToken.isEmpty()
 
     displayName = "${property("display_name")} ${property("version")}"
     version = "${property("version")}"
@@ -153,14 +152,6 @@ publishMods {
     modLoaders.add("fabric")
 
     val targets = property("supported_versions").toString().split(",")
-
-    github {
-        repository = "NikitaCartes/EasyAuth"
-        accessToken = githubToken
-
-        commitish = "stonecutter"
-        announcementTitle = "${property("version")}"
-    }
 
     modrinth {
         projectId = "aZj58GfX"

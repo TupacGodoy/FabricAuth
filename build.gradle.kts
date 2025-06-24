@@ -130,19 +130,29 @@ java {
 }
 
 publishMods {
+    val githubToken = System.getenv("GITHUB_TOKEN") ?: ""
     val modrinthToken = System.getenv("MODRINTH_TOKEN") ?: ""
     val curseforgeToken = System.getenv("CURSEFORGE_TOKEN") ?: ""
 
     file = project.tasks.remapJar.get().archiveFile
-    dryRun = modrinthToken.isEmpty() || curseforgeToken.isEmpty()
+    dryRun = githubToken.isEmpty() || modrinthToken.isEmpty() || curseforgeToken.isEmpty()
 
     displayName = "${property("display_name")} ${property("version")}"
     version = "${property("version")}"
-    changelog = "Release notes:\nhttps://github.com/NikitaCartes/EasyAuth/releases/tag/${property("version")}\n\nChangelog:\nhttps://github.com/NikitaCartes/EasyAuth/tree/HEAD/CHANGELOG.md"
+
+    changelog = "Release notes:\n${file("RELEASE_NOTE.md").readText()}\n\nFull Changelog:\nhttps://github.com/NikitaCartes/EasyAuth/tree/HEAD/CHANGELOG.md"
     type = STABLE
     modLoaders.add("fabric")
 
     val targets = property("supported_versions").toString().split(",")
+
+    github {
+        repository = "NikitaCartes/EasyAuth"
+        accessToken = githubToken
+
+        commitish = "stonecutter"
+        announcementTitle = "${property("version")}"
+    }
 
     modrinth {
         projectId = "aZj58GfX"
@@ -156,7 +166,7 @@ publishMods {
 
     curseforge {
         projectId = "503866"
-        accessToken = curseforgeToken.toString()
+        accessToken = curseforgeToken
 
         targets.forEach(minecraftVersions::add)
         requires("fabric-api")

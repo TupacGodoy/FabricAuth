@@ -4,3 +4,4 @@
 #### Fix
 - Re-register `register` command if `single-use-global-password` was changed
 - Wrong log-in message with enabled `single-use-global-password` and disabled `enable-global-password`
+- Double login required message on login

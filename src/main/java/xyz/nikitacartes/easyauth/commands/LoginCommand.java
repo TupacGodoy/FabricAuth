@@ -81,7 +81,7 @@ public class LoginCommand {
             return 0;
         } else if (passwordResult == AuthHelper.PasswordOptions.NOT_REGISTERED) {
             LogLogin("Player " + username + " is not registered");
-            if (config.singleUseGlobalPassword) {
+            if (config.enableGlobalPassword && config.singleUseGlobalPassword) {
                 langConfig.registerRequiredWithGlobalPassword.send(source);
                 return 0;
             }

@@ -232,19 +232,22 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
      * Gets the text which tells the player
      * to login or register, depending on account status.
      *
-     * @return Text with appropriate string (login or register)
      */
     @Override
     public void easyAuth$sendAuthMessage() {
-        if ((!config.enableGlobalPassword || config.singleUseGlobalPassword) && (playerEntryV1 == null || playerEntryV1.password.isEmpty())) {
-            if (config.singleUseGlobalPassword) {
-                langConfig.registerRequiredWithGlobalPassword.send(player);
-            } else {
-                langConfig.registerRequired.send(player);
-            }
-        } else {
+        if (playerEntryV1 != null && !playerEntryV1.password.isEmpty()) {
             langConfig.loginRequired.send(player);
+            return;
         }
+        if (!config.enableGlobalPassword) {
+            langConfig.registerRequired.send(player);
+            return;
+        }
+        if (config.singleUseGlobalPassword) {
+            langConfig.registerRequiredWithGlobalPassword.send(player);
+            return;
+        }
+        langConfig.loginRequired.send(player);
     }
 
     /**

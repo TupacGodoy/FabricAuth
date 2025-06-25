@@ -5,3 +5,6 @@
 - Re-register `register` command if `single-use-global-password` was changed
 - Wrong log-in message with enabled `single-use-global-password` and disabled `enable-global-password`
 - Double login required message on login
+
+#### Changes
+- Build EasyAuth against Java 17 [#199](https://github.com/NikitaCartes/EasyAuth/issues/199)

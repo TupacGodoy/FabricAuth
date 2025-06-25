@@ -5,6 +5,12 @@
 #### Fix
 - Check how offline players work if they try to connect with a taken online account
 
+---
+### 3.3.5
+##### Minecraft 1.20[.X], 1.21[.X]
+#### Changes
+- Build EasyAuth against Java 17 [#199](https://github.com/NikitaCartes/EasyAuth/issues/199)
+
 ----
 ### 3.3.4
 ##### Minecraft 1.20[.X], 1.21[.X]

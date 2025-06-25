@@ -8,3 +8,4 @@
 
 #### Changes
 - Build EasyAuth against Java 17 [#199](https://github.com/NikitaCartes/EasyAuth/issues/199)
+- Improve readability of es_mx language

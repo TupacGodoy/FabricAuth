@@ -43,7 +43,7 @@ Thank you so much for those who have already helped with translation of the mod!
 
 * Russian: @alphatoasterous, @NikitaCartes
 * Chinese: @Neubulae, @GodGun968, @Sam5440, @CMJNB, @MyBlueHorizon
-* Spanish: @Zailer43
+* Spanish: @Zailer43, @DanielTrejoBorjas
 * Slovene: @Kljunas2
 * Hungarian: @Bendimester23
 * Brazilian Portuguese: @luizffgv, @guigiffoni

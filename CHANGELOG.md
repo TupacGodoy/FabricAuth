@@ -10,6 +10,7 @@
 ##### Minecraft 1.20[.X], 1.21[.X]
 #### Changes
 - Build EasyAuth against Java 17 [#199](https://github.com/NikitaCartes/EasyAuth/issues/199)
+- Improve readability of es_mx language
 
 ----
 ### 3.3.4

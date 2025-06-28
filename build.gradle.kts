@@ -141,13 +141,13 @@ publishMods {
     val modrinthToken = System.getenv("MODRINTH_TOKEN") ?: ""
     val curseforgeToken = System.getenv("CURSEFORGE_TOKEN") ?: ""
 
-    file = project.tasks.remapJar.get().archiveFile
+    file = tasks.remapJar.get().archiveFile
     dryRun = modrinthToken.isEmpty() || curseforgeToken.isEmpty()
 
     displayName = "${property("display_name")} ${property("version")}"
     version = "${property("version")}"
 
-    changelog = "Release notes:\n${file("../../RELEASE_NOTE.md").readText()}\n\nFull Changelog:\nhttps://github.com/NikitaCartes/EasyAuth/tree/HEAD/CHANGELOG.md"
+    changelog = file("../../RELEASE_NOTE.md").readText()
     type = STABLE
     modLoaders.add("fabric")
 

@@ -1,4 +1,5 @@
-##### Add
+### Release notes:
+#### Add
 - Disable register command if `enable-global-password` enabled with `single-use-global-password` disabled
 
 #### Fix
@@ -9,3 +10,8 @@
 #### Changes
 - Build EasyAuth against Java 17 [#199](https://github.com/NikitaCartes/EasyAuth/issues/199)
 - Improve readability of es_mx language
+
+---
+
+### Full Changelog:
+https://github.com/NikitaCartes/EasyAuth/tree/HEAD/CHANGELOG.md

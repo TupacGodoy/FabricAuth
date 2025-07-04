@@ -25,7 +25,7 @@
     "easyauth.mixins.json5"
   ],
   "depends": {
-    "fabric-api": "*",
+    "fabric": "*",
     "fabricloader": ">=0.15.0",
     "minecraft": "${supported_minecraft_version}"
   },

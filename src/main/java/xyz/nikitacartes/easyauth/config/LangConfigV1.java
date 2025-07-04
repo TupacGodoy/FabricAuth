@@ -18,7 +18,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static net.minecraft.text.Text.translatable;
+//? if >= 1.19.4 {
 import static net.minecraft.text.Text.translatableWithFallback;
+//?}
 import static net.minecraft.text.TranslatableTextContent.EMPTY_ARGUMENTS;
 import static xyz.nikitacartes.easyauth.EasyAuth.langConfig;
 
@@ -214,11 +216,15 @@ public class LangConfigV1 extends ConfigTemplate {
 
         public MutableText getNonTranslatable(Object... args) {
             if (enabled) {
+                //? if >= 1.19.4 {
                 if (!fallback.isEmpty()) {
                     return translatableWithFallback(key, fallback, args);
                 } else {
                     return translatableWithFallback(key, translations.get(key), args);
                 }
+                //?} else {
+                /*return translatable(key, args);
+                *///?}
             } else {
                 return Text.literal("");
             }
@@ -229,6 +235,7 @@ public class LangConfigV1 extends ConfigTemplate {
         }
 
         private MutableText getTranslation(Object... args) {
+            //? if >= 1.19.4 {
             if (langConfig.enableServerSideTranslation && serverSide) {
                 return translatable(key, args);
             } if (!fallback.isEmpty()) {
@@ -236,6 +243,9 @@ public class LangConfigV1 extends ConfigTemplate {
             } else {
                 return translatableWithFallback(key, translations.get(key), args);
             }
+            //?} else {
+            /*return translatable(key, args);
+            *///?}
         }
     }
 

@@ -22,12 +22,25 @@ val awFile = when {
     stonecutter.eval(stonecutter.current.version, ">=1.21.6") -> "easyauth.1.21.6.accesswidener"
     stonecutter.eval(stonecutter.current.version, ">=1.20.3") -> "easyauth.1.20.3.accesswidener"
     stonecutter.eval(stonecutter.current.version, ">=1.20.2") -> "easyauth.1.20.2.accesswidener"
-    else -> "easyauth.1.20.accesswidener"
+    stonecutter.eval(stonecutter.current.version, ">=1.19.4") -> "easyauth.1.19.4.accesswidener"
+    else -> "easyauth.1.19.3.accesswidener"
 }
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
+}
+
+fabricApi.configureTests {
+    createSourceSet = true
+    modId = "${property("mod_id")}-mixin-test"
+    eula = true
+    enableClientGameTests = false
+    enableGameTests = true
+}
+
+tasks.named("runGameTest") {
+    usesService(semaphore)
 }
 
 loom {
@@ -55,8 +68,8 @@ dependencies {
     modImplementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_version")}")
 
     // Translations
-    include("xyz.nucleoid:server-translations-api:${property("server_translations_version")}")
-    modImplementation("xyz.nucleoid:server-translations-api:${property("server_translations_version")}")
+    include("${property("server_translations_package")}:server-translations-api:${property("server_translations_version")}")
+    modImplementation("${property("server_translations_package")}:server-translations-api:${property("server_translations_version")}")
 
     // Permissions
     modImplementation("me.lucko:fabric-permissions-api:${property("fabric_permissions_version")}")
@@ -179,4 +192,17 @@ j52j {
     params {
         prettyPrinting = true
     }
+}
+
+tasks.register<Copy>("buildAndCollect") {
+    group = "build"
+    from(tasks.remapJar.get().archiveFile)
+    into(rootProject.layout.buildDirectory.file("libs/${property("mod_version")}"))
+    dependsOn("build")
+}
+
+private abstract class ServerRunSemaphore : BuildService<BuildServiceParameters.None>
+
+private val semaphore = gradle.sharedServices.registerIfAbsent("semaphore", ServerRunSemaphore::class.java) {
+    maxParallelUsages.set(1)
 }

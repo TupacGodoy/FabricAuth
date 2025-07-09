@@ -23,7 +23,7 @@ val awFile = when {
     stonecutter.eval(stonecutter.current.version, ">=1.20.3") -> "easyauth.1.20.3.accesswidener"
     stonecutter.eval(stonecutter.current.version, ">=1.20.2") -> "easyauth.1.20.2.accesswidener"
     stonecutter.eval(stonecutter.current.version, ">=1.19.4") -> "easyauth.1.19.4.accesswidener"
-    else -> "easyauth.1.19.3.accesswidener"
+    else -> throw GradleException("Access widener is missing for Minecraft ${stonecutter.current.version})")
 }
 
 java {
@@ -68,8 +68,8 @@ dependencies {
     modImplementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_version")}")
 
     // Translations
-    include("${property("server_translations_package")}:server-translations-api:${property("server_translations_version")}")
-    modImplementation("${property("server_translations_package")}:server-translations-api:${property("server_translations_version")}")
+    include("xyz.nucleoid:server-translations-api:${property("server_translations_version")}")
+    modImplementation("xyz.nucleoid:server-translations-api:${property("server_translations_version")}")
 
     // Permissions
     modImplementation("me.lucko:fabric-permissions-api:${property("fabric_permissions_version")}")

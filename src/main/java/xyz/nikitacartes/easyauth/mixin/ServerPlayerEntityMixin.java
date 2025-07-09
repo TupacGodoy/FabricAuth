@@ -186,7 +186,7 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
             /*player.readRootVehicle(Optional.of(rootVehicle));
             *///?} else {
             /*NbtCompound nbtCompound = rootVehicle.getCompound("RootVehicle");
-            //? if >=1.19.4 {
+            //? if > 1.19.4 {
              Entity entity = EntityType.loadEntityWithPassengers(nbtCompound.getCompound("Entity"), player.getServerWorld(), (vehicle) -> !player.getServerWorld().tryLoadEntity(vehicle) ? null : vehicle);
             //?} else {
             /^Entity entity = EntityType.loadEntityWithPassengers(nbtCompound.getCompound("Entity"), player.getWorld(), (vehicle) -> !player.getWorld().tryLoadEntity(vehicle) ? null : vehicle);

@@ -28,6 +28,18 @@ See [wiki](https://github.com/NikitaCartes/EasyAuth/wiki) for more information.
 This mod requires:
 - `Fabric API` [CurseForge](https://www.curseforge.com/minecraft/mc-mods/fabric-api), [Modrinth](https://modrinth.com/mod/fabric-api)
 
+### Build
+Build all supported versions at once:
+```bash
+./gradlew chiseledBuild
+```
+
+If you want to add new feature, you can make pull request against `fabric-1.21.6` branch as it contains the latest changes from `stonecutter` branch:
+```bash
+git checkout fabric-1.21.6
+./gradlew build
+```
+
 ### Contributors
 
 * Many thanks for @samolego, author of SimpleAuth, for his mod, and his permission on creating this fork

@@ -49,11 +49,18 @@ public abstract class ServerLoginNetworkHandlerMixin {
     @Inject(
             method = "onHello(Lnet/minecraft/network/packet/c2s/login/LoginHelloC2SPacket;)V",
             at = @At(
+                    //? if > 1.19.3 {
                     value = "INVOKE",
                     //? if >= 1.20.2 {
                     target = "Lnet/minecraft/server/MinecraftServer;isOnlineMode()Z"
                     //?} else {
                     /*target = "Lcom/mojang/authlib/GameProfile;<init>(Ljava/util/UUID;Ljava/lang/String;)V",
+                    shift = At.Shift.AFTER,
+                    remap = false
+                    *///?}
+                    //?} else {
+                    /*value = "NEW",
+                    target = "com/mojang/authlib/GameProfile",
                     shift = At.Shift.AFTER,
                     remap = false
                     *///?}

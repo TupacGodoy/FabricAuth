@@ -16,6 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import static xyz.nikitacartes.easyauth.EasyAuth.serverProp;
 import static xyz.nikitacartes.easyauth.EasyAuth.extendedConfig;
 
+import java.io.File;
 import java.nio.file.Path;
 
 @Mixin(PlayerAdvancementTracker.class)
@@ -24,25 +25,41 @@ public class PlayerAdvancementTrackerMixin {
     @Mutable
     @Shadow
     @Final
+    //? if > 1.19.3 {
     private Path filePath;
+    //?} else {
+    /*private File advancementFile;
+    *///?}
 
     @Shadow
     private ServerPlayerEntity owner;
 
     @Inject(method = "load(Lnet/minecraft/server/ServerAdvancementLoader;)V", at = @At("HEAD"))
     private void startMigratingOfflineAdvancements(ServerAdvancementLoader advancementLoader, CallbackInfo ci) {
+        //? if > 1.19.3 {
         if (Boolean.parseBoolean(serverProp.getProperty("online-mode")) && !extendedConfig.forcedOfflineUuid && ((PlayerAuth) this.owner).easyAuth$isUsingMojangAccount() && !this.filePath.toFile().isFile()) {
             // Migrate
             String playername = owner.getGameProfile().getName();
             this.filePath = this.filePath.getParent().resolve(Uuids.getOfflinePlayerUuid(playername) + ".json");
         }
+        //?} else {
+        /*if (Boolean.parseBoolean(serverProp.getProperty("online-mode")) && !extendedConfig.forcedOfflineUuid && ((PlayerAuth) this.owner).easyAuth$isUsingMojangAccount() && !this.advancementFile.isFile()) {
+            // Migrate
+            String playername = owner.getGameProfile().getName();
+            this.advancementFile = new File(this.advancementFile.getParent(), Uuids.getOfflinePlayerUuid(playername) + ".json");
+        }
+        *///?}
     }
 
     @Inject(method = "load(Lnet/minecraft/server/ServerAdvancementLoader;)V", at = @At("TAIL"))
     private void endMigratingOfflineAdvancements(ServerAdvancementLoader advancementLoader, CallbackInfo ci) {
         if (Boolean.parseBoolean(serverProp.getProperty("online-mode")) && !extendedConfig.forcedOfflineUuid && ((PlayerAuth) this.owner).easyAuth$isUsingMojangAccount()) {
             // Changes the file name to use online UUID
+            //? if > 1.19.3 {
             this.filePath = this.filePath.getParent().resolve(owner.getUuid() + ".json");
+            //?} else {
+            /*this.advancementFile = new File(this.advancementFile.getParent(), owner.getUuid() + ".json");
+            *///?}
         }
     }
 }

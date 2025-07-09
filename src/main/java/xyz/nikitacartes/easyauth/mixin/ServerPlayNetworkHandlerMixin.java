@@ -49,7 +49,11 @@ public abstract class ServerPlayNetworkHandlerMixin {
             method = "onPlayerAction(Lnet/minecraft/network/packet/c2s/play/PlayerActionC2SPacket;)V",
             at = @At(
                     value = "INVOKE",
+                    //? if > 1.19.3 {
                     target = "Lnet/minecraft/network/NetworkThreadUtils;forceMainThread(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/listener/PacketListener;Lnet/minecraft/server/world/ServerWorld;)V",
+                    //?} else {
+                    /*target = "net/minecraft/network/NetworkThreadUtils.forceMainThread(Lnet/minecraft/network/Packet;Lnet/minecraft/network/listener/PacketListener;Lnet/minecraft/server/world/ServerWorld;)V",
+                    *///?}
                     shift = At.Shift.AFTER
             ),
             cancellable = true
@@ -68,7 +72,11 @@ public abstract class ServerPlayNetworkHandlerMixin {
             at = @At(
                     value = "INVOKE",
                     // Thanks to Liach for helping me out!
+                    //? if > 1.19.3 {
                     target = "Lnet/minecraft/network/NetworkThreadUtils;forceMainThread(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/listener/PacketListener;Lnet/minecraft/server/world/ServerWorld;)V",
+                    //?} else {
+                    /*target = "net/minecraft/network/NetworkThreadUtils.forceMainThread(Lnet/minecraft/network/Packet;Lnet/minecraft/network/listener/PacketListener;Lnet/minecraft/server/world/ServerWorld;)V",
+                    *///?}
                     shift = At.Shift.AFTER
             ),
             cancellable = true
@@ -84,7 +92,11 @@ public abstract class ServerPlayNetworkHandlerMixin {
             method = "onCreativeInventoryAction(Lnet/minecraft/network/packet/c2s/play/CreativeInventoryActionC2SPacket;)V",
             at = @At(
                     value = "INVOKE",
+                    //? if > 1.19.3 {
                     target = "Lnet/minecraft/network/NetworkThreadUtils;forceMainThread(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/listener/PacketListener;Lnet/minecraft/server/world/ServerWorld;)V",
+                    //?} else {
+                    /*target = "net/minecraft/network/NetworkThreadUtils.forceMainThread(Lnet/minecraft/network/Packet;Lnet/minecraft/network/listener/PacketListener;Lnet/minecraft/server/world/ServerWorld;)V",
+                    *///?}
                     shift = At.Shift.AFTER
             ),
             cancellable = true

@@ -1,9 +1,19 @@
 ### ToDo
 #### Add
 - Add support for a changing "invalid session" message when offline player connects with online nickname
+- Gamemode switching on login
 
 #### Fix
 - Check how offline players work if they try to connect with a taken online account
+
+---
+### 3.3.6
+##### Minecraft 1.19.4, 1.20[.X], 1.21[.X]
+#### Fix
+- Command reloading
+
+#### Changes
+- Update Turkish translation, thanks to @MemoKing34
 
 ---
 ### 3.3.5

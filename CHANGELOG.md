@@ -11,6 +11,7 @@
 ##### Minecraft 1.19.4, 1.20[.X], 1.21[.X]
 #### Fix
 - Command reloading
+- Detection of offline players that join using an online account
 
 #### Changes
 - Update Turkish translation, thanks to @MemoKing34

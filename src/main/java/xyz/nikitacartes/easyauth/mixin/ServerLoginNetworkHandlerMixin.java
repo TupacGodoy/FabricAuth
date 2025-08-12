@@ -16,12 +16,12 @@ import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.PlayersCache;
 
 import java.io.IOException;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static xyz.nikitacartes.easyauth.integrations.MojangApi.isValidUsername;
-import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
-import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogError;
+import static xyz.nikitacartes.easyauth.integrations.MojangApi.getUuid;
+import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
 @Mixin(ServerLoginNetworkHandler.class)
 public abstract class ServerLoginNetworkHandlerMixin {
@@ -105,12 +105,18 @@ public abstract class ServerLoginNetworkHandlerMixin {
                     *///?}
                     ci.cancel();
                 } else {
-                    if (isValidUsername(username)) {
+                    UUID onlineUuid = getUuid(username);
+                    if (packet.profileId().equals(onlineUuid)) {
                         // Caches the request
                         playerData.onlineAccount = PlayerEntryV1.OnlineAccount.TRUE;
                         playerData.update();
                         // Authentication continues in the original method
                     } else {
+                        if (onlineUuid == null) {
+                            LogDebug("Player " + username + " doesn't have a Mojang account");
+                        } else {
+                            LogInfo("Player " + username + " has a Mojang account, but UUID mismatch: expected " + onlineUuid + ", got " + packet.profileId());
+                        }
                         //? if >= 1.20.2 {
                         state = ServerLoginNetworkHandler.State.VERIFYING;
                         //?} else {

@@ -11,6 +11,7 @@
 ##### Minecraft 1.19.4, 1.20[.X], 1.21[.X]
 ##### Add
 - Add `prevent-offline-players-with-online-usernames` option to prevent offline players from joining with online usernames
+- Add `check-offline-players-with-online-usernames` option to check offline players with online usernames every time they join the server for an online account
 
 #### Fix
 - Command reloading

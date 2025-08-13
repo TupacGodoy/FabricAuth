@@ -115,17 +115,20 @@ public abstract class ServerLoginNetworkHandlerMixin {
                     } else {
                         if (onlineUuid == null) {
                             LogDebug("Player " + username + " doesn't have a Mojang account");
+                            playerData.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
+                            playerData.update();
                         } else {
                             LogInfo("Player " + username + " has a Mojang account, but UUID mismatch: expected " + onlineUuid + ", got " + packet.profileId());
+                            if (!EasyAuth.extendedConfig.checkOfflinePlayersWithOnlineUsernames) {
+                                playerData.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
+                                playerData.update();
+                            }
                         }
                         //? if >= 1.20.2 {
                         state = ServerLoginNetworkHandler.State.VERIFYING;
                         //?} else {
                         /*state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
                         *///?}
-
-                        playerData.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
-                        playerData.update();
 
                         //? if >= 1.20.2 {
                         this.profile = new GameProfile(Uuids.getOfflinePlayerUuid(packet.name()), packet.name());

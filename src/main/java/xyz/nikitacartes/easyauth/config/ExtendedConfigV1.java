@@ -167,6 +167,11 @@ public class ExtendedConfigV1 extends ConfigTemplate {
             Log player login as info level log.""")
     public boolean logPlayerLogin = false;
 
+    @Comment("""
+            
+            Prevent offline players from joining the server using online usernames.""")
+    public boolean preventOfflinePlayersWithOnlineUsernames = false;
+
     public ExtendedConfigV1() {
         super("extended.conf", """
                 ##                          ##

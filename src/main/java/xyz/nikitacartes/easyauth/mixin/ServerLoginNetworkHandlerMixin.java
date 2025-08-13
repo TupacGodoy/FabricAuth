@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import xyz.nikitacartes.easyauth.EasyAuth;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.PlayersCache;
 
@@ -106,7 +107,7 @@ public abstract class ServerLoginNetworkHandlerMixin {
                     ci.cancel();
                 } else {
                     UUID onlineUuid = getUuid(username);
-                    if (packet.profileId().equals(onlineUuid)) {
+                    if ((EasyAuth.extendedConfig.preventOfflinePlayersWithOnlineUsernames && onlineUuid != null) || packet.profileId().equals(onlineUuid)) {
                         // Caches the request
                         playerData.onlineAccount = PlayerEntryV1.OnlineAccount.TRUE;
                         playerData.update();

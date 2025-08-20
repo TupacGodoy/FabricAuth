@@ -9,7 +9,7 @@
 ---
 ### 3.3.6
 ##### Minecraft 1.19.4, 1.20[.X], 1.21[.X]
-##### Add
+#### Add
 - Add `prevent-offline-players-with-online-usernames` option to prevent offline players from joining with online usernames
 - Add `check-offline-players-with-online-usernames` option to check offline players with online usernames every time they join the server for an online account
 
@@ -30,7 +30,7 @@
 ----
 ### 3.3.4
 ##### Minecraft 1.20[.X], 1.21[.X]
-##### Add
+#### Add
 - Disable register command if `enable-global-password` enabled with `single-use-global-password` disabled
 
 #### Fix

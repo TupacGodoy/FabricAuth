@@ -1,9 +1,11 @@
 plugins {
-    id("dev.kikugie.j52j") version "2.0"
     id("java")
     id("java-library")
-    id("fabric-loom") version "1.10-SNAPSHOT"
-    id("com.gradleup.shadow") version "9.0.0-beta13"
+    kotlin("jvm") version "2.2.0"
+    id("fabric-loom") version "1.11-SNAPSHOT"
+    id("com.google.devtools.ksp") version "2.2.0-2.0.2"
+    id("dev.kikugie.fletching-table.fabric") version "0.1.0-alpha.15"
+    id("com.gradleup.shadow") version "9.0.2"
     id("me.modmuss50.mod-publish-plugin") version "0.8.4"
 }
 
@@ -134,11 +136,20 @@ tasks.processResources {
         )
     }
 
-    filesMatching("easyauth.mixins.json5") {
+    filesMatching("easyauth.mixins.json") {
         filter {
             it.replace("\${refmap}", "${base.archivesName.get()}-refmap.json")
         }
     }
+}
+
+tasks.processTestResources {
+    dependsOn("kspGametestKotlin")
+}
+
+tasks.named<Copy>("processGametestResources") {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    dependsOn("kspTestKotlin")
 }
 
 tasks.withType<JavaCompile>().configureEach {
@@ -188,17 +199,11 @@ publishMods {
     }
 }
 
-j52j {
-    params {
-        prettyPrinting = true
+fletchingTable {
+    mixins.create("main") { // Name should match an existing source set
+        // Default matches the default value in the annotation
+        mixin("default", "easyauth.mixins.json")
     }
-}
-
-tasks.register<Copy>("buildAndCollect") {
-    group = "build"
-    from(tasks.remapJar.get().archiveFile)
-    into(rootProject.layout.buildDirectory.file("libs/${property("mod_version")}"))
-    dependsOn("build")
 }
 
 private abstract class ServerRunSemaphore : BuildService<BuildServiceParameters.None>

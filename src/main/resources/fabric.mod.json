@@ -22,7 +22,7 @@
   },
   "accessWidener": "accesswidener/${accessWidener}",
   "mixins": [
-    "easyauth.mixins.json5"
+    "easyauth.mixins.json"
   ],
   "depends": {
     "fabric-api": "*",

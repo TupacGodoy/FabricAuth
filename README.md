@@ -31,7 +31,7 @@ This mod requires:
 ### Build
 Build all supported versions at once:
 ```bash
-./gradlew chiseledBuild
+./gradlew build
 ```
 
 If you want to add new feature, you can make pull request against `fabric-1.21.6` branch as it contains the latest changes from `stonecutter` branch:

@@ -184,7 +184,6 @@ public abstract class PlayerManagerMixin {
             *///?}
 
             ((PlayerAuth) player).easyAuth$setSkipAuth();
-            ((PlayerAuth) player).easyAuth$sendAuthMessage();
 
             LogDebug(String.format("Teleporting player %s", username));
             LogDebug(String.format("Spawn position of player %s is %s", username, config.worldSpawn));

@@ -64,6 +64,8 @@ public abstract class ServerLoginNetworkHandlerMixin {
     private void checkPremium(LoginHelloC2SPacket packet, CallbackInfo ci) {
         String username = packet.name();
 
+        LogDebug("UUID of player " + username + " is " + packet.profileId());
+
         PlayerEntryV1 playerData = PlayersCache.getOrRegister(username);
 
         if (server.isOnlineMode()) {

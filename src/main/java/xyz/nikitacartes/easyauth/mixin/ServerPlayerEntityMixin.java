@@ -346,7 +346,7 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
                 player.networkHandler.disconnect(langConfig.timeExpired.get());
             } else {
                 // Sending authentication prompt every 10 seconds
-                if (kickTimer % (extendedConfig.authenticationPromptInterval * 20) == 1) {
+                if (kickTimer % (extendedConfig.authenticationPromptInterval * 20) == 0) {
                     this.easyAuth$sendAuthMessage();
                 }
                 --kickTimer;

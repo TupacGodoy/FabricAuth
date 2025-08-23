@@ -7,6 +7,12 @@
 - Check how offline players work if they try to connect with a taken online account
 
 ---
+### 3.4.0
+##### Minecraft 1.19.4, 1.20[.X], 1.21[.X]
+#### Fix
+- Not sending register prompt on login if coordinates hiding is disabled
+
+---
 ### 3.3.6
 ##### Minecraft 1.19.4, 1.20[.X], 1.21[.X]
 #### Add

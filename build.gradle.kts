@@ -52,7 +52,7 @@ loom {
 
     runConfigs.all {
         ideConfigGenerated(true) // Run configurations are not created for subprojects by default
-        runDir = "../../run" // Use a shared run folder and create separate worlds
+        runDir = "run" // Use a separate run directory for all configurations
     }
 }
 

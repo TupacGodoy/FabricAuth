@@ -11,6 +11,7 @@
 ##### Minecraft 1.19.4, 1.20[.X], 1.21[.X]
 #### Fix
 - Not sending register prompt on login if coordinates hiding is disabled
+- Fix false-positive UUID mismatch
 
 ---
 ### 3.3.6

@@ -109,7 +109,11 @@ public abstract class ServerLoginNetworkHandlerMixin {
                     ci.cancel();
                 } else {
                     UUID onlineUuid = getUuid(username);
+                    //? if >= 1.20.2 {
                     if ((EasyAuth.extendedConfig.preventOfflinePlayersWithOnlineUsernames && onlineUuid != null) || packet.profileId().equals(onlineUuid)) {
+                     //?} else {
+                    /*if ((EasyAuth.extendedConfig.preventOfflinePlayersWithOnlineUsernames && onlineUuid != null) || (packet.profileId().isPresent() && packet.profileId().get().equals(onlineUuid))) {
+                    *///?}
                         // Caches the request
                         playerData.onlineAccount = PlayerEntryV1.OnlineAccount.TRUE;
                         playerData.update();

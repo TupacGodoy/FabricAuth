@@ -21,6 +21,7 @@ base.archivesName = "${property("mod_id")}-mc${property("minecraft_version")}"
 version = "${property("mod_version")}"
 
 val awFile = when {
+    stonecutter.eval(stonecutter.current.version, ">=1.21.9") -> "easyauth.1.21.9.accesswidener"
     stonecutter.eval(stonecutter.current.version, ">=1.21.6") -> "easyauth.1.21.6.accesswidener"
     stonecutter.eval(stonecutter.current.version, ">=1.20.3") -> "easyauth.1.20.3.accesswidener"
     stonecutter.eval(stonecutter.current.version, ">=1.20.2") -> "easyauth.1.20.2.accesswidener"

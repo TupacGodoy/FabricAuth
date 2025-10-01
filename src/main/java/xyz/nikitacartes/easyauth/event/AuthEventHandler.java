@@ -11,6 +11,9 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
 import net.minecraft.server.MinecraftServer;
+//? if >= 1.21.9 {
+import net.minecraft.server.PlayerConfigEntry;
+//?}
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerLoginNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -50,13 +53,22 @@ public class AuthEventHandler {
      * Player pre-join.
      * Returns text as a reason for disconnect or null to pass
      *
-     * @param profile GameProfile of the player
+     * @param profile PlayerConfigEntry|GameProfile of the player
      * @param manager PlayerManager
      * @return Text if player should be disconnected
      */
-    public static Text checkCanPlayerJoinServer(GameProfile profile, PlayerManager manager, SocketAddress socketAddress) {
+    //? if >= 1.21.9 {
+    public static Text checkCanPlayerJoinServer(PlayerConfigEntry profile, PlayerManager manager, SocketAddress socketAddress) {
+    //?} else {
+    /*public static Text checkCanPlayerJoinServer(GameProfile profile, PlayerManager manager, SocketAddress socketAddress) {
+    *///?}
         // Getting the player. By this point, the player's game profile has been authenticated so the UUID is legitimate.
-        String incomingPlayerUsername = profile.getName();
+        //? if >= 1.21.9 {
+        String incomingPlayerUsername = profile.name();
+        //?} else {
+        /*String incomingPlayerUsername = profile.getName();
+        *///?}
+
         PlayerEntity onlinePlayer = manager.getPlayer(incomingPlayerUsername);
 
         if ((onlinePlayer != null && !((PlayerAuth) onlinePlayer).easyAuth$canSkipAuth()) && extendedConfig.preventAnotherLocationKick) {
@@ -81,7 +93,11 @@ public class AuthEventHandler {
         // Checking if player username is valid. The pattern is generated when the config is (re)loaded.
         Matcher matcher = usernamePattern.matcher(incomingPlayerUsername);
 
-        if (!(matcher.matches() || (technicalConfig.floodgateLoaded && extendedConfig.floodgateBypassRegex && FloodgateApiHelper.isFloodgatePlayer(profile.getId())))) {
+        //? if >= 1.21.9 {
+        if (!(matcher.matches() || (technicalConfig.floodgateLoaded && extendedConfig.floodgateBypassRegex && FloodgateApiHelper.isFloodgatePlayer(profile.id())))) {
+        //?} else {
+        /*if (!(matcher.matches() || (technicalConfig.floodgateLoaded && extendedConfig.floodgateBypassRegex && FloodgateApiHelper.isFloodgatePlayer(profile.getId())))) {
+        *///?}
             return langConfig.disallowedUsername.getNonTranslatable(extendedConfig.usernameRegexp);
         }
         // If the player name and registered name are different, kick the player if differentUsernameCase is enabled
@@ -165,7 +181,11 @@ public class AuthEventHandler {
         if (extendedConfig.tryPortalRescue) {
             BlockPos pos = player.getBlockPos();
             player.teleport(pos.getX() + 0.5, player.getY(), pos.getZ() + 0.5, false);
-            if (player.getBlockStateAtPos().getBlock().equals(Blocks.NETHER_PORTAL) || player.getWorld().getBlockState(player.getBlockPos().up()).getBlock().equals(Blocks.NETHER_PORTAL)) {
+            //? if >= 1.21.9 {
+            if (player.getBlockStateAtPos().getBlock().equals(Blocks.NETHER_PORTAL) || player.getEntityWorld().getBlockState(player.getBlockPos().up()).getBlock().equals(Blocks.NETHER_PORTAL)) {
+            //?} else {
+            /*if (player.getBlockStateAtPos().getBlock().equals(Blocks.NETHER_PORTAL) || player.getWorld().getBlockState(player.getBlockPos().up()).getBlock().equals(Blocks.NETHER_PORTAL)) {
+            *///?}
                 // Faking portal blocks to be air
                 BlockUpdateS2CPacket feetPacket = new BlockUpdateS2CPacket(pos, Blocks.AIR.getDefaultState());
                 player.networkHandler.sendPacket(feetPacket);
@@ -329,8 +349,10 @@ public class AuthEventHandler {
 
     public static void onPreLogin(ServerLoginNetworkHandler netHandler, MinecraftServer server, PacketSender packetSender, ServerLoginNetworking.LoginSynchronizer sync) {
         if (extendedConfig.forcedOfflineUuid && netHandler.profile != null) {
-            //? if >= 1.20.3 {
-            netHandler.profile = Uuids.getOfflinePlayerProfile(netHandler.profile.getName());
+            //? if >= 1.21.9 {
+            netHandler.profile = Uuids.getOfflinePlayerProfile(netHandler.profile.name());
+            //?} else if >= 1.20.3 {
+            //netHandler.profile = Uuids.getOfflinePlayerProfile(netHandler.profile.getName());
             //?} else if >= 1.20.2 {
             /*netHandler.profile = ServerLoginNetworkHandler.createOfflineProfile(netHandler.profile.getName());
             *///?} else {

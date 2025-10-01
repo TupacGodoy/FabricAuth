@@ -110,7 +110,11 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
         if (lastLocation == null) {
             lastLocation = new LastLocation();
         }
-        lastLocation.position = player.getPos();
+        //? if >= 1.21.9 {
+        lastLocation.position = player.getEntityPos();
+        //?} else {
+        /*lastLocation.position = player.getPos();
+        *///?}
         lastLocation.yaw = player.getYaw();
         lastLocation.pitch = player.getPitch();
 
@@ -141,15 +145,20 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
             return;
         }
         if (wasDead) {
-            //? if >= 1.21.6 {
-            player.kill(player.getWorld());
+            //? if >= 1.21.9 {
+            player.kill(player.getEntityWorld());
+            //?} else if >= 1.21.6 {
+            //player.kill(player.getWorld());
             //?} else if >= 1.21.2 {
             /*player.kill(player.getServerWorld());
             *///?} else {
             /*player.kill();
             *///?}
-            //? if >= 1.20.3 {
-            player.getScoreboard().forEachScore(ScoreboardCriterion.DEATH_COUNT, player, (score) -> score.setScore(score.getScore() - 1));
+
+            //? if >= 1.21.9 {
+            player.getEntityWorld().getScoreboard().forEachScore(ScoreboardCriterion.DEATH_COUNT, player, (score) -> score.setScore(score.getScore() - 1));
+            //?} else if >= 1.20.3 {
+            //player.getScoreboard().forEachScore(ScoreboardCriterion.DEATH_COUNT, player, (score) -> score.setScore(score.getScore() - 1));
             //?} else {
             /*player.getScoreboard().forEachScore(ScoreboardCriterion.DEATH_COUNT, player.getName().getString(), (score) -> score.setScore(score.getScore() - 1));
             *///?}
@@ -225,7 +234,11 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
             if (world == null) return;
             Entity entity = world.getEntity(ridingEntityUUID);
             if (entity != null) {
-                player.startRiding(entity, true);
+                //? if >= 1.21.9 {
+                player.startRiding(entity, true, false);
+                //?} else {
+                /*player.startRiding(entity, true);
+                *///?}
             } else {
                 LogDebug("Could not find vehicle for player " + username);
             }
@@ -309,8 +322,10 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
         if (authenticated) {
             kickTimer = config.kickTimeout * 20;
             // Updating blocks if needed (in case if portal rescue action happened)
-            //? if >= 1.21.6 {
-            World world = player.getWorld();
+            //? if >= 1.21.9 {
+            World world = player.getEntityWorld();
+            //?} else if >= 1.21.6 {
+            //World world = player.getWorld();
             //?} else {
             /*World world = player.getEntityWorld();
             *///?}

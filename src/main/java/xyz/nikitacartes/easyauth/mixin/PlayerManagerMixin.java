@@ -16,6 +16,9 @@ import net.minecraft.network.ClientConnection;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
+//? if >= 1.21.9 {
+import net.minecraft.server.PlayerConfigEntry;
+//?}
 import net.minecraft.server.PlayerManager;
 //? if >= 1.20.2 {
 import net.minecraft.server.network.ConnectedClientData;
@@ -27,7 +30,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.stat.ServerStatHandler;
 //? if >= 1.21.6 {
 import net.minecraft.storage.NbtReadView;
-import net.minecraft.storage.ReadView;
+import net.minecraft.storage.NbtWriteView;import net.minecraft.storage.ReadView;
 //?}
 import net.minecraft.text.Text;
 //? if >= 1.21.6 {
@@ -88,8 +91,10 @@ public abstract class PlayerManagerMixin {
         AuthEventHandler.loadPlayerData(player, connection);
     }
 
-    //? if >= 1.21.6 {
-    @ModifyExpressionValue(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
+    // ToDo: Move it to PrepareSpawnTask mixin
+    //? if >= 1.21.9 {
+    //?} else if = 1.21.6 {
+    /*@ModifyExpressionValue(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
             at = @At(value = "INVOKE", target = "Ljava/util/Optional;flatMap(Ljava/util/function/Function;)Ljava/util/Optional;"))
     private  Optional<RegistryKey<World>> onPlayerConnect(Optional<RegistryKey<World>> original, @Local(argsOnly = true) ServerPlayerEntity player) {
         if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
@@ -98,7 +103,7 @@ public abstract class PlayerManagerMixin {
         }
         return original;
     }
-    //?} else {
+    *///?} else {
     /*//? if >= 1.20.2 {
     @ModifyVariable(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
             at = @At("STORE"), ordinal = 0)
@@ -139,7 +144,21 @@ public abstract class PlayerManagerMixin {
 
             //? if >= 1.21.6 {
             try (ErrorReporter.Logging logging = new ErrorReporter.Logging(player.getErrorReporterContext(), LOGGER)) {
-                playerManager.loadPlayerData(player, logging).flatMap(view -> view.getOptionalReadView("RootVehicle")).ifPresent(rootVehicleView -> {
+
+                //? if >= 1.21.9 {
+                playerManager.loadPlayerData(new PlayerConfigEntry(player.getGameProfile())).flatMap(compound -> compound.getCompound("RootVehicle")).ifPresent(rootVehicle -> {
+                    NbtCompound rootRootVehicle = new NbtCompound();
+                    rootRootVehicle.put("RootVehicle", rootVehicle);
+                    ReadView readView = NbtReadView.create(logging, player.getRegistryManager(), rootRootVehicle);
+                    ((PlayerAuth) player).easyAuth$setRootVehicle(readView);
+
+                    rootVehicle.get("Attach", Uuids.INT_STREAM_CODEC).ifPresent(uUID -> {
+                        ((PlayerAuth) player).easyAuth$setRidingEntityUUID(uUID);
+                        LogDebug(String.format("Saving vehicle of player %s as %s", player.getNameForScoreboard(), uUID));
+                    });
+                });
+                //?} else {
+                /*playerManager.loadPlayerData(player, logging).flatMap(view -> view.getOptionalReadView("RootVehicle")).ifPresent(rootVehicleView -> {
                     NbtCompound rootRootVehicle = new NbtCompound();
                     rootRootVehicle.put("RootVehicle", ((NbtReadView) rootVehicleView).nbt);
                     ReadView rootVehicle = NbtReadView.create(logging, player.getRegistryManager(), rootRootVehicle);
@@ -150,6 +169,7 @@ public abstract class PlayerManagerMixin {
                         LogDebug(String.format("Saving vehicle of player %s as %s", username, uUID));
                     });
                 });
+                *///?}
             }
             //?} else if >= 1.21.5 {
             /*playerManager.loadPlayerData(player).flatMap(compound -> compound.getCompound("RootVehicle")).ifPresent(rootVehicle -> {
@@ -270,7 +290,20 @@ public abstract class PlayerManagerMixin {
         }
     }
 
-    @Inject(method = "checkCanJoin(Ljava/net/SocketAddress;Lcom/mojang/authlib/GameProfile;)Lnet/minecraft/text/Text;", at = @At("HEAD"), cancellable = true)
+    //? if >= 1.21.9 {
+    @Inject(method = "checkCanJoin(Ljava/net/SocketAddress;Lnet/minecraft/server/PlayerConfigEntry;)Lnet/minecraft/text/Text;", at = @At("HEAD"), cancellable = true)
+    private void checkCanJoin(SocketAddress address, PlayerConfigEntry configEntry, CallbackInfoReturnable<Text> cir) {
+        // Getting the player that is trying to join the server
+        Text returnText = AuthEventHandler.checkCanPlayerJoinServer(configEntry, playerManager, address);
+
+        if (returnText != null) {
+            // Canceling player joining with the returnText message
+            cir.setReturnValue(returnText);
+        }
+    }
+    //?} else {
+    
+    /*@Inject(method = "checkCanJoin(Ljava/net/SocketAddress;Lcom/mojang/authlib/GameProfile;)Lnet/minecraft/text/Text;", at = @At("HEAD"), cancellable = true)
     private void checkCanJoin(SocketAddress socketAddress, GameProfile profile, CallbackInfoReturnable<Text> cir) {
         // Getting the player that is trying to join the server
         Text returnText = AuthEventHandler.checkCanPlayerJoinServer(profile, playerManager, socketAddress);
@@ -280,6 +313,8 @@ public abstract class PlayerManagerMixin {
             cir.setReturnValue(returnText);
         }
     }
+     
+    *///?}
 
     @Inject(method = "createStatHandler(Lnet/minecraft/entity/player/PlayerEntity;)Lnet/minecraft/stat/ServerStatHandler;",
             at = @At(
@@ -290,7 +325,11 @@ public abstract class PlayerManagerMixin {
     private void migrateOfflineStats(PlayerEntity player, CallbackInfoReturnable<ServerStatHandler> cir, @Local UUID uUID, @Local ServerStatHandler serverStatHandler, @Local(ordinal = 0) File serverStatsDir) {
         File onlineFile = new File(serverStatsDir, uUID + ".json");
         if (server.isOnlineMode() && !extendedConfig.forcedOfflineUuid && ((PlayerAuth) player).easyAuth$isUsingMojangAccount() && !onlineFile.exists()) {
-            String playername = player.getGameProfile().getName();
+            //? if >= 1.21.9 {
+            String playername = player.getGameProfile().name();
+            //?} else {
+            /*String playername = player.getGameProfile().getName();
+            *///?}
             File offlineFile = new File(onlineFile.getParent(), Uuids.getOfflinePlayerUuid(playername) + ".json");
             if (!offlineFile.renameTo(onlineFile)) {
                 LogWarn("Failed to migrate offline stats (" + offlineFile.getName() + ") for player " + playername + " to online stats (" + onlineFile.getName() + ")");
@@ -302,7 +341,9 @@ public abstract class PlayerManagerMixin {
         }
     }
 
-    //? if >= 1.21.6 {
+    //? if >= 1.21.9 {
+    //?} else if >= 1.21.6 {
+    /*
     @WrapOperation(method = "method_68176(Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/storage/ReadView;)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;readRootVehicle(Lnet/minecraft/storage/ReadView;)V"))
     private static void doNotMountPlayerToVehicle(ServerPlayerEntity instance, ReadView view, Operation<Void> original) {
@@ -311,6 +352,7 @@ public abstract class PlayerManagerMixin {
         }
         original.call(instance, view);
     }
+     */
     //?} else if >= 1.21.5 {
     /*@WrapOperation(method = "method_68176(Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/nbt/NbtCompound;)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;readRootVehicle(Lnet/minecraft/nbt/NbtCompound;)V"))

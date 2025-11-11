@@ -2,12 +2,25 @@ plugins {
     id("java")
     id("java-library")
     kotlin("jvm") version "2.2.0"
-    id("fabric-loom") version "1.11-SNAPSHOT"
+    id("fabric-loom") version "1.13-SNAPSHOT"
     id("com.google.devtools.ksp") version "2.2.0-2.0.2"
-    id("dev.kikugie.fletching-table.fabric") version "0.1.0-alpha.15"
+    id("dev.kikugie.fletching-table.fabric") version "0.1.0-alpha.22"
     id("com.gradleup.shadow") version "9.0.2"
     id("me.modmuss50.mod-publish-plugin") version "0.8.4"
 }
+
+val baseVersion = property("mod_version").toString()
+val dynamicVersion = if (baseVersion.endsWith("-SNAPSHOT")) {
+    // Match only plain release tags like 1.2.3
+    val lastReleaseTag = runGit("describe", "--tags", "--match", "[0-9]*.[0-9]*.[0-9]*", "--abbrev=0")
+    if (lastReleaseTag != null) {
+        // Count commits since last release tag
+        val countStr = runGit("rev-list", "$lastReleaseTag..HEAD", "--count")
+        val count = countStr?.toIntOrNull() ?: 0
+        if (count > 0) "$baseVersion.$count" else baseVersion
+    } else baseVersion
+} else baseVersion
+version = dynamicVersion
 
 repositories {
     maven(url = "https://maven.nucleoid.xyz")
@@ -18,11 +31,11 @@ repositories {
 }
 
 base.archivesName = "${property("mod_id")}-mc${property("minecraft_version")}"
-version = "${property("mod_version")}"
 
 val awFile = when {
     stonecutter.eval(stonecutter.current.version, ">=1.21.9") -> "easyauth.1.21.9.accesswidener"
     stonecutter.eval(stonecutter.current.version, ">=1.21.6") -> "easyauth.1.21.6.accesswidener"
+    stonecutter.eval(stonecutter.current.version, ">=1.21.5") -> "easyauth.1.21.5.accesswidener"
     stonecutter.eval(stonecutter.current.version, ">=1.20.3") -> "easyauth.1.20.3.accesswidener"
     stonecutter.eval(stonecutter.current.version, ">=1.20.2") -> "easyauth.1.20.2.accesswidener"
     stonecutter.eval(stonecutter.current.version, ">=1.19.4") -> "easyauth.1.19.4.accesswidener"
@@ -32,6 +45,23 @@ val awFile = when {
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
+}
+
+loom {
+    //splitEnvironmentSourceSets()
+    serverOnlyMinecraftJar()
+    accessWidenerPath = rootProject.file("src/main/resources/accesswidener/$awFile")
+    //mods {
+    //    create("easyauth") {
+    //        sourceSet(sourceSets["main"])
+    //    }
+    //}
+    log4jConfigs.from(file("log4j.xml"))
+
+    runConfigs.all {
+        ideConfigGenerated(true) // Run configurations are not created for subprojects by default
+        runDir = "run" // Use a separate run directory for all configurations
+    }
 }
 
 fabricApi.configureTests {
@@ -44,17 +74,6 @@ fabricApi.configureTests {
 
 tasks.named("runGameTest") {
     usesService(semaphore)
-}
-
-loom {
-    accessWidenerPath = file("../../src/main/resources/accesswidener/$awFile")
-    serverOnlyMinecraftJar()
-    log4jConfigs.from(file("log4j.xml"))
-
-    runConfigs.all {
-        ideConfigGenerated(true) // Run configurations are not created for subprojects by default
-        runDir = "run" // Use a separate run directory for all configurations
-    }
 }
 
 dependencies {
@@ -130,7 +149,7 @@ tasks.processResources {
     filesMatching("fabric.mod.json") {
         expand(
             mapOf(
-                "version" to project.property("mod_version"),
+                "version" to dynamicVersion,
                 "supported_minecraft_version" to project.property("supported_minecraft_version"),
                 "accessWidener" to awFile
             )
@@ -169,8 +188,8 @@ publishMods {
     file = tasks.remapJar.get().archiveFile
     dryRun = modrinthToken.isEmpty() || curseforgeToken.isEmpty()
 
-    displayName = "${property("display_name")} ${property("version")}"
-    version = "${property("version")}"
+    displayName = "${property("display_name")} $dynamicVersion"
+    version = dynamicVersion
 
     changelog = file("../../RELEASE_NOTE.md").readText()
     type = STABLE
@@ -212,3 +231,9 @@ private abstract class ServerRunSemaphore : BuildService<BuildServiceParameters.
 private val semaphore = gradle.sharedServices.registerIfAbsent("semaphore", ServerRunSemaphore::class.java) {
     maxParallelUsages.set(1)
 }
+
+fun runGit(vararg args: String): String? = try {
+    val proc = ProcessBuilder("git", *args).redirectErrorStream(true).start()
+    proc.waitFor(5, TimeUnit.SECONDS)
+    if (proc.exitValue() == 0) proc.inputStream.bufferedReader().readText().trim().takeIf { it.isNotBlank() } else null
+} catch (_: Exception) { null }

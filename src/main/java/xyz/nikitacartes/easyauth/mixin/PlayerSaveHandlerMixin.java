@@ -25,12 +25,13 @@ import java.util.Optional;
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogWarn;
+import static xyz.nikitacartes.easyauth.utils.StoneCutterUtils.getName;
 
 @Mixin(PlayerSaveHandler.class)
 public class PlayerSaveHandlerMixin {
     @Final
     @Shadow
-    private File playerDataDir;
+    public File playerDataDir;
 
     /**
      * Loads offline-uuid player data to compoundTag in order to migrate from offline to online.
@@ -38,29 +39,29 @@ public class PlayerSaveHandlerMixin {
      * @param cir
      * @param mixinFile
      */
+    //? if >= 1.21.9 {
     @Inject(
-            //? if >= 1.21.9 {
             method = "loadPlayerData(Lnet/minecraft/server/PlayerConfigEntry;Ljava/lang/String;)Ljava/util/Optional;",
-            //?} else {
-            /*method = "loadPlayerData(Lnet/minecraft/entity/player/PlayerEntity;Ljava/lang/String;)Ljava/util/Optional;",
-            *///?}
             at = @At(
                     value = "INVOKE",
                     target = "Ljava/io/File;exists()Z"
             ),
             cancellable = true
     )
-    //? if >= 1.21.9 {
-    private void fileExists(PlayerConfigEntry playerConfigEntry, String extension, CallbackInfoReturnable<Optional<NbtCompound>> cir, @Local File mixinFile) {
+    private void fileExists(PlayerConfigEntry player, String extension, CallbackInfoReturnable<Optional<NbtCompound>> cir, @Local File mixinFile) {
     //?} else {
-    /*private void fileExists(PlayerEntity player, String extension, CallbackInfoReturnable<Optional<NbtCompound>> cir, @Local File mixinFile) {
+    /*@Inject(
+            method = "loadPlayerData(Lnet/minecraft/entity/player/PlayerEntity;Ljava/lang/String;)Ljava/util/Optional;",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Ljava/io/File;exists()Z"
+            ),
+            cancellable = true
+    )
+        private void fileExists(PlayerEntity player, String extension, CallbackInfoReturnable<Optional<NbtCompound>> cir, @Local File mixinFile) {
     *///?}
         if (!(mixinFile.exists() && mixinFile.isFile())) {
-            //? if >= 1.21.9 {
-            String playerName = playerConfigEntry.name();
-            //?} else {
-            /*String playerName = player.getGameProfile().getName();
-            *///?}
+            String playerName = getName(player);
             if (Boolean.parseBoolean(serverProp.getProperty("online-mode"))) {
                 LogDebug(String.format("Migrating data for %s", playerName));
                 File file = new File(this.playerDataDir, Uuids.getOfflinePlayerUuid(playerName) + extension);

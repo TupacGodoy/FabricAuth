@@ -16,14 +16,12 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import xyz.nikitacartes.easyauth.utils.PlayerAuth;
+import xyz.nikitacartes.easyauth.interfaces.PlayerAuth;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Locale;
-//? if >= 1.20.5 {
 import java.util.Optional;
-//?}
 
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;

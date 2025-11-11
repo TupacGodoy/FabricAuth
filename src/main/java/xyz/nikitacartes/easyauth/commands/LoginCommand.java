@@ -8,7 +8,8 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import xyz.nikitacartes.easyauth.integrations.Permissions;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.AuthHelper;
-import xyz.nikitacartes.easyauth.utils.PlayerAuth;
+import xyz.nikitacartes.easyauth.interfaces.PlayerAuth;
+import xyz.nikitacartes.easyauth.utils.StoneCutterUtils;
 
 import java.time.ZonedDateTime;
 
@@ -47,12 +48,8 @@ public class LoginCommand {
         // Getting the player who send the command
         ServerPlayerEntity player = source.getPlayerOrThrow();
         PlayerAuth playerAuth = (PlayerAuth) player;
-        //? if >= 1.20.3 {
-        String username = player.getNameForScoreboard();
-        //?} else {
-        /*String username = player.getName().getString();
-        *///?}
 
+        String username = StoneCutterUtils.getUsername(player);
         LogLogin("Player " + username + " is trying to login");
         if (playerAuth.easyAuth$isAuthenticated()) {
             LogLogin("Player " + username + " is already authenticated");

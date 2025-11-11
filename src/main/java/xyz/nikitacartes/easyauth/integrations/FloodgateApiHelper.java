@@ -1,9 +1,11 @@
-package xyz.nikitacartes.easyauth.utils;
+package xyz.nikitacartes.easyauth.integrations;
 
 import net.minecraft.entity.player.PlayerEntity;
 import org.geysermc.floodgate.api.FloodgateApi;
 
 import java.util.UUID;
+
+import static xyz.nikitacartes.easyauth.EasyAuth.technicalConfig;
 
 public class FloodgateApiHelper{
     /**
@@ -25,6 +27,7 @@ public class FloodgateApiHelper{
      */
 
     public static boolean isFloodgatePlayer(UUID uuid) {
+        if (!technicalConfig.floodgateLoaded) return false;
         FloodgateApi floodgateApi = FloodgateApi.getInstance();
         return floodgateApi.isFloodgatePlayer(uuid);
     }

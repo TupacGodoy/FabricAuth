@@ -2,9 +2,8 @@ package xyz.nikitacartes.easyauth.config;
 
 //? if >= 1.21.9 {
 import net.minecraft.server.PlayerConfigEntry;
-//?} else {
-/*import com.mojang.authlib.GameProfile;
-*///?}
+//?}
+import com.mojang.authlib.GameProfile;
 import net.minecraft.util.UserCache;
 import xyz.nikitacartes.easyauth.EasyAuth;
 import xyz.nikitacartes.easyauth.config.deprecated.AuthConfig;

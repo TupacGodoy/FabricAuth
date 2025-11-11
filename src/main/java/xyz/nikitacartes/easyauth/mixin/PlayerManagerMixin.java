@@ -1,15 +1,11 @@
 package xyz.nikitacartes.easyauth.mixin;
 
-//? if >= 1.21.6 {
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
-//?}
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.authlib.GameProfile;
-//? if < 1.21.2 {
-/*import net.minecraft.entity.Entity;
-*///?}
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.ClientConnection;
@@ -24,27 +20,20 @@ import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ConnectedClientData;
 //?}
 import net.minecraft.server.network.ServerPlayerEntity;
-//? if < 1.21 {
-/*import net.minecraft.server.world.ServerWorld;
-*///?}
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.stat.ServerStatHandler;
 //? if >= 1.21.6 {
 import net.minecraft.storage.NbtReadView;
-import net.minecraft.storage.NbtWriteView;import net.minecraft.storage.ReadView;
-//?}
-import net.minecraft.text.Text;
-//? if >= 1.21.6 {
+import net.minecraft.storage.NbtWriteView;
+import net.minecraft.storage.ReadView;
 import net.minecraft.util.ErrorReporter;
 //?}
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Uuids;
-//? if < 1.21 {
-/*import net.minecraft.util.math.BlockPos;
-*///?}
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
-//? if >= 1.21 {
 import net.minecraft.world.TeleportTarget;
-//?}
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Shadow;
@@ -53,23 +42,21 @@ import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
 import xyz.nikitacartes.easyauth.integrations.VanishIntegration;
-import xyz.nikitacartes.easyauth.utils.PlayerAuth;
+import xyz.nikitacartes.easyauth.interfaces.PlayerAuth;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import xyz.nikitacartes.easyauth.utils.StoneCutterUtils;
 
 import java.io.File;
 import java.net.SocketAddress;
-//? if >= 1.21.6 || < 1.21.5 {
 import java.util.Optional;
-//?}
 import java.util.UUID;
-//? if < 1.21.2 {
-/*import java.util.function.Function;
-*///?}
+import java.util.function.Function;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
+import static xyz.nikitacartes.easyauth.utils.StoneCutterUtils.getName;
 
 @Mixin(PlayerManager.class)
 public abstract class PlayerManagerMixin {
@@ -81,71 +68,14 @@ public abstract class PlayerManagerMixin {
     @Shadow
     private MinecraftServer server;
 
-    //? if >= 1.20.2 {
+    //? if >= 1.21.9 {
     @Inject(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V", at = @At("HEAD"))
     private void onPlayerConnectHead(ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData, CallbackInfo ci) {
-    //?} else {
-    /*@Inject(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;)V", at = @At("HEAD"))
-    private void onPlayerConnectHead(ClientConnection connection, ServerPlayerEntity player, CallbackInfo ci) {
-    *///?}
         AuthEventHandler.loadPlayerData(player, connection);
-    }
 
-    // ToDo: Move it to PrepareSpawnTask mixin
-    //? if >= 1.21.9 {
-    //?} else if = 1.21.6 {
-    /*@ModifyExpressionValue(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
-            at = @At(value = "INVOKE", target = "Ljava/util/Optional;flatMap(Ljava/util/function/Function;)Ljava/util/Optional;"))
-    private  Optional<RegistryKey<World>> onPlayerConnect(Optional<RegistryKey<World>> original, @Local(argsOnly = true) ServerPlayerEntity player) {
         if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
-            ((PlayerAuth) player).easyAuth$saveTrueDimension(original.orElse(World.OVERWORLD));
-            return Optional.of(RegistryKey.of(RegistryKeys.WORLD, Identifier.of(config.worldSpawn.dimension)));
-        }
-        return original;
-    }
-    *///?} else {
-    /*//? if >= 1.20.2 {
-    @ModifyVariable(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
-            at = @At("STORE"), ordinal = 0)
-    private RegistryKey<World> onPlayerConnect(RegistryKey<World> world, ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData) {
-    //?} else {
-    /^@ModifyVariable(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;)V",
-            at = @At("STORE"), ordinal = 0)
-    private RegistryKey<World> onPlayerConnect(RegistryKey<World> world, ClientConnection connection, ServerPlayerEntity player) {
-    ^///?}
-        if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
-            ((PlayerAuth) player).easyAuth$saveTrueDimension(world);
-            //? if < 1.21 {
-            /^return RegistryKey.of(RegistryKeys.WORLD, new Identifier(config.worldSpawn.dimension));
-            ^///?} else {
-            return RegistryKey.of(RegistryKeys.WORLD, Identifier.of(config.worldSpawn.dimension));
-            //?}
-        }
-        return world;
-    }
-    *///?}
-
-    //? if >= 1.20.2 {
-    @ModifyArgs(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;requestTeleport(DDDFF)V"))
-    private void onPlayerConnect(Args args, ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData) {
-    //?} else {
-    /*@ModifyArgs(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;)V",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;requestTeleport(DDDFF)V"))
-    private void onPlayerConnect(Args args, ClientConnection connection, ServerPlayerEntity player) {
-    *///?}
-        if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
-            ((PlayerAuth) player).easyAuth$saveTrueLocation();
-            //? if >= 1.20.3 {
-            String username = player.getNameForScoreboard();
-            //?} else {
-            /*String username = player.getName().getString();
-            *///?}
-
-            //? if >= 1.21.6 {
             try (ErrorReporter.Logging logging = new ErrorReporter.Logging(player.getErrorReporterContext(), LOGGER)) {
 
-                //? if >= 1.21.9 {
                 playerManager.loadPlayerData(new PlayerConfigEntry(player.getGameProfile())).flatMap(compound -> compound.getCompound("RootVehicle")).ifPresent(rootVehicle -> {
                     NbtCompound rootRootVehicle = new NbtCompound();
                     rootRootVehicle.put("RootVehicle", rootVehicle);
@@ -157,8 +87,77 @@ public abstract class PlayerManagerMixin {
                         LogDebug(String.format("Saving vehicle of player %s as %s", player.getNameForScoreboard(), uUID));
                     });
                 });
-                //?} else {
-                /*playerManager.loadPlayerData(player, logging).flatMap(view -> view.getOptionalReadView("RootVehicle")).ifPresent(rootVehicleView -> {
+            }
+        }
+
+        ((PlayerAuth) player).easyAuth$setSkipAuth();
+    }
+    //?} else if >= 1.20.2 {
+    //@Inject(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V", at = @At("HEAD"))
+    //private void onPlayerConnectHead(ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData, CallbackInfo ci) {
+    //    AuthEventHandler.loadPlayerData(player, connection);
+    //}
+    //?} else {
+    /*@Inject(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;)V", at = @At("HEAD"))
+    private void onPlayerConnectHead(ClientConnection connection, ServerPlayerEntity player, CallbackInfo ci) {
+        AuthEventHandler.loadPlayerData(player, connection);
+    }
+    *///?}
+
+    //? if >= 1.21.9 {
+    //?} else if = 1.21.6 {
+    /*@ModifyExpressionValue(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
+            at = @At(value = "INVOKE", target = "Ljava/util/Optional;flatMap(Ljava/util/function/Function;)Ljava/util/Optional;"))
+    private  Optional<RegistryKey<World>> onPlayerConnect(Optional<RegistryKey<World>> original, @Local(argsOnly = true) ServerPlayerEntity player) {
+        if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
+            ((PlayerAuth) player).easyAuth$saveTrueDimension(original.orElse(World.OVERWORLD));
+            return Optional.of(RegistryKey.of(RegistryKeys.WORLD, Identifier.of(config.worldSpawn.dimension)));
+        }
+        return original;
+    }
+    *///?} else if >= 1.21 {
+    /*@ModifyVariable(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
+            at = @At("STORE"), ordinal = 0)
+    private RegistryKey<World> onPlayerConnect(RegistryKey<World> world, ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData) {
+        if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
+            ((PlayerAuth) player).easyAuth$saveTrueDimension(world);
+            return RegistryKey.of(RegistryKeys.WORLD, Identifier.of(config.worldSpawn.dimension));
+        }
+        return world;
+    }
+    *///?} else if >= 1.20.2 {
+    /*@ModifyVariable(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
+                at = @At("STORE"), ordinal = 0)
+        private RegistryKey<World> onPlayerConnect(RegistryKey<World> world, ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData) {
+            if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
+                ((PlayerAuth) player).easyAuth$saveTrueDimension(world);
+                return RegistryKey.of(RegistryKeys.WORLD, new Identifier(config.worldSpawn.dimension));
+            }
+            return world;
+        }
+    *///?} else {
+    /*@ModifyVariable(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;)V",
+            at = @At("STORE"), ordinal = 0)
+    private RegistryKey<World> onPlayerConnect(RegistryKey<World> world, ClientConnection connection, ServerPlayerEntity player) {
+        if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
+            ((PlayerAuth) player).easyAuth$saveTrueDimension(world);
+            return RegistryKey.of(RegistryKeys.WORLD, new Identifier(config.worldSpawn.dimension));
+        }
+        return world;
+    }
+    *///?}
+
+    //? if >= 1.21.9 {
+    //?} else if >= 1.21.6 {
+    /*@ModifyArgs(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;requestTeleport(DDDFF)V"))
+    private void onPlayerConnect(Args args, ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData) {
+        if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
+            ((PlayerAuth) player).easyAuth$saveTrueLocation();
+            String username = StoneCutterUtils.getUsername(player);
+
+            try (ErrorReporter.Logging logging = new ErrorReporter.Logging(player.getErrorReporterContext(), LOGGER)) {
+                playerManager.loadPlayerData(player, logging).flatMap(view -> view.getOptionalReadView("RootVehicle")).ifPresent(rootVehicleView -> {
                     NbtCompound rootRootVehicle = new NbtCompound();
                     rootRootVehicle.put("RootVehicle", ((NbtReadView) rootVehicleView).nbt);
                     ReadView rootVehicle = NbtReadView.create(logging, player.getRegistryManager(), rootRootVehicle);
@@ -169,29 +168,41 @@ public abstract class PlayerManagerMixin {
                         LogDebug(String.format("Saving vehicle of player %s as %s", username, uUID));
                     });
                 });
-                *///?}
             }
-            //?} else if >= 1.21.5 {
-            /*playerManager.loadPlayerData(player).flatMap(compound -> compound.getCompound("RootVehicle")).ifPresent(rootVehicle -> {
+			onPlayerConnect(args, player, username);
+        }
+    }
+    *///?} else if >= 1.21.5 {
+    /*@ModifyArgs(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;requestTeleport(DDDFF)V"))
+    private void onPlayerConnect(Args args, ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData) {
+        if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
+            ((PlayerAuth) player).easyAuth$saveTrueLocation();
+            String username = StoneCutterUtils.getUsername(player);
+            playerManager.loadPlayerData(player).flatMap(compound -> compound.getCompound("RootVehicle")).ifPresent(rootVehicle -> {
                 NbtCompound rootRootVehicle = new NbtCompound();
                 rootRootVehicle.put("RootVehicle", rootVehicle);
                 ((PlayerAuth) player).easyAuth$setRootVehicle(rootRootVehicle);
-            
+
                 rootVehicle.get("Attach", Uuids.INT_STREAM_CODEC).ifPresent(uUID -> {
                     ((PlayerAuth) player).easyAuth$setRidingEntityUUID(uUID);
                     LogDebug(String.format("Saving vehicle of player %s as %s", username, uUID));
                 });
             });
-            *///?} else {
-            /*//? if >= 1.20.5 {
+			onPlayerConnect(args, player, username);
+        }
+    }
+    *///?} else if >= 1.20.5 {
+    /*@ModifyArgs(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;requestTeleport(DDDFF)V"))
+    private void onPlayerConnect(Args args, ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData) {
+        if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
+            ((PlayerAuth) player).easyAuth$saveTrueLocation();
+            String username = StoneCutterUtils.getUsername(player);
+
             Optional<NbtCompound> nbtCompound = playerManager.loadPlayerData(player);
             if(nbtCompound.isPresent() && nbtCompound.get().contains("RootVehicle", 10)) {
                 NbtCompound rootVehicle = nbtCompound.get().getCompound("RootVehicle");
-            //?} else {
-            /^NbtCompound nbtCompound = playerManager.loadPlayerData(player);
-            if(nbtCompound != null && nbtCompound.contains("RootVehicle", 10)) {
-                NbtCompound rootVehicle = nbtCompound.getCompound("RootVehicle");
-            ^///?}
                 NbtCompound rootRootVehicle = new NbtCompound();
                 rootRootVehicle.put("RootVehicle", rootVehicle);
                 ((PlayerAuth) player).easyAuth$setRootVehicle(rootRootVehicle);
@@ -201,20 +212,57 @@ public abstract class PlayerManagerMixin {
                     LogDebug(String.format("Saving vehicle of player %s as %s", username, rootVehicle.getUuid("Attach")));
                 }
             }
-            *///?}
-
-            ((PlayerAuth) player).easyAuth$setSkipAuth();
-
-            LogDebug(String.format("Teleporting player %s", username));
-            LogDebug(String.format("Spawn position of player %s is %s", username, config.worldSpawn));
-
-            args.set(0, config.worldSpawn.x);
-            args.set(1, config.worldSpawn.y);
-            args.set(2, config.worldSpawn.z);
-            args.set(3, config.worldSpawn.yaw);
-            args.set(4, config.worldSpawn.pitch);
+			onPlayerConnect(args, player, username);
         }
     }
+    *///?} else if >= 1.20.2 {
+    /*@ModifyArgs(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;requestTeleport(DDDFF)V"))
+    private void onPlayerConnect(Args args, ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData) {
+        if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
+            ((PlayerAuth) player).easyAuth$saveTrueLocation();
+            String username = StoneCutterUtils.getUsername(player);
+
+
+            NbtCompound nbtCompound = playerManager.loadPlayerData(player);
+            if(nbtCompound != null && nbtCompound.contains("RootVehicle", 10)) {
+                NbtCompound rootVehicle = nbtCompound.getCompound("RootVehicle");
+                NbtCompound rootRootVehicle = new NbtCompound();
+                rootRootVehicle.put("RootVehicle", rootVehicle);
+                ((PlayerAuth) player).easyAuth$setRootVehicle(rootRootVehicle);
+
+                if (rootVehicle.containsUuid("Attach")) {
+                    ((PlayerAuth) player).easyAuth$setRidingEntityUUID(rootVehicle.getUuid("Attach"));
+                    LogDebug(String.format("Saving vehicle of player %s as %s", username, rootVehicle.getUuid("Attach")));
+                }
+            }
+			onPlayerConnect(args, player, username);
+        }
+    }
+    *///?} else {
+        /*@ModifyArgs(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;requestTeleport(DDDFF)V"))
+    private void onPlayerConnect(Args args, ClientConnection connection, ServerPlayerEntity player) {
+        if (config.hidePlayerCoords && !((PlayerAuth) player).easyAuth$isAuthenticated()) {
+            ((PlayerAuth) player).easyAuth$saveTrueLocation();
+            String username = StoneCutterUtils.getUsername(player);
+
+            NbtCompound nbtCompound = playerManager.loadPlayerData(player);
+            if(nbtCompound != null && nbtCompound.contains("RootVehicle", 10)) {
+                NbtCompound rootVehicle = nbtCompound.getCompound("RootVehicle");
+                NbtCompound rootRootVehicle = new NbtCompound();
+                rootRootVehicle.put("RootVehicle", rootVehicle);
+                ((PlayerAuth) player).easyAuth$setRootVehicle(rootRootVehicle);
+
+                if (rootVehicle.containsUuid("Attach")) {
+                    ((PlayerAuth) player).easyAuth$setRidingEntityUUID(rootVehicle.getUuid("Attach"));
+                    LogDebug(String.format("Saving vehicle of player %s as %s", username, rootVehicle.getUuid("Attach")));
+                }
+            }
+			onPlayerConnect(args, player, username);
+        }
+    }
+    *///?}
 
     //? if >= 1.20.2 {
     @Inject(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V", at = @At("RETURN"))
@@ -285,36 +333,26 @@ public abstract class PlayerManagerMixin {
         if (playerAuth.easyAuth$canSkipAuth() || playerAuth.easyAuth$isAuthenticated()) {
             return;
         }
-        if (config.vanishUntilAuth && technicalConfig.vanishLoaded) {
+        if (config.vanishUntilAuth) {
             VanishIntegration.setVanished(player, playerAuth.easyAuth$wasVanished());
         }
     }
 
     //? if >= 1.21.9 {
     @Inject(method = "checkCanJoin(Ljava/net/SocketAddress;Lnet/minecraft/server/PlayerConfigEntry;)Lnet/minecraft/text/Text;", at = @At("HEAD"), cancellable = true)
-    private void checkCanJoin(SocketAddress address, PlayerConfigEntry configEntry, CallbackInfoReturnable<Text> cir) {
-        // Getting the player that is trying to join the server
-        Text returnText = AuthEventHandler.checkCanPlayerJoinServer(configEntry, playerManager, address);
-
-        if (returnText != null) {
-            // Canceling player joining with the returnText message
-            cir.setReturnValue(returnText);
-        }
-    }
+    private void checkCanJoin(SocketAddress address, PlayerConfigEntry profile, CallbackInfoReturnable<Text> cir) {
     //?} else {
-    
     /*@Inject(method = "checkCanJoin(Ljava/net/SocketAddress;Lcom/mojang/authlib/GameProfile;)Lnet/minecraft/text/Text;", at = @At("HEAD"), cancellable = true)
-    private void checkCanJoin(SocketAddress socketAddress, GameProfile profile, CallbackInfoReturnable<Text> cir) {
+    private void checkCanJoin(SocketAddress address, GameProfile profile, CallbackInfoReturnable<Text> cir) {
+    *///?}
         // Getting the player that is trying to join the server
-        Text returnText = AuthEventHandler.checkCanPlayerJoinServer(profile, playerManager, socketAddress);
+        Text returnText = AuthEventHandler.checkCanPlayerJoinServer(profile, playerManager, address);
 
         if (returnText != null) {
             // Canceling player joining with the returnText message
             cir.setReturnValue(returnText);
         }
     }
-     
-    *///?}
 
     @Inject(method = "createStatHandler(Lnet/minecraft/entity/player/PlayerEntity;)Lnet/minecraft/stat/ServerStatHandler;",
             at = @At(
@@ -325,11 +363,7 @@ public abstract class PlayerManagerMixin {
     private void migrateOfflineStats(PlayerEntity player, CallbackInfoReturnable<ServerStatHandler> cir, @Local UUID uUID, @Local ServerStatHandler serverStatHandler, @Local(ordinal = 0) File serverStatsDir) {
         File onlineFile = new File(serverStatsDir, uUID + ".json");
         if (server.isOnlineMode() && !extendedConfig.forcedOfflineUuid && ((PlayerAuth) player).easyAuth$isUsingMojangAccount() && !onlineFile.exists()) {
-            //? if >= 1.21.9 {
-            String playername = player.getGameProfile().name();
-            //?} else {
-            /*String playername = player.getGameProfile().getName();
-            *///?}
+            String playername = getName(player.getGameProfile());
             File offlineFile = new File(onlineFile.getParent(), Uuids.getOfflinePlayerUuid(playername) + ".json");
             if (!offlineFile.renameTo(onlineFile)) {
                 LogWarn("Failed to migrate offline stats (" + offlineFile.getName() + ") for player " + playername + " to online stats (" + onlineFile.getName() + ")");
@@ -386,4 +420,18 @@ public abstract class PlayerManagerMixin {
         return original.call(nbt, world, entityProcessor);
     }
     *///?}
+
+    @Unique
+    private void onPlayerConnect(Args args, ServerPlayerEntity player, String username) {
+        ((PlayerAuth) player).easyAuth$setSkipAuth();
+
+        LogDebug(String.format("Teleporting player %s", username));
+        LogDebug(String.format("Spawn position of player %s is %s", username, config.worldSpawn));
+
+        args.set(0, config.worldSpawn.x);
+        args.set(1, config.worldSpawn.y);
+        args.set(2, config.worldSpawn.z);
+        args.set(3, config.worldSpawn.yaw);
+        args.set(4, config.worldSpawn.pitch);
+    }
 }

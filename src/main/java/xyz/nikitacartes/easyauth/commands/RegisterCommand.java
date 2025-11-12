@@ -7,7 +7,8 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import xyz.nikitacartes.easyauth.integrations.Permissions;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
-import xyz.nikitacartes.easyauth.utils.PlayerAuth;
+import xyz.nikitacartes.easyauth.interfaces.PlayerAuth;
+import xyz.nikitacartes.easyauth.utils.StoneCutterUtils;
 
 import java.time.ZonedDateTime;
 
@@ -89,11 +90,7 @@ public class RegisterCommand {
 
                 playerData.loginTries++;
                 if (playerData.loginTries >= config.maxLoginTries && config.maxLoginTries != -1) { // Player exceeded maxLoginTries
-                    //? if >= 1.20.3 {
-                    String username = player.getNameForScoreboard();
-                    //?} else {
-                    /*String username = player.getName().getString();
-                    *///?}
+                    String username = StoneCutterUtils.getUsername(player);
                     LogRegister("Player " + username + " exceeded global password tries limit.");
                     playerData.lastKickedDate = ZonedDateTime.now();
                     playerData.loginTries = 0;
@@ -150,11 +147,7 @@ public class RegisterCommand {
             playerAuth.easyAuth$setPlayerEntryV1(playerData);
             playerData.update();
 
-            //? if >= 1.20.3 {
-            String username = player.getNameForScoreboard();
-            //?} else {
-            /*String username = player.getName().getString();
-            *///?}
+            String username = StoneCutterUtils.getUsername(player);
             LogRegister("Player " + username + "{" + player.getUuidAsString() + "} successfully registered with password: " + playerData.password);
         });
         return 0;

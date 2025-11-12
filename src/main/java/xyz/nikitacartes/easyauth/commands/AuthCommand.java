@@ -5,7 +5,6 @@ import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.command.argument.BlockPosArgumentType;
 import net.minecraft.command.argument.DimensionArgumentType;
 import net.minecraft.command.argument.RotationArgumentType;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.ClickEvent;
@@ -14,13 +13,12 @@ import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
-import xyz.nikitacartes.easyauth.EasyAuth;
 import xyz.nikitacartes.easyauth.config.deprecated.AuthConfig;
 import xyz.nikitacartes.easyauth.integrations.Permissions;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
-import xyz.nikitacartes.easyauth.storage.database.DBApiException;
 import xyz.nikitacartes.easyauth.utils.AuthHelper;
-import xyz.nikitacartes.easyauth.utils.PlayerAuth;
+import xyz.nikitacartes.easyauth.interfaces.PlayerAuth;
+import xyz.nikitacartes.easyauth.utils.StoneCutterUtils;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
@@ -68,7 +66,7 @@ public class AuthCommand {
                         .requires(Permissions.require("easyauth.commands.auth.setSpawn", 3))
                         .executes(ctx -> setSpawn(
                                 ctx.getSource(),
-                                ctx.getSource().getEntityOrThrow().getWorld().getRegistryKey().getValue(),
+                                StoneCutterUtils.getWorld(ctx.getSource().getEntityOrThrow()).getRegistryKey().getValue(),
                                 ctx.getSource().getEntityOrThrow().getX(),
                                 ctx.getSource().getEntityOrThrow().getY(),
                                 ctx.getSource().getEntityOrThrow().getZ(),
@@ -422,11 +420,7 @@ public class AuthCommand {
         THREADPOOL.submit(() -> {
             MutableText message = Text.literal("");
             source.getServer().getPlayerManager().getPlayerList().forEach(player -> {
-                //? if >= 1.20.3 {
-                String username = player.getNameForScoreboard();
-                //?} else {
-                /*String username = player.getName().getString();
-                *///?}
+                String username = StoneCutterUtils.getUsername(player);
                 PlayerEntryV1 playerData = DB.getUserData(username);
                 PlayerAuth playerAuth = (PlayerAuth) player;
 

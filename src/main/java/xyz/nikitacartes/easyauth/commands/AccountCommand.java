@@ -7,7 +7,8 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import xyz.nikitacartes.easyauth.integrations.Permissions;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.AuthHelper;
-import xyz.nikitacartes.easyauth.utils.PlayerAuth;
+import xyz.nikitacartes.easyauth.interfaces.PlayerAuth;
+import xyz.nikitacartes.easyauth.utils.StoneCutterUtils;
 
 import java.io.IOException;
 
@@ -101,11 +102,7 @@ public class AccountCommand {
 
         // Different thread to avoid lag spikes
         THREADPOOL.submit(() -> {
-            //? if >= 1.20.3 {
-            String username = player.getNameForScoreboard();
-            //?} else {
-            /*String username = player.getName().getString();
-            *///?}
+            String username = StoneCutterUtils.getUsername(player);
             if (AuthHelper.checkPassword(playerAuth, pass.toCharArray()) == AuthHelper.PasswordOptions.CORRECT) {
                 DB.deleteUserData(username);
                 langConfig.accountDeleted.send(source);
@@ -166,11 +163,7 @@ public class AccountCommand {
 
         THREADPOOL.submit(() -> {
             if (AuthHelper.checkPassword(playerAuth, password.toCharArray()) == AuthHelper.PasswordOptions.CORRECT) {
-                //? if >= 1.20.3 {
-                String username = player.getNameForScoreboard();
-                //?} else {
-                /*String username = player.getName().getString();
-                *///?}
+                String username = StoneCutterUtils.getUsername(player);
                 try {
                     if (!isValidUsername(username)) {
                         langConfig.accountNotFound.send(source);

@@ -2,18 +2,9 @@ package xyz.nikitacartes.easyauth.mixin;
 
 import com.google.common.net.InetAddresses;
 import net.minecraft.entity.Entity;
-//? if < 1.21.2 {
-/*import net.minecraft.entity.EntityType;
-*///?}
-//? if < 1.21.6 {
-/*import net.minecraft.nbt.NbtCompound;
-*///?}
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.ClientConnection;
-//? if >= 1.21.2 {
-import net.minecraft.network.packet.s2c.play.PositionFlag;
-//?}
 import net.minecraft.registry.RegistryKey;
-import net.minecraft.scoreboard.ScoreboardCriterion;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -32,24 +23,19 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
+import xyz.nikitacartes.easyauth.integrations.FloodgateApiHelper;
 import xyz.nikitacartes.easyauth.integrations.VanishIntegration;
+import xyz.nikitacartes.easyauth.interfaces.PlayerAuth;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.*;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-//? if >= 1.21.2 {
-import java.util.EnumSet;
-//?} else {
-/*import java.util.Iterator;
-*///?}
-//? if = 1.21.2 {
-/*import java.util.Optional;
-*///?}
 import java.util.UUID;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
+import static xyz.nikitacartes.easyauth.utils.StoneCutterUtils.*;
 
 @Mixin(ServerPlayerEntity.class)
 public abstract class ServerPlayerEntityMixin extends EntityMixin implements PlayerAuth {
@@ -87,11 +73,7 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
     private boolean wasDead = false;
 
     @Unique
-    //? if >= 1.20.3 {
-    PlayerEntryV1 playerEntryV1 = new PlayerEntryV1(player.getNameForScoreboard());
-    //?} else {
-    /*PlayerEntryV1 playerEntryV1 = new PlayerEntryV1(player.getName().getString());
-    *///?}
+    PlayerEntryV1 playerEntryV1 = new PlayerEntryV1(getUsername(player));
 
     @Unique
     private boolean canSkipAuth = this.player.getClass() != ServerPlayerEntity.class;
@@ -105,22 +87,30 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
     @Unique
     private boolean wasVanished = false;
 
+    //? if >= 1.21.9 {
+    @Override
+    public void easyAuth$savePlayerInfo() {
+        ridingEntityUUID = player.getVehicle() != null ? player.getVehicle().getUuid() : null;
+        wasDead = player.isDead();
+        String username = player.getNameForScoreboard();
+        if (ridingEntityUUID != null) {
+            LogDebug(String.format("Saving vehicle of player %s as %s", username, ridingEntityUUID));
+        }
+    }
+    //?}
+
     @Override
     public void easyAuth$saveTrueLocation() {
         if (lastLocation == null) {
             lastLocation = new LastLocation();
         }
-        lastLocation.position = player.getPos();
+        lastLocation.position = getPosition(player);
         lastLocation.yaw = player.getYaw();
         lastLocation.pitch = player.getPitch();
 
         ridingEntityUUID = player.getVehicle() != null ? player.getVehicle().getUuid() : null;
         wasDead = player.isDead();
-        //? if >= 1.20.3 {
-        String username = player.getNameForScoreboard();
-        //?} else {
-        /*String username = player.getName().getString();
-        *///?}
+        String username = getUsername(player);
         LogDebug(String.format("Saving position of player %s as %s", username, lastLocation));
         if (ridingEntityUUID != null) {
             LogDebug(String.format("Saving vehicle of player %s as %s", username, ridingEntityUUID));
@@ -132,7 +122,7 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
         if (lastLocation == null) {
             lastLocation = new LastLocation();
         }
-        lastLocation.dimension = this.server.getWorld(registryKey);
+        lastLocation.dimension = registryKey;
     }
 
     @Override
@@ -141,91 +131,27 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
             return;
         }
         if (wasDead) {
-            //? if >= 1.21.6 {
-            player.kill(player.getWorld());
-            //?} else if >= 1.21.2 {
-            /*player.kill(player.getServerWorld());
-            *///?} else {
-            /*player.kill();
-            *///?}
-            //? if >= 1.20.3 {
-            player.getScoreboard().forEachScore(ScoreboardCriterion.DEATH_COUNT, player, (score) -> score.setScore(score.getScore() - 1));
-            //?} else {
-            /*player.getScoreboard().forEachScore(ScoreboardCriterion.DEATH_COUNT, player.getName().getString(), (score) -> score.setScore(score.getScore() - 1));
-            *///?}
+            StoneCutterUtils.killPlayer(player);
             return;
         }
         // Puts player to last saved position
-        player.teleport(
-                lastLocation.dimension == null ? server.getWorld(World.OVERWORLD) : lastLocation.dimension,
-                lastLocation.position.getX(),
-                lastLocation.position.getY(),
-                lastLocation.position.getZ(),
-                //? if >= 1.21.2 {
-                EnumSet.noneOf(PositionFlag.class),
-                //?}
-                lastLocation.yaw,
-                //? if >= 1.21.2 {
-                lastLocation.pitch,
-                true);
-                //?} else {
-                /*lastLocation.pitch);
-                *///?}
-        //? if >= 1.20.3 {
-        String username = player.getNameForScoreboard();
-        //?} else {
-        /*String username = player.getName().getString();
-        *///?}
+        teleport(player, lastLocation, server.getWorld(World.OVERWORLD));
+        String username = getUsername(player);
         LogDebug(String.format("Teleported player %s to %s", username, lastLocation));
 
         if (rootVehicle != null) {
             LogDebug(String.format("Mounting player to vehicle %s", rootVehicle));
-            //? if >= 1.21.5 {
-            player.readRootVehicle(rootVehicle);
-            //?} else >= 1.21.2 {
-            /*player.readRootVehicle(Optional.of(rootVehicle));
-            *///?} else {
-            /*NbtCompound nbtCompound = rootVehicle.getCompound("RootVehicle");
-            //? if > 1.19.4 {
-             Entity entity = EntityType.loadEntityWithPassengers(nbtCompound.getCompound("Entity"), player.getServerWorld(), (vehicle) -> !player.getServerWorld().tryLoadEntity(vehicle) ? null : vehicle);
-            //?} else {
-            /^Entity entity = EntityType.loadEntityWithPassengers(nbtCompound.getCompound("Entity"), player.getWorld(), (vehicle) -> !player.getWorld().tryLoadEntity(vehicle) ? null : vehicle);
-            ^///?}
-            if (entity != null) {
-                UUID uUID;
-                if (nbtCompound.containsUuid("Attach")) {
-                    uUID = nbtCompound.getUuid("Attach");
-                } else {
-                    uUID = null;
-                }
-
-                Iterator var23;
-                Entity entity2;
-                if (entity.getUuid().equals(uUID)) {
-                    player.startRiding(entity, true);
-                } else {
-                    var23 = entity.getPassengersDeep().iterator();
-
-                    while(var23.hasNext()) {
-                        entity2 = (Entity)var23.next();
-                        if (entity2.getUuid().equals(uUID)) {
-                            player.startRiding(entity2, true);
-                            break;
-                        }
-                    }
-                }
-            }
-            *///?}
+            readRootVehicle(player, rootVehicle);
         }
 
         if (player.getVehicle() == null && ridingEntityUUID != null) {
             LogDebug(String.format("Mounting player to vehicle %s", ridingEntityUUID));
             if (lastLocation.dimension == null) return;
-            ServerWorld world = server.getWorld(lastLocation.dimension.getRegistryKey());
+            ServerWorld world = server.getWorld(lastLocation.dimension);
             if (world == null) return;
             Entity entity = world.getEntity(ridingEntityUUID);
             if (entity != null) {
-                player.startRiding(entity, true);
+                startRiding(player, entity);
             } else {
                 LogDebug("Could not find vehicle for player " + username);
             }
@@ -255,9 +181,9 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
     }
 
     /**
-     * Checks whether player can skip authentication process.
+     * Checks whether player can skip an authentication process (Online Player or Fake one).
      *
-     * @return true if player can skip authentication process, otherwise false
+     * @return true if a player can skip an authentication process, otherwise false
      */
     @Override
     public boolean easyAuth$canSkipAuth() {
@@ -268,8 +194,8 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
     public void easyAuth$setSkipAuth() {
         easyAuth$setUsingMojangAccount();
         canSkipAuth = (this.player.getClass() != ServerPlayerEntity.class) ||
-                (config.floodgateAutoLogin && technicalConfig.floodgateLoaded && FloodgateApiHelper.isFloodgatePlayer(this.player)) ||
-                (easyAuth$isUsingMojangAccount() && config.premiumAutoLogin);
+                (config.floodgateAutoLogin && FloodgateApiHelper.isFloodgatePlayer(this.player)) ||
+                (config.premiumAutoLogin && easyAuth$isUsingMojangAccount());
     }
 
     /**
@@ -309,11 +235,7 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
         if (authenticated) {
             kickTimer = config.kickTimeout * 20;
             // Updating blocks if needed (in case if portal rescue action happened)
-            //? if >= 1.21.6 {
-            World world = player.getWorld();
-            //?} else {
-            /*World world = player.getEntityWorld();
-            *///?}
+            World world = StoneCutterUtils.getServerWorld(player);
             BlockPos pos = player.getBlockPos();
 
             // Sending updates to portal blocks
@@ -327,11 +249,9 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
 
             player.currentScreenHandler.syncState();
 
-            if (technicalConfig.vanishLoaded) {
-                VanishIntegration.setVanished(player, wasVanished);
-            }
+            VanishIntegration.setVanished(player, wasVanished);
         } else {
-            if (config.vanishUntilAuth && technicalConfig.vanishLoaded) {
+            if (config.vanishUntilAuth) {
                 wasVanished = VanishIntegration.isVanished(player);
                 VanishIntegration.setVanished(player, true);
             }

@@ -6,6 +6,9 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtSizeTracker;
+//? if >= 1.21.9 {
+import net.minecraft.server.PlayerConfigEntry;
+//?}
 import net.minecraft.util.Uuids;
 import net.minecraft.world.PlayerSaveHandler;
 import org.spongepowered.asm.mixin.Final;
@@ -14,23 +17,21 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
-import xyz.nikitacartes.easyauth.utils.PlayerAuth;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Locale;
 import java.util.Optional;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogWarn;
+import static xyz.nikitacartes.easyauth.utils.StoneCutterUtils.getName;
 
 @Mixin(PlayerSaveHandler.class)
 public class PlayerSaveHandlerMixin {
     @Final
     @Shadow
-    private File playerDataDir;
+    public File playerDataDir;
 
     /**
      * Loads offline-uuid player data to compoundTag in order to migrate from offline to online.
@@ -38,7 +39,18 @@ public class PlayerSaveHandlerMixin {
      * @param cir
      * @param mixinFile
      */
+    //? if >= 1.21.9 {
     @Inject(
+            method = "loadPlayerData(Lnet/minecraft/server/PlayerConfigEntry;Ljava/lang/String;)Ljava/util/Optional;",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Ljava/io/File;exists()Z"
+            ),
+            cancellable = true
+    )
+    private void fileExists(PlayerConfigEntry player, String extension, CallbackInfoReturnable<Optional<NbtCompound>> cir, @Local File mixinFile) {
+    //?} else {
+    /*@Inject(
             method = "loadPlayerData(Lnet/minecraft/entity/player/PlayerEntity;Ljava/lang/String;)Ljava/util/Optional;",
             at = @At(
                     value = "INVOKE",
@@ -46,22 +58,22 @@ public class PlayerSaveHandlerMixin {
             ),
             cancellable = true
     )
-    private void fileExists(PlayerEntity player, String extension, CallbackInfoReturnable<Optional<NbtCompound>> cir, @Local File mixinFile) {
+        private void fileExists(PlayerEntity player, String extension, CallbackInfoReturnable<Optional<NbtCompound>> cir, @Local File mixinFile) {
+    *///?}
         if (!(mixinFile.exists() && mixinFile.isFile())) {
-            String playername = player.getGameProfile().getName().toLowerCase(Locale.ENGLISH);
-            PlayerAuth playerAuth = (PlayerAuth) player;
-            if (Boolean.parseBoolean(serverProp.getProperty("online-mode")) && playerAuth.easyAuth$isUsingMojangAccount()) {
-                LogDebug(String.format("Migrating data for %s", playername));
-                File file = new File(this.playerDataDir, Uuids.getOfflinePlayerUuid(player.getGameProfile().getName()) + extension);
+            String playerName = getName(player);
+            if (Boolean.parseBoolean(serverProp.getProperty("online-mode"))) {
+                LogDebug(String.format("Migrating data for %s", playerName));
+                File file = new File(this.playerDataDir, Uuids.getOfflinePlayerUuid(playerName) + extension);
                 if (file.exists() && file.isFile()) try {
                     cir.setReturnValue(Optional.of(NbtIo.readCompressed(file.toPath(), NbtSizeTracker.ofUnlimitedBytes())));
                 } catch (IOException e) {
-                    LogWarn(String.format("Failed to load player data for: %s", playername));
+                    LogWarn(String.format("Failed to load player data for: %s", playerName));
                 }
             } else {
                 LogDebug(
-                        String.format("Not migrating %s, as premium status is '%s' and data file is %s present.",
-                                playername, playerAuth.easyAuth$isUsingMojangAccount(), mixinFile.exists() && mixinFile.isFile() ? "" : "not")
+                        String.format("Not migrating %s, data file is %s present.",
+                                playerName, mixinFile.exists() && mixinFile.isFile() ? "" : "not")
                 );
             }
         }

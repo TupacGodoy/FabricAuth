@@ -7,16 +7,16 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import xyz.nikitacartes.easyauth.utils.PlayerAuth;
+import xyz.nikitacartes.easyauth.interfaces.PlayerAuth;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.extendedConfig;
 
 @Mixin(targets = "net.minecraft.server.network.ServerPlayerEntity$1")
 public class ServerPlayerEntity$1Mixin {
 
+    //? if >= 1.21.5 {
     @Final
     @Shadow
-    //? if >= 1.21.5 {
     ServerPlayerEntity field_58075;
 
     @Inject(method = "updateState(Lnet/minecraft/screen/ScreenHandler;Ljava/util/List;Lnet/minecraft/item/ItemStack;[I)V",
@@ -28,7 +28,10 @@ public class ServerPlayerEntity$1Mixin {
         }
     }
     //?} else {
-    /*ServerPlayerEntity field_29182;
+    
+    /*@Final
+    @Shadow
+    ServerPlayerEntity field_29182;
 
     @Inject(method = "updateState(Lnet/minecraft/screen/ScreenHandler;Lnet/minecraft/util/collection/DefaultedList;Lnet/minecraft/item/ItemStack;[I)V",
             at = @At("HEAD"),

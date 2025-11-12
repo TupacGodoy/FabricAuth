@@ -5,29 +5,29 @@ import net.fabricmc.fabric.api.networking.v1.PacketSender;
 import net.fabricmc.fabric.api.networking.v1.ServerLoginNetworking;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.player.PlayerEntity;
-//? if < 1.21.2 {
-/*import net.minecraft.item.ItemStack;
-*///?}
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
 import net.minecraft.server.MinecraftServer;
+//? if >= 1.21.9 {
+import net.minecraft.server.PlayerConfigEntry;
+//?}
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerLoginNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
-//? if < 1.21.2 {
-/*import net.minecraft.util.TypedActionResult;
-*///?}
-//? if >= 1.20.3 {
 import net.minecraft.util.Uuids;
-//?}
+//? if < 1.21.2 {
+/*import net.minecraft.item.ItemStack;
+import net.minecraft.util.TypedActionResult;
+*///?}
 import net.minecraft.util.math.BlockPos;
 import xyz.nikitacartes.easyauth.integrations.VanishIntegration;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
-import xyz.nikitacartes.easyauth.utils.FloodgateApiHelper;
-import xyz.nikitacartes.easyauth.utils.PlayerAuth;
+import xyz.nikitacartes.easyauth.integrations.FloodgateApiHelper;
+import xyz.nikitacartes.easyauth.interfaces.PlayerAuth;
 import xyz.nikitacartes.easyauth.utils.PlayersCache;
+import xyz.nikitacartes.easyauth.utils.StoneCutterUtils;
 
 import java.net.SocketAddress;
 import java.time.ZonedDateTime;
@@ -50,16 +50,20 @@ public class AuthEventHandler {
      * Player pre-join.
      * Returns text as a reason for disconnect or null to pass
      *
-     * @param profile GameProfile of the player
+     * @param profile PlayerConfigEntry|GameProfile of the player
      * @param manager PlayerManager
      * @return Text if player should be disconnected
      */
-    public static Text checkCanPlayerJoinServer(GameProfile profile, PlayerManager manager, SocketAddress socketAddress) {
+    //? if >= 1.21.9 {
+    public static Text checkCanPlayerJoinServer(PlayerConfigEntry profile, PlayerManager manager, SocketAddress socketAddress) {
+    //?} else {
+    /*public static Text checkCanPlayerJoinServer(GameProfile profile, PlayerManager manager, SocketAddress socketAddress) {
+    *///?}
         // Getting the player. By this point, the player's game profile has been authenticated so the UUID is legitimate.
-        String incomingPlayerUsername = profile.getName();
+        String incomingPlayerUsername = StoneCutterUtils.getName(profile);
         PlayerEntity onlinePlayer = manager.getPlayer(incomingPlayerUsername);
 
-        if ((onlinePlayer != null && !((PlayerAuth) onlinePlayer).easyAuth$canSkipAuth()) && extendedConfig.preventAnotherLocationKick) {
+        if ((onlinePlayer != null) && ((PlayerAuth) onlinePlayer).easyAuth$isAuthenticated() && extendedConfig.preventAnotherLocationKick) {
             // Player needs to be kicked, since there's already a player with that name
             // playing on the server
 
@@ -81,12 +85,12 @@ public class AuthEventHandler {
         // Checking if player username is valid. The pattern is generated when the config is (re)loaded.
         Matcher matcher = usernamePattern.matcher(incomingPlayerUsername);
 
-        if (!(matcher.matches() || (technicalConfig.floodgateLoaded && extendedConfig.floodgateBypassRegex && FloodgateApiHelper.isFloodgatePlayer(profile.getId())))) {
+        if (!(matcher.matches() || (extendedConfig.floodgateBypassRegex && FloodgateApiHelper.isFloodgatePlayer(StoneCutterUtils.getId(profile))))) {
             return langConfig.disallowedUsername.getNonTranslatable(extendedConfig.usernameRegexp);
         }
         // If the player name and registered name are different, kick the player if differentUsernameCase is enabled
         // Create in case of Floodgate player
-        PlayerEntryV1 playerEntryV1 = PlayersCache.getFloodgate(incomingPlayerUsername);
+        PlayerEntryV1 playerEntryV1 = PlayersCache.getOrLoadOrRegister(incomingPlayerUsername);
 
         if (!extendedConfig.allowCaseInsensitiveUsername && !playerEntryV1.username.equals(incomingPlayerUsername)) {
             return langConfig.differentUsernameCase.getNonTranslatable(incomingPlayerUsername);
@@ -103,12 +107,8 @@ public class AuthEventHandler {
         PlayerAuth playerAuth = (PlayerAuth) player;
 
         // Create in case of Carpet player
-        //? if >= 1.20.3 {
-        String username = player.getNameForScoreboard();
-        //?} else {
-        /*String username = player.getName().getString();
-        *///?}
-        PlayerEntryV1 cache = PlayersCache.getCarpet(username);
+        String username = StoneCutterUtils.getUsername(player);
+        PlayerEntryV1 cache = PlayersCache.getOrCreate(username);
         boolean update = false;
         if (cache.uuid == null) {
             cache.uuid = player.getUuid();
@@ -119,7 +119,7 @@ public class AuthEventHandler {
         playerAuth.easyAuth$setIpAddress(connection);
         playerAuth.easyAuth$setSkipAuth();
 
-        if (config.vanishUntilAuth && technicalConfig.vanishLoaded) {
+        if (config.vanishUntilAuth) {
             ((PlayerAuth) player).easyAuth$wasVanished(VanishIntegration.isVanished(player));
         }
 
@@ -142,7 +142,7 @@ public class AuthEventHandler {
             playerAuth.easyAuth$setAuthenticated(true);
         }
 
-        if (config.vanishUntilAuth && technicalConfig.vanishLoaded && !playerAuth.easyAuth$isAuthenticated()) {
+        if (config.vanishUntilAuth && !playerAuth.easyAuth$isAuthenticated()) {
             VanishIntegration.setVanished(player, true);
         }
     }
@@ -165,7 +165,7 @@ public class AuthEventHandler {
         if (extendedConfig.tryPortalRescue) {
             BlockPos pos = player.getBlockPos();
             player.teleport(pos.getX() + 0.5, player.getY(), pos.getZ() + 0.5, false);
-            if (player.getBlockStateAtPos().getBlock().equals(Blocks.NETHER_PORTAL) || player.getWorld().getBlockState(player.getBlockPos().up()).getBlock().equals(Blocks.NETHER_PORTAL)) {
+            if (player.getBlockStateAtPos().getBlock().equals(Blocks.NETHER_PORTAL) || StoneCutterUtils.getServerWorld(player).getBlockState(player.getBlockPos().up()).getBlock().equals(Blocks.NETHER_PORTAL)) {
                 // Faking portal blocks to be air
                 BlockUpdateS2CPacket feetPacket = new BlockUpdateS2CPacket(pos, Blocks.AIR.getDefaultState());
                 player.networkHandler.sendPacket(feetPacket);
@@ -208,11 +208,7 @@ public class AuthEventHandler {
             return ActionResult.PASS;
         }
         if (!((PlayerAuth) player).easyAuth$isAuthenticated()) {
-            //? if >= 1.20.3 {
-            String username = player.getNameForScoreboard();
-            //?} else {
-            /*String username = player.getName().getString();
-            *///?}
+            String username = StoneCutterUtils.getUsername(player);
             for (String allowedCommand : extendedConfig.allowedCommands) {
                 if (command.startsWith(allowedCommand)) {
                     LogDebug("Player " + username + " executed command " + command + " without being authenticated.");
@@ -329,8 +325,10 @@ public class AuthEventHandler {
 
     public static void onPreLogin(ServerLoginNetworkHandler netHandler, MinecraftServer server, PacketSender packetSender, ServerLoginNetworking.LoginSynchronizer sync) {
         if (extendedConfig.forcedOfflineUuid && netHandler.profile != null) {
-            //? if >= 1.20.3 {
-            netHandler.profile = Uuids.getOfflinePlayerProfile(netHandler.profile.getName());
+            //? if >= 1.21.9 {
+            netHandler.profile = Uuids.getOfflinePlayerProfile(netHandler.profile.name());
+            //?} else if >= 1.20.3 {
+            //netHandler.profile = Uuids.getOfflinePlayerProfile(netHandler.profile.getName());
             //?} else if >= 1.20.2 {
             /*netHandler.profile = ServerLoginNetworkHandler.createOfflineProfile(netHandler.profile.getName());
             *///?} else {

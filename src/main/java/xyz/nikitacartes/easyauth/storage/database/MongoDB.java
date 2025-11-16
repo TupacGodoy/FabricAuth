@@ -2,10 +2,13 @@ package xyz.nikitacartes.easyauth.storage.database;
 
 import com.mongodb.MongoClientException;
 import com.mongodb.MongoCommandException;
+import com.mongodb.ConnectionString;
+import com.mongodb.MongoClientSettings;
 import com.mongodb.client.*;
 import com.mongodb.client.model.InsertOneModel;
 import net.minecraft.util.Uuids;
 import org.bson.Document;
+import org.bson.UuidRepresentation;
 import xyz.nikitacartes.easyauth.config.StorageConfigV1;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 
@@ -29,7 +32,12 @@ public class MongoDB implements DbApi {
     public void connect() throws DBApiException {
         LogDebug("You are using Mongo DB");
         try {
-            mongoClient = MongoClients.create(config.mongodb.mongodbConnectionString);
+            ConnectionString connString = new ConnectionString(config.mongodb.mongodbConnectionString);
+            MongoClientSettings settings = MongoClientSettings.builder()
+                    .applyConnectionString(connString)
+                    .uuidRepresentation(UuidRepresentation.STANDARD)
+                    .build();
+            mongoClient = MongoClients.create(settings);
             MongoDatabase database = mongoClient.getDatabase(config.mongodb.mongodbDatabase);
             collection = database.getCollection("players");
         } catch (MongoClientException | MongoCommandException e) {
@@ -50,7 +58,7 @@ public class MongoDB implements DbApi {
     public void registerUser(PlayerEntryV1 data) {
         Document document = new Document("username", data.username)
                 .append("username_lower", data.usernameLowerCase)
-                .append("uuid", data.uuid)
+                .append("uuid", data.uuid == null ? null : data.uuid.toString())
                 .append("data", data.toJson());
         try {
             collection.insertOne(document);
@@ -105,7 +113,7 @@ public class MongoDB implements DbApi {
     public void updateUserData(PlayerEntryV1 data) {
         Document document = new Document("username", data.username)
                 .append("username_lower", data.usernameLowerCase)
-                .append("uuid", data.uuid)
+                .append("uuid", data.uuid == null ? null : data.uuid.toString())
                 .append("data", data.toJson());
         collection.replaceOne(eq("username", data.username), document);
     }

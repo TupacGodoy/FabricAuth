@@ -82,6 +82,11 @@ dependencies {
         include(name)
     }
 
+    fun implementAndShadow(name: String) {
+        implementation(name)
+        shadow(name)
+    }
+
     // Fabric
     minecraft("com.mojang:minecraft:${property("minecraft_version")}")
     mappings("net.fabricmc:yarn:${property("yarn_mappings")}:v2")
@@ -112,9 +117,9 @@ dependencies {
     implementAndInclude("org.iq80.leveldb:leveldb:${property("leveldb_version")}")
     implementAndInclude("org.iq80.leveldb:leveldb-api:${property("leveldb_version")}")
 
-    implementAndInclude("org.mongodb:mongodb-driver-sync:${property("mongodb_version")}")
-    implementAndInclude("org.mongodb:mongodb-driver-core:${property("mongodb_version")}")
-    implementAndInclude("org.mongodb:bson:${property("mongodb_version")}")
+    implementAndShadow("org.mongodb:mongodb-driver-sync:${property("mongodb_version")}")
+    implementAndShadow("org.mongodb:mongodb-driver-core:${property("mongodb_version")}")
+    implementAndShadow("org.mongodb:bson:${property("mongodb_version")}")
 
     implementAndInclude("com.mysql:mysql-connector-j:${property("mysql_version")}")
     implementAndInclude("org.xerial:sqlite-jdbc:${property("sqlite_version")}")
@@ -130,8 +135,9 @@ tasks.shadowJar {
     relocate("com.typesafe.config", "xyz.nikitacartes.shadow.config")
     relocate("io.leangen.geantyref", "xyz.nikitacartes.shadow.geantyref")
     relocate("net.kyori.option", "xyz.nikitacartes.shadow.option")
+    relocate("org.bson", "xyz.nikitacartes.shadow.bson")
+    relocate("com.mongodb", "xyz.nikitacartes.shadow.mongodb")
 
-    minimize()
     configurations = listOf(project.configurations.shadow.get())
     from(sourceSets.main.get().output)
 }

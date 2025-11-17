@@ -5,11 +5,15 @@
 
 #### Fix
 - Check how offline players work if they try to connect with a taken online account
-- Fix hide-cords with dimension change: move mixin to PrepareSpawnTask mixin
+
+---
+### 3.4.1
+##### Minecraft 1.19.4, 1.20[.X], 1.21[.X]
+
 
 ---
 ### 3.4.0
-##### Minecraft 1.19.4, 1.20[.X], 1.21[.X]
+##### Minecraft 1.21.9-1.21.10
 #### Fix
 - Not sending register prompt on login if coordinates hiding is disabled [#237](https://github.com/NikitaCartes/EasyAuth/issues/237)
 - False-positive UUID mismatch

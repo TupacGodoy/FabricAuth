@@ -42,23 +42,24 @@ git checkout fabric-1.21.6
 ### Languages
 This mod supports multiple languages.
 
-| Language                                                                | Missing Strings |                        Contributors                         |
-|-------------------------------------------------------------------------|:---------------:|:-----------------------------------------------------------:|
-| Czech <br/>(cs_cz)                                                      |       11        |                  @DavidCZ2051, @Thewest123                  |
-| German <br/>(de_de)                                                     |       14        |                           @X00LA                            |
-| English <br/>(en_gb, en_us)                                             |        0        |                  @samolego, @NikitaCartes                   |
-| Spanish <br/>(es_ar, es_cl, es_ec, <br/>es_es, es_mx, es_uy,<br/>es_ve) |       14        |                @Zailer43, @DanielTrejoBorjas                |
-| French <br/>(fr_fr)                                                     |        9        |                    @Uxzylon, @Sky-NiniKo                    |
-| Hungarian <br/>(hu_hu)                                                  |       14        |                       @Bendimester23                        |
-| Italian <br/>(it_it)                                                    |       11        |                         @Rizzo1812                          |
-| Polish <br/>(pl_pl)                                                     |       11        |                       @LimakXRobczuk                        |
-| Brazilian Portuguese <br/>(pt_br)                                       |        2        |                   @luizffgv, @guigiffoni                    |
-| Russian <br/>(ru_ru)                                                    |        0        |               @alphatoasterous, @NikitaCartes               |
-| Slovenian <br/>(sl_si)                                                  |       14        |                          @Kljunas2                          |
-| Turkish <br/>(tr_tr)                                                    |        0        |                    @egeesin, @MemoKing34                    |
-| Ukrainian <br/>(uk_ua)                                                  |        9        |                     @txlbr, @Y0shioSato                     |
-| Vietnamese <br/>(vi_vn)                                                 |        0        |                     @Toibithieunang123                      |
-| Chinese <br/>(zh_cn, zh_tw)                                             |        9        | @Neubulae, @GodGun968, @Sam5440,<br/>@CMJNB, @MyBlueHorizon |
+| Language                                                                | Missing Strings |                              Contributors                               |
+|-------------------------------------------------------------------------|:---------------:|:-----------------------------------------------------------------------:|
+| Czech <br/>(cs_cz)                                                      |       11        |                        @DavidCZ2051, @Thewest123                        |
+| German <br/>(de_de)                                                     |       14        |                                 @X00LA                                  |
+| English <br/>(en_gb, en_us)                                             |        0        |                        @samolego, @NikitaCartes                         |
+| Spanish <br/>(es_ar, es_cl, es_ec, <br/>es_es, es_mx, es_uy,<br/>es_ve) |       14        |                      @Zailer43, @DanielTrejoBorjas                      |
+| French <br/>(fr_fr)                                                     |        9        |                          @Uxzylon, @Sky-NiniKo                          |
+| Hungarian <br/>(hu_hu)                                                  |       14        |                             @Bendimester23                              |
+| Italian <br/>(it_it)                                                    |       11        |                               @Rizzo1812                                |
+| Polish <br/>(pl_pl)                                                     |       11        |                             @LimakXRobczuk                              |
+| Brazilian Portuguese <br/>(pt_br)                                       |        2        |                         @luizffgv, @guigiffoni                          |
+| Russian <br/>(ru_ru)                                                    |        0        |                     @alphatoasterous, @NikitaCartes                     |
+| Slovenian <br/>(sl_si)                                                  |       14        |                                @Kljunas2                                |
+| Turkish <br/>(tr_tr)                                                    |        0        |                          @egeesin, @MemoKing34                          |
+| Ukrainian <br/>(uk_ua)                                                  |        9        |                           @txlbr, @Y0shioSato                           |
+| Vietnamese <br/>(vi_vn)                                                 |        0        |                           @Toibithieunang123                            |
+| Chinese <br/>(zh_cn)                                                    |        0        | @Neubulae, @GodGun968, @Sam5440,<br/>@CMJNB, @MyBlueHorizon, @ShadyLeaf |
+| Taiwanese Chinese <br/>(zh_tw)                                          |       14        |       @Neubulae, @GodGun968, @Sam5440,<br/>@CMJNB, @MyBlueHorizon       |
 
 A Total of 43 strings are used in the mod
 

@@ -13,6 +13,9 @@
 - Incompatibility with QuickBackupMulti mod [#232](https://github.com/NikitaCartes/EasyAuth/issues/232)
 - MongoDB connection [#247](https://github.com/NikitaCartes/EasyAuth/issues/247), thanks to @MemoKing34
 
+#### Changes
+- Update Chinese translation [#233](https://github.com/NikitaCartes/EasyAuth/issues/233), thanks to @ShadyLeaf
+
 ---
 ### 3.4.0
 ##### Minecraft 1.21.9-1.21.10

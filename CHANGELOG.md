@@ -11,6 +11,7 @@
 ##### Minecraft 1.19.4, 1.20[.X], 1.21[.X]
 #### Fix
 - Incompatibility with QuickBackupMulti mod [#232](https://github.com/NikitaCartes/EasyAuth/issues/232)
+- MongoDB connection [#247](https://github.com/NikitaCartes/EasyAuth/issues/247), thanks to @MemoKing34
 
 ---
 ### 3.4.0

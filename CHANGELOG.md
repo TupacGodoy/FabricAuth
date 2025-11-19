@@ -12,6 +12,7 @@
 #### Fix
 - Incompatibility with QuickBackupMulti mod [#232](https://github.com/NikitaCartes/EasyAuth/issues/232)
 - MongoDB connection [#247](https://github.com/NikitaCartes/EasyAuth/issues/247), thanks to @MemoKing34
+- Server crash during config reload [#248](https://github.com/NikitaCartes/EasyAuth/issues/248)
 
 #### Changes
 - Update Chinese translation [#233](https://github.com/NikitaCartes/EasyAuth/issues/233), thanks to @ShadyLeaf

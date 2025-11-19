@@ -242,6 +242,9 @@ public class EasyAuth implements ModInitializer {
         RegisterCommand.registerCommand(serverCommandManager.getDispatcher());
         LoginCommand.registerCommand(serverCommandManager.getDispatcher());
 
+        if (server.getPlayerManager() == null) {
+            return;
+        }
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
             serverCommandManager.sendCommandTree(player);
         }

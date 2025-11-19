@@ -48,14 +48,14 @@ java {
 }
 
 loom {
-    //splitEnvironmentSourceSets()
-    serverOnlyMinecraftJar()
+    splitEnvironmentSourceSets()
     accessWidenerPath = rootProject.file("src/main/resources/accesswidener/$awFile")
-    //mods {
-    //    create("easyauth") {
-    //        sourceSet(sourceSets["main"])
-    //    }
-    //}
+    mods {
+        create("easyauth") {
+            sourceSet(sourceSets["main"])
+            sourceSet(sourceSets["client"])
+        }
+    }
     log4jConfigs.from(file("log4j.xml"))
 
     runConfigs.all {
@@ -149,6 +149,10 @@ tasks.remapJar {
 
 tasks.jar {
     from("LICENCE")
+}
+
+tasks.withType<ProcessResources>().configureEach {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
 tasks.processResources {

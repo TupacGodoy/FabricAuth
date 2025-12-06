@@ -127,6 +127,7 @@ public class MySQL implements DbApi {
      */
     @Override
     public void registerUser(PlayerEntryV1 data) {
+        LogDebug("Registering new player " + data.username + ": " + data.toJson());
         try {
             reConnect();
             PreparedStatement preparedStatement = MySQLConnection.prepareStatement("INSERT INTO  " + config.mysql.mysqlTable + " (username, username_lower, uuid, data) VALUES (?, ?, ?, ?);");
@@ -134,10 +135,12 @@ public class MySQL implements DbApi {
             preparedStatement.setString(2, data.usernameLowerCase);
             preparedStatement.setString(3, data.uuid == null ? null : data.uuid.toString());
             preparedStatement.setString(4, data.toJson());
-            preparedStatement.executeUpdate();
+            if (preparedStatement.executeUpdate() == 0) {
+                LogError("Failed to register user " + data.username + ": " + data.toJson());
+            }
             preparedStatement.close();
         } catch (SQLException e) {
-            LogError("Register error: " + data, e);
+            LogError("Register error: " + data.toJson(), e);
         }
     }
 
@@ -180,9 +183,10 @@ public class MySQL implements DbApi {
 
             resultSet.close();
             statement.close();
+            LogDebug("Retrieved player data for " + username + ": " + (playerEntry != null ? playerEntry.toJson() : "null"));
             return playerEntry;
         } catch (SQLException e) {
-            LogError("Error checking user registration in MySQL database", e);
+            LogError("Error checking user registration", e);
         }
         return null;
     }
@@ -201,15 +205,21 @@ public class MySQL implements DbApi {
      *
      * @param username username of player to delete data for
      */
-    public void deleteUserData(String username) {
+    public boolean deleteUserData(String username) {
+        LogDebug("Deleting player data for " + username);
         try {
             reConnect();
             PreparedStatement preparedStatement = MySQLConnection.prepareStatement("DELETE FROM " + config.mysql.mysqlTable + " WHERE username = ?;");
             preparedStatement.setString(1, username);
-            preparedStatement.executeUpdate();
+            int deletedRows = preparedStatement.executeUpdate();
             preparedStatement.close();
+            if (deletedRows == 0) {
+                LogError("Failed to delete user " + username);
+            }
+            return deletedRows > 0;
         } catch (SQLException e) {
             LogError("deleteUserData error", e);
+            return false;
         }
     }
 
@@ -218,17 +228,23 @@ public class MySQL implements DbApi {
      *
      * @param data data of the player to update data for
      */
-    public void updateUserData(PlayerEntryV1 data) {
+    public boolean updateUserData(PlayerEntryV1 data) {
+        LogDebug("Updating player data for " + data.username + ": " + data.toJson());
         try {
             reConnect();
             PreparedStatement preparedStatement = MySQLConnection.prepareStatement("UPDATE " + config.mysql.mysqlTable + " SET uuid = ?, data = ? WHERE username = ?;");
             preparedStatement.setString(1, data.uuid == null ? null : data.uuid.toString());
             preparedStatement.setString(2, data.toJson());
             preparedStatement.setString(3, data.username);
-            preparedStatement.executeUpdate();
+            int updatedRows = preparedStatement.executeUpdate();
             preparedStatement.close();
+            if (updatedRows == 0) {
+                LogError("Failed to update user " + data.username + ": " + data.toJson());
+            }
+            return updatedRows > 0;
         } catch (SQLException e) {
-            LogError("updateUserData error: " + data, e);
+            LogError("updateUserData error: " + data.toJson(), e);
+            return false;
         }
     }
 
@@ -250,7 +266,7 @@ public class MySQL implements DbApi {
             resultSet.close();
             statement.close();
         } catch (SQLException e) {
-            LogError("Error retrieving all data from MySQL database", e);
+            LogError("Error retrieving all data", e);
         }
         return registeredPlayers;
     }

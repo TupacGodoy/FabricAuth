@@ -82,6 +82,8 @@ public class LangConfigV1 extends ConfigTemplate {
     public TranslatableText selfMarkAsOnlineWarning = new TranslatableText("selfMarkAsOnlineWarning");
     public TranslatableText accountNotFound = new TranslatableText("accountNotFound");
     public TranslatableText accountCheckFailed = new TranslatableText("accountCheckFailed");
+    public TranslatableText databaseError = new TranslatableText("databaseError");
+    public TranslatableText unknownError = new TranslatableText("unknownError");
 
     private static Map<String, String> translations = new HashMap<>();
 

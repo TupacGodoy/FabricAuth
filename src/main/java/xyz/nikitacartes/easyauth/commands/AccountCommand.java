@@ -104,7 +104,16 @@ public class AccountCommand {
         THREADPOOL.submit(() -> {
             String username = StoneCutterUtils.getUsername(player);
             if (AuthHelper.checkPassword(playerAuth, pass.toCharArray()) == AuthHelper.PasswordOptions.CORRECT) {
-                DB.deleteUserData(username);
+                PlayerEntryV1 playerEntry = DB.getUserData(username);
+                if (playerEntry == null) {
+                    langConfig.cannotUnregister.send(source);
+                    return;
+                }
+
+                if (!DB.deleteUserData(username)) {
+                    langConfig.unknownError.send(source);
+                    return;
+                }
                 langConfig.accountDeleted.send(source);
                 playerAuth.easyAuth$setAuthenticated(false);
                 playerAuth.easyAuth$setPlayerEntryV1(new PlayerEntryV1(username));

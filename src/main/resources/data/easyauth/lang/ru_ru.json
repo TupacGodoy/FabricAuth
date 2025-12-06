@@ -41,5 +41,7 @@
   "text.easyauth.selfMarkAsOnline": "§aВы пометили себя как онлайн-игрока.",
   "text.easyauth.selfMarkAsOnlineWarning": "§6Вы собираетесь пометить себя как онлайн-игрока.\n§6Вы не сможете войти, если у вас нет онлайн-аккаунта.\n§6Данные, связанные с оффлайн UUID (скидки у жителей, питомцы и т.д.), будут утеряны.\n§aЕсли вы хотите продолжить, введите /account online \u003cпароль\u003e true.",
   "text.easyauth.accountNotFound": "§cОнлайн-аккаунт не найден.",
-  "text.easyauth.accountCheckFailed": "§cСервер Mojang недоступен. Повторите попытку позже."
+  "text.easyauth.accountCheckFailed": "§cСервер Mojang недоступен. Повторите попытку позже.",
+  "text.easyauth.unknownError": "§4Произошла неизвестная ошибка.",
+  "text.easyauth.databaseError": "§4Ошибка базы данных, подробности в консоли."
 }

@@ -3,7 +3,6 @@ package xyz.nikitacartes.easyauth.storage.database;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.Options;
 import xyz.nikitacartes.easyauth.EasyAuth;
-import xyz.nikitacartes.easyauth.config.StorageConfigV1;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 
 import javax.annotation.Nonnull;
@@ -18,13 +17,11 @@ import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
 public class LevelDB implements DbApi {
     private DB levelDBStore;
-    private final StorageConfigV1 config;
 
     /**
      * Prepares connection to the LevelDB.
      */
-    public LevelDB(StorageConfigV1 config) {
-        this.config = config;
+    public LevelDB() {
     }
 
     /**
@@ -91,11 +88,11 @@ public class LevelDB implements DbApi {
         throw new UnsupportedOperationException("LevelDB is not supported anymore");
     }
 
-    public void deleteUserData(String uuid) {
+    public boolean deleteUserData(String uuid) {
         throw new UnsupportedOperationException("LevelDB is not supported anymore");
     }
 
-    public void updateUserData(PlayerEntryV1 data) {
+    public boolean updateUserData(PlayerEntryV1 data) {
         throw new UnsupportedOperationException("LevelDB is not supported anymore");
     }
 

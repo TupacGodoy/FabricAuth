@@ -31,6 +31,7 @@ import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
 import static xyz.nikitacartes.easyauth.integrations.MojangApi.isValidUsername;
+import static xyz.nikitacartes.easyauth.utils.StoneCutterUtils.getUsername;
 
 public class AuthCommand {
     /**
@@ -253,16 +254,26 @@ public class AuthCommand {
      */
     private static int removeAccount(ServerCommandSource source, String username) {
         THREADPOOL.submit(() -> {
-            DB.deleteUserData(username);
+            PlayerEntryV1 playerEntry = DB.getUserData(username);
+            if (playerEntry == null) {
+                langConfig.userNotRegistered.send(source);
+                return;
+            }
+
+            if (DB.deleteUserData(username)) {
+                langConfig.userdataDeleted.send(source);
+            } else {
+                langConfig.databaseError.send(source);
+            }
         });
 
         ServerPlayerEntity playerEntity = source.getServer().getPlayerManager().getPlayer(username);
-        if (playerEntity != null) {
+        if (playerEntity != null && getUsername(playerEntity).equals(username)) {
+            ((PlayerAuth) playerEntity).easyAuth$setAuthenticated(false);
             ((PlayerAuth) playerEntity).easyAuth$setPlayerEntryV1(new PlayerEntryV1(username));
             playerEntity.networkHandler.disconnect(langConfig.userdataDeleted.get());
         }
 
-        langConfig.userdataDeleted.send(source);
         return 1; // Success
     }
 
@@ -420,7 +431,7 @@ public class AuthCommand {
         THREADPOOL.submit(() -> {
             MutableText message = Text.literal("");
             source.getServer().getPlayerManager().getPlayerList().forEach(player -> {
-                String username = StoneCutterUtils.getUsername(player);
+                String username = getUsername(player);
                 PlayerEntryV1 playerData = DB.getUserData(username);
                 PlayerAuth playerAuth = (PlayerAuth) player;
 

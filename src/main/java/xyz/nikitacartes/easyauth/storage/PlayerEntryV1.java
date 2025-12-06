@@ -12,7 +12,6 @@ import java.util.Locale;
 import java.util.UUID;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
-import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
 
 public class PlayerEntryV1 {
 
@@ -119,7 +118,6 @@ public class PlayerEntryV1 {
      * Update entry in database.
      */
     public void update() {
-        LogDebug("Updating player data for " + username + " in database: " + toJson());
         THREADPOOL.execute(() -> DB.updateUserData(this));
     }
 

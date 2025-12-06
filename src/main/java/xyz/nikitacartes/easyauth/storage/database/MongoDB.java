@@ -56,44 +56,53 @@ public class MongoDB implements DbApi {
 
     @Override
     public void registerUser(PlayerEntryV1 data) {
-        Document document = new Document("username", data.username)
-                .append("username_lower", data.usernameLowerCase)
-                .append("uuid", data.uuid == null ? null : data.uuid.toString())
-                .append("data", data.toJson());
+        LogDebug("Registering new player " + data.username + ": " + data.toJson());
         try {
-            collection.insertOne(document);
+            Document document = new Document("username", data.username)
+                    .append("username_lower", data.usernameLowerCase)
+                    .append("uuid", data.uuid == null ? null : data.uuid.toString())
+                    .append("data", data.toJson());
+            if (collection.insertOne(document).getInsertedId() == null) {
+                LogError("Failed to insert data: " + data.toJson());
+            }
         } catch (MongoCommandException e) {
-            LogError("Failed to insert data into MongoDB: " + data, e);
+            LogError("Failed to insert data: " + data.toJson(), e);
         }
     }
 
     public @Nullable PlayerEntryV1 getUserData(String username) {
         MongoCursor<Document> findIterable;
-        if (extendedConfig.allowCaseInsensitiveUsername) {
-            findIterable = collection.find(eq("username", username)).iterator();
-        } else {
-            findIterable = collection.find(eq("username_lower", username.toLowerCase(Locale.ENGLISH))).iterator();
-        }
-        PlayerEntryV1 playerEntry = null;
-        if (findIterable.hasNext()) {
-            Document document = findIterable.next();
-            playerEntry = new PlayerEntryV1(document.getString("username"),
+        try {
+            if (extendedConfig.allowCaseInsensitiveUsername) {
+                findIterable = collection.find(eq("username", username)).iterator();
+            } else {
+                findIterable = collection.find(eq("username_lower", username.toLowerCase(Locale.ENGLISH))).iterator();
+            }
+            PlayerEntryV1 playerEntry = null;
+            if (findIterable.hasNext()) {
+                Document document = findIterable.next();
+                playerEntry = new PlayerEntryV1(document.getString("username"),
                                             document.getString("username_lower"),
                                             document.getString("uuid"),
                                             document.getString("data"));
-        }
-        while (findIterable.hasNext()) {
-            Document document = findIterable.next();
-            String dbUsername = document.getString("username");
-            if (dbUsername.equals(username)) {
-                playerEntry = new PlayerEntryV1(dbUsername,
+            }
+            while (findIterable.hasNext()) {
+                Document document = findIterable.next();
+                String dbUsername = document.getString("username");
+                if (dbUsername.equals(username)) {
+                    playerEntry = new PlayerEntryV1(dbUsername,
                                                 document.getString("username_lower"),
                                                 document.getString("uuid"),
                                                 document.getString("data"));
-                break;
+                    break;
+                }
             }
+            LogDebug("Retrieved player data for " + username + ": " + (playerEntry != null ? playerEntry.toJson() : "null"));
+            return playerEntry;
+        } catch (Exception e) {
+            LogError("Error retrieving user data for " + username, e);
+            return null;
         }
-        return playerEntry;
     }
 
     public @Nonnull PlayerEntryV1 getUserDataOrCreate(String username) {
@@ -105,30 +114,54 @@ public class MongoDB implements DbApi {
         return playerEntry;
     }
 
-    public void deleteUserData(String username) {
-        collection.deleteOne(eq("username", username));
+    public boolean deleteUserData(String username) {
+        LogDebug("Deleting player data for " + username);
+        try {
+            if (collection.deleteOne(eq("username", username)).getDeletedCount() == 0) {
+                LogError("Failed to delete data for username: " + username);
+                return false;
+            }
+            return true;
+        } catch (Exception e) {
+            LogError("Error deleting user data", e);
+            return false;
+        }
     }
 
     @Override
-    public void updateUserData(PlayerEntryV1 data) {
-        Document document = new Document("username", data.username)
-                .append("username_lower", data.usernameLowerCase)
-                .append("uuid", data.uuid == null ? null : data.uuid.toString())
-                .append("data", data.toJson());
-        collection.replaceOne(eq("username", data.username), document);
+    public boolean updateUserData(PlayerEntryV1 data) {
+        LogDebug("Updating player data for " + data.username + ": " + data.toJson());
+        try {
+            Document document = new Document("username", data.username)
+                    .append("username_lower", data.usernameLowerCase)
+                    .append("uuid", data.uuid == null ? null : data.uuid.toString())
+                    .append("data", data.toJson());
+            if (collection.replaceOne(eq("username", data.username), document).getModifiedCount() == 0) {
+                LogError("Failed to update data: " + data.toJson());
+                return false;
+            }
+            return true;
+        } catch (Exception e) {
+            LogError("Error updating user data: " + data.toJson(), e);
+            return false;
+        }
     }
 
     @Override
     public HashMap<String, PlayerEntryV1> getAllData() {
         HashMap<String, PlayerEntryV1> registeredPlayers = new HashMap<>();
-        collection.find().forEach(document -> {
-            String username = document.getString("username");
-            if (username == null) return;
-            String username_lower = document.getString("username_lower");
-            String uuid = document.getString("uuid");
-            String data = document.getString("data");
-            registeredPlayers.put(username, new PlayerEntryV1(username, username_lower, uuid, data));
-        });
+        try {
+            collection.find().forEach(document -> {
+                String username = document.getString("username");
+                if (username == null) return;
+                String username_lower = document.getString("username_lower");
+                String uuid = document.getString("uuid");
+                String data = document.getString("data");
+                registeredPlayers.put(username, new PlayerEntryV1(username, username_lower, uuid, data));
+            });
+        } catch (Exception e) {
+            LogError("Error retrieving all user data", e);
+        }
         return registeredPlayers;
     }
 

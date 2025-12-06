@@ -41,5 +41,7 @@
   "text.easyauth.selfMarkAsOnline": "§aYou have marked yourself as an online player.",
   "text.easyauth.selfMarkAsOnlineWarning": "§6You are about to mark yourself as an online player.\n§6You will not be able to log in unless you have an online account.\n§6All data linked to the offline UUID (like villagers' discounts, pets) will be lost.\n§aTo proceed, type /account online \u003cpassword\u003e true.",
   "text.easyauth.accountNotFound": "§cOnline account not found.",
-  "text.easyauth.accountCheckFailed": "§cMojang server is unavailable. Please try again later."
+  "text.easyauth.accountCheckFailed": "§cMojang server is unavailable. Please try again later.",
+  "text.easyauth.unknownError": "§4An unknown error has occurred.",
+  "text.easyauth.databaseError": "§4Database error, see console for details."
 }

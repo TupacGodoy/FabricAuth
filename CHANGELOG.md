@@ -18,6 +18,7 @@
 
 #### Changes
 - Update Chinese translation [#233](https://github.com/NikitaCartes/EasyAuth/issues/233), thanks to @ShadyLeaf
+- Update Spanish translation [#250](https://github.com/NikitaCartes/EasyAuth/pull/250), thanks to @danielospina-b
 
 ---
 ### 3.4.0

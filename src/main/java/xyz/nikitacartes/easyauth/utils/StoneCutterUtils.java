@@ -1,6 +1,7 @@
 package xyz.nikitacartes.easyauth.utils;
 
 import com.mojang.authlib.GameProfile;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.player.PlayerEntity;
@@ -181,6 +182,10 @@ public class StoneCutterUtils {
         //?} else {
         /*player.startRiding(entity, true);
          *///?}
+    }
+
+    public static boolean isModLoaded(String modId) {
+        return FabricLoader.getInstance().isModLoaded(modId);
     }
 
 }

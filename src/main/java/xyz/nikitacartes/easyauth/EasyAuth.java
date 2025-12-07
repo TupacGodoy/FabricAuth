@@ -1,18 +1,10 @@
 package xyz.nikitacartes.easyauth;
 
 import com.mojang.brigadier.tree.CommandNode;
-import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.event.Event;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.player.*;
-import net.fabricmc.fabric.api.networking.v1.ServerLoginConnectionEvents;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
 import xyz.nikitacartes.easyauth.commands.*;
 import xyz.nikitacartes.easyauth.config.*;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
@@ -36,7 +28,7 @@ import java.util.regex.Pattern;
 import static xyz.nikitacartes.easyauth.config.ConfigMigration.migrateFromV1;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
-public class EasyAuth implements ModInitializer {
+public class EasyAuth {
     public static DbApi DB = null;
 
     public static final ExecutorService THREADPOOL = Executors.newCachedThreadPool();
@@ -53,11 +45,23 @@ public class EasyAuth implements ModInitializer {
     public static TechnicalConfigV1 technicalConfig;
     public static StorageConfigV1 storageConfig;
 
-    @Override
-    public void onInitialize() {
-        gameDirectory = FabricLoader.getInstance().getGameDir();
-        LogInfo("EasyAuth mod by NikitaCartes");
 
+    public static void loadDatabase() {
+        if (storageConfig.databaseType.equalsIgnoreCase("mysql")) {
+            DB = new MySQL(storageConfig);
+        } else if (storageConfig.databaseType.equalsIgnoreCase("mongodb")) {
+            DB = new MongoDB(storageConfig);
+        } else {
+            DB = new SQLite(storageConfig);
+        }
+        try {
+            DB.connect();
+        } catch (DBApiException e) {
+            LogError("Error while set up database connection", e);
+        }
+    }
+
+    public static void migrateConfigs() {
         File file = new File(gameDirectory + "/config/EasyAuth");
         if (!file.exists()) {
             if (!file.mkdirs()) {
@@ -65,50 +69,9 @@ public class EasyAuth implements ModInitializer {
             }
             ConfigMigration.migrateFromV0();
         }
-
-        loadConfigs();
-
-        if (EasyAuth.storageConfig.databaseType.equalsIgnoreCase("mysql")) {
-            DB = new MySQL(EasyAuth.storageConfig);
-        } else if (EasyAuth.storageConfig.databaseType.equalsIgnoreCase("mongodb")) {
-            DB = new MongoDB(EasyAuth.storageConfig);
-        } else {
-            DB = new SQLite(EasyAuth.storageConfig);
-        }
-        try {
-            DB.connect();
-        } catch (DBApiException e) {
-            LogError("Error while set up database connection", e);
-        }
-
-        // Registering the commands
-        CommandRegistrationCallback.EVENT.register((dispatcher, dedicated, environment) -> {
-            RegisterCommand.registerCommand(dispatcher);
-            LoginCommand.registerCommand(dispatcher);
-            LogoutCommand.registerCommand(dispatcher);
-            AuthCommand.registerCommand(dispatcher);
-            AccountCommand.registerCommand(dispatcher);
-        });
-
-        // From Fabric API
-        PlayerBlockBreakEvents.BEFORE.register((world, player, blockPos, blockState, blockEntity) -> AuthEventHandler.onBreakBlock(player));
-        UseBlockCallback.EVENT.register((player, world, hand, blockHitResult) -> AuthEventHandler.onUseBlock(player));
-        UseItemCallback.EVENT.register((player, world, hand) -> AuthEventHandler.onUseItem(player));
-        AttackEntityCallback.EVENT.register((player, world, hand, entity, entityHitResult) -> AuthEventHandler.onAttackEntity(player));
-        UseEntityCallback.EVENT.register((player, world, hand, entity, entityHitResult) -> AuthEventHandler.onUseEntity(player));
-        ServerLifecycleEvents.START_DATA_PACK_RELOAD.register((server, serverResourceManager) -> {
-            reloadConfigs(server);
-            langConfig.configurationReloaded.send(server);
-        });
-        ServerLifecycleEvents.SERVER_STARTED.register(this::onStartServer);
-        ServerLifecycleEvents.SERVER_STOPPED.register(this::onStopServer);
-
-        Identifier earlyPhase = Identifier.of("easyauth", "early");
-        ServerLoginConnectionEvents.QUERY_START.addPhaseOrdering(earlyPhase, Event.DEFAULT_PHASE);
-        ServerLoginConnectionEvents.QUERY_START.register(earlyPhase, AuthEventHandler::onPreLogin);
     }
 
-    private void onStartServer(MinecraftServer server) {
+    static void onStartServer(MinecraftServer server) {
         try {
             serverProp.load(new FileReader(gameDirectory + "/server.properties"));
             if (Boolean.parseBoolean(serverProp.getProperty("enforce-secure-profile"))) {
@@ -129,7 +92,7 @@ public class EasyAuth implements ModInitializer {
         }
     }
 
-    private void onStopServer(MinecraftServer server) {
+    static void onStopServer(MinecraftServer server) {
         LogInfo("Shutting down EasyAuth.");
 
         // Closing threads

@@ -17,7 +17,7 @@
   "environment": "server",
   "entrypoints": {
     "main": [
-      "xyz.nikitacartes.easyauth.EasyAuth"
+      "xyz.nikitacartes.easyauth.EasyAuthFabric"
     ]
   },
   "accessWidener": "accesswidener/${accessWidener}",

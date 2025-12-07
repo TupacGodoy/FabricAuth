@@ -1,13 +1,10 @@
 package xyz.nikitacartes.easyauth.event;
 
 import com.mojang.authlib.GameProfile;
-import net.fabricmc.fabric.api.networking.v1.PacketSender;
-import net.fabricmc.fabric.api.networking.v1.ServerLoginNetworking;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
-import net.minecraft.server.MinecraftServer;
 //? if >= 1.21.9 {
 import net.minecraft.server.PlayerConfigEntry;
 //?}
@@ -323,7 +320,7 @@ public class AuthEventHandler {
         return ActionResult.PASS;
     }
 
-    public static void onPreLogin(ServerLoginNetworkHandler netHandler, MinecraftServer server, PacketSender packetSender, ServerLoginNetworking.LoginSynchronizer sync) {
+    public static void onPreLogin(ServerLoginNetworkHandler netHandler) {
         if (extendedConfig.forcedOfflineUuid && netHandler.profile != null) {
             //? if >= 1.21.9 {
             netHandler.profile = Uuids.getOfflinePlayerProfile(netHandler.profile.name());

@@ -47,7 +47,7 @@ This mod supports multiple languages.
 | Czech <br/>(cs_cz)                                                      |       13        |                        @DavidCZ2051, @Thewest123                        |
 | German <br/>(de_de)                                                     |       16        |                                 @X00LA                                  |
 | English <br/>(en_gb, en_us)                                             |        0        |                        @samolego, @NikitaCartes                         |
-| Spanish <br/>(es_ar, es_cl, es_ec, <br/>es_es, es_mx, es_uy,<br/>es_ve) |       16        |                      @Zailer43, @DanielTrejoBorjas                      |
+| Spanish <br/>(es_ar, es_cl, es_ec, <br/>es_es, es_mx, es_uy,<br/>es_ve) |        0        |             @Zailer43, @DanielTrejoBorjas, @danielospina-b              |
 | French <br/>(fr_fr)                                                     |       11        |                          @Uxzylon, @Sky-NiniKo                          |
 | Hungarian <br/>(hu_hu)                                                  |       16        |                             @Bendimester23                              |
 | Italian <br/>(it_it)                                                    |       13        |                               @Rizzo1812                                |

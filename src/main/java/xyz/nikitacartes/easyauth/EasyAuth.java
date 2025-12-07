@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import static xyz.nikitacartes.easyauth.config.ConfigMigration.migrateFromV1;
+import static xyz.nikitacartes.easyauth.config.ConfigMigration.migrateFromV2;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
 public class EasyAuth {
@@ -110,46 +111,39 @@ public class EasyAuth {
         DB.close();
     }
 
-    public static void loadConfigs() {
-        VersionConfig version = VersionConfig.load();
+    private static final int CURRENT_CONFIG_VERSION = 3;
 
-        switch (version.configVersion) {
-            case -1: {
-                EasyAuth.config = MainConfigV1.create();
-                EasyAuth.technicalConfig = TechnicalConfigV1.create();
-                EasyAuth.langConfig = LangConfigV1.create();
-                EasyAuth.extendedConfig = ExtendedConfigV1.create();
-                EasyAuth.storageConfig = StorageConfigV1.create();
-                break;
-            }
-            case 1: {
-                EasyAuth.config = MainConfigV1.load();
-                EasyAuth.technicalConfig = TechnicalConfigV1.load();
-                EasyAuth.langConfig = LangConfigV1.load();
-                EasyAuth.extendedConfig = ExtendedConfigV1.load();
-                EasyAuth.storageConfig = StorageConfigV1.load();
-                migrateFromV1();
-                break;
-            }
-            case 2: {
-                EasyAuth.config = MainConfigV1.load();
-                EasyAuth.technicalConfig = TechnicalConfigV1.load();
-                EasyAuth.langConfig = LangConfigV1.load();
-                EasyAuth.extendedConfig = ExtendedConfigV1.load();
-                EasyAuth.storageConfig = StorageConfigV1.load();
-                break;
-            }
-            default: {
-                LogError("Unknown config version: " + version.configVersion + "\n Using last known version");
-                EasyAuth.config = MainConfigV1.load();
-                EasyAuth.technicalConfig = TechnicalConfigV1.load();
-                EasyAuth.langConfig = LangConfigV1.load();
-                EasyAuth.extendedConfig = ExtendedConfigV1.load();
-                EasyAuth.storageConfig = StorageConfigV1.load();
-                break;
-            }
+    public static void loadConfigs() {
+        int configVersion = VersionConfig.load().configVersion;
+
+        if (configVersion == -1) {
+            // Fresh install - create default configs
+            EasyAuth.config = MainConfigV1.create();
+            EasyAuth.technicalConfig = TechnicalConfigV1.create();
+            EasyAuth.langConfig = LangConfigV1.create();
+            EasyAuth.extendedConfig = ExtendedConfigV1.create();
+            EasyAuth.storageConfig = StorageConfigV1.create();
+            return;
         }
-        AuthEventHandler.usernamePattern = Pattern.compile(EasyAuth.extendedConfig.usernameRegexp);
+
+        if (configVersion > CURRENT_CONFIG_VERSION) {
+            LogError("Unknown config version: " + configVersion + "\n Using last known version");
+        }
+
+        // Load existing configs
+        EasyAuth.config = MainConfigV1.load();
+        EasyAuth.technicalConfig = TechnicalConfigV1.load();
+        EasyAuth.langConfig = LangConfigV1.load();
+        EasyAuth.extendedConfig = ExtendedConfigV1.load();
+        EasyAuth.storageConfig = StorageConfigV1.load();
+
+        // Apply migrations sequentially
+        if (configVersion < 2) {
+            migrateFromV1();
+        }
+        if (configVersion < 3) {
+            migrateFromV2();
+        }
     }
 
     public static void saveConfigs() {

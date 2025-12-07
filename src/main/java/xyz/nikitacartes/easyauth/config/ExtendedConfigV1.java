@@ -2,8 +2,10 @@ package xyz.nikitacartes.easyauth.config;
 
 import org.spongepowered.configurate.objectmapping.ConfigSerializable;
 import org.spongepowered.configurate.objectmapping.meta.Comment;
+import xyz.nikitacartes.easyauth.event.AuthEventHandler;
 
 import java.util.ArrayList;
+import java.util.regex.Pattern;
 
 @ConfigSerializable
 public class ExtendedConfigV1 extends ConfigTemplate {
@@ -191,6 +193,7 @@ public class ExtendedConfigV1 extends ConfigTemplate {
             config = new ExtendedConfigV1();
             config.save();
         }
+        AuthEventHandler.usernamePattern = Pattern.compile(config.usernameRegexp);
         return config;
     }
 
@@ -199,6 +202,7 @@ public class ExtendedConfigV1 extends ConfigTemplate {
         if (config == null) {
             throw new RuntimeException("Failed to load extended.conf");
         }
+        AuthEventHandler.usernamePattern = Pattern.compile(config.usernameRegexp);
         return config;
     }
 

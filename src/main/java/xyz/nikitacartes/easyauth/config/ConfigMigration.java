@@ -168,6 +168,16 @@ public class ConfigMigration {
 
         LogInfo("Migration completed in " + (System.currentTimeMillis() - now) + "ms");
     }
+
+    public static void migrateFromV2() {
+        LogInfo("Migrating config from v2 to v3");
+
+        EasyAuth.extendedConfig.save();
+        EasyAuth.langConfig.save();
+
+        EasyAuth.config.configVersion = 3;
+        EasyAuth.config.save();
+    }
     
     private static String notNull(String string) {
         return string == null ? "" : string;

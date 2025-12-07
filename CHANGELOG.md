@@ -15,6 +15,7 @@
 - Server crash during config reload [#248](https://github.com/NikitaCartes/EasyAuth/issues/248)
 - Incorrect messages when deleting/updating non-existing account
 - Sometimes players are not deleted properly from the database
+- Config not migrating after adding new options [#239](https://github.com/NikitaCartes/EasyAuth/issues/239)
 
 #### Changes
 - Update Chinese translation [#233](https://github.com/NikitaCartes/EasyAuth/issues/233), thanks to @ShadyLeaf

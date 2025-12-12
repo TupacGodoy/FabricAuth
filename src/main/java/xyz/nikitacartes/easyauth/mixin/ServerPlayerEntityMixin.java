@@ -276,7 +276,17 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
     }
 
     // Player item dropping
-    @Inject(method = "dropSelectedItem(Z)Z", at = @At("HEAD"), cancellable = true)
+    //? if >= 1.21.11 {
+    @Inject(method = "dropSelectedItem(Z)V", at = @At("HEAD"), cancellable = true)
+    private void dropSelectedItem(boolean entireStack, CallbackInfo ci) {
+        ActionResult result = AuthEventHandler.onDropItem(player);
+
+        if (result == ActionResult.FAIL) {
+            ci.cancel();
+        }
+    }
+    //?} else {
+    /*@Inject(method = "dropSelectedItem(Z)Z", at = @At("HEAD"), cancellable = true)
     private void dropSelectedItem(boolean dropEntireStack, CallbackInfoReturnable<Boolean> cir) {
         ActionResult result = AuthEventHandler.onDropItem(player);
 
@@ -284,6 +294,7 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
             cir.setReturnValue(false);
         }
     }
+    *///?}
 
     @Inject(method = "copyFrom(Lnet/minecraft/server/network/ServerPlayerEntity;Z)V", at = @At("RETURN"))
     private void copyFrom(ServerPlayerEntity oldPlayer, boolean alive, CallbackInfo ci) {

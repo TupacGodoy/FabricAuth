@@ -2,10 +2,10 @@ plugins {
     id("java")
     id("java-library")
     kotlin("jvm") version "2.2.0"
-    id("fabric-loom") version "1.13-SNAPSHOT"
+    id("fabric-loom") version "1.14-SNAPSHOT"
     id("com.google.devtools.ksp") version "2.2.0-2.0.2"
     id("dev.kikugie.fletching-table.fabric") version "0.1.0-alpha.22"
-    id("com.gradleup.shadow") version "9.0.2"
+    id("com.gradleup.shadow") version "9.3.0"
     id("me.modmuss50.mod-publish-plugin") version "0.8.4"
 }
 
@@ -33,6 +33,7 @@ repositories {
 base.archivesName = "${property("mod_id")}-mc${property("minecraft_version")}"
 
 val awFile = when {
+    stonecutter.eval(stonecutter.current.version, ">=1.21.11") -> "easyauth.1.21.11.accesswidener"
     stonecutter.eval(stonecutter.current.version, ">=1.21.9") -> "easyauth.1.21.9.accesswidener"
     stonecutter.eval(stonecutter.current.version, ">=1.21.6") -> "easyauth.1.21.6.accesswidener"
     stonecutter.eval(stonecutter.current.version, ">=1.21.5") -> "easyauth.1.21.5.accesswidener"
@@ -43,8 +44,8 @@ val awFile = when {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 loom {
@@ -184,7 +185,7 @@ tasks.named<Copy>("processGametestResources") {
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
-    options.release.set(17)
+    options.release.set(21)
 }
 
 java {

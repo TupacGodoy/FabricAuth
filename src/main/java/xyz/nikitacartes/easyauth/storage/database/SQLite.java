@@ -1,12 +1,12 @@
 package xyz.nikitacartes.easyauth.storage.database;
 
 import net.minecraft.util.Uuids;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import xyz.nikitacartes.easyauth.EasyAuth;
 import xyz.nikitacartes.easyauth.config.StorageConfigV1;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.File;
 import java.sql.*;
 import java.util.HashMap;
@@ -135,7 +135,7 @@ public class SQLite implements DbApi {
         return null;
     }
 
-    public @Nonnull PlayerEntryV1 getUserDataOrCreate(String username) {
+    public @NotNull PlayerEntryV1 getUserDataOrCreate(String username) {
         PlayerEntryV1 playerEntry = getUserData(username);
         if (playerEntry == null) {
             playerEntry = new PlayerEntryV1(username);

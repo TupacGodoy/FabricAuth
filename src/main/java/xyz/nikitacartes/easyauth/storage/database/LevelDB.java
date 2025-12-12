@@ -2,11 +2,11 @@ package xyz.nikitacartes.easyauth.storage.database;
 
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.Options;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import xyz.nikitacartes.easyauth.EasyAuth;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
@@ -84,7 +84,7 @@ public class LevelDB implements DbApi {
         throw new UnsupportedOperationException("LevelDB is not supported anymore");
     }
 
-    public @Nonnull PlayerEntryV1 getUserDataOrCreate(String username) {
+    public @NotNull PlayerEntryV1 getUserDataOrCreate(String username) {
         throw new UnsupportedOperationException("LevelDB is not supported anymore");
     }
 

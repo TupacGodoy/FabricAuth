@@ -1,5 +1,9 @@
 package xyz.nikitacartes.easyauth.integrations;
 
+//? if >= 1.21.11 {
+import net.minecraft.command.DefaultPermissions;
+import net.minecraft.command.permission.Permission;
+//?}
 import net.minecraft.server.command.ServerCommandSource;
 import org.jetbrains.annotations.NotNull;
 
@@ -22,7 +26,23 @@ public class Permissions {
         if (technicalConfig.permissionsLoaded) {
             return source -> check(source, permission, defaultRequiredLevel);
         } else {
-            return source -> source.hasPermissionLevel(defaultRequiredLevel);
+            //? if >= 1.21.11 {
+            return source -> source.getPermissions().hasPermission(permissionLevelFromInt(defaultRequiredLevel));
+            //?} else {
+            /*return source -> source.hasPermissionLevel(defaultRequiredLevel);
+            *///?}
         }
     }
+
+    //? if >= 1.21.11 {
+    static Permission permissionLevelFromInt(int level) {
+        return switch (level) {
+            case 1 -> DefaultPermissions.MODERATORS;
+            case 2 -> DefaultPermissions.GAMEMASTERS;
+            case 3 -> DefaultPermissions.ADMINS;
+            case 4 -> DefaultPermissions.OWNERS;
+            default -> throw new IllegalArgumentException("Invalid permission level: " + level);
+        };
+    }
+    //?}
 }

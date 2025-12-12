@@ -9,11 +9,11 @@ import com.mongodb.client.model.InsertOneModel;
 import net.minecraft.util.Uuids;
 import org.bson.Document;
 import org.bson.UuidRepresentation;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import xyz.nikitacartes.easyauth.config.StorageConfigV1;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.*;
 
 import static com.mongodb.client.model.Filters.eq;
@@ -105,7 +105,7 @@ public class MongoDB implements DbApi {
         }
     }
 
-    public @Nonnull PlayerEntryV1 getUserDataOrCreate(String username) {
+    public @NotNull PlayerEntryV1 getUserDataOrCreate(String username) {
         PlayerEntryV1 playerEntry = getUserData(username);
         if (playerEntry == null) {
             playerEntry = new PlayerEntryV1(username);

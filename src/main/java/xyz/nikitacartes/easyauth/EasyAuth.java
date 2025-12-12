@@ -7,7 +7,6 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import xyz.nikitacartes.easyauth.commands.*;
 import xyz.nikitacartes.easyauth.config.*;
-import xyz.nikitacartes.easyauth.event.AuthEventHandler;
 import xyz.nikitacartes.easyauth.storage.database.*;
 import xyz.nikitacartes.easyauth.integrations.LuckPermsIntegration;
 
@@ -23,7 +22,6 @@ import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 
 import static xyz.nikitacartes.easyauth.config.ConfigMigration.migrateFromV1;
 import static xyz.nikitacartes.easyauth.config.ConfigMigration.migrateFromV2;

@@ -1,5 +1,6 @@
 package xyz.nikitacartes.easyauth.mixin;
 
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
@@ -50,6 +51,8 @@ import xyz.nikitacartes.easyauth.utils.StoneCutterUtils;
 
 import java.io.File;
 import java.net.SocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
@@ -354,7 +357,39 @@ public abstract class PlayerManagerMixin {
         }
     }
 
-    @Inject(method = "createStatHandler(Lnet/minecraft/entity/player/PlayerEntity;)Lnet/minecraft/stat/ServerStatHandler;",
+    //? if >= 1.21.11 {
+    @ModifyReturnValue(method = "locateStatFilePath(Lcom/mojang/authlib/GameProfile;)Ljava/nio/file/Path;",
+            at = @At("RETURN")
+    )
+    private Path migrateOfflineStats(Path original, @Local(ordinal = 0) Path parentPath, @Local(ordinal = 1) Path onlinePath, @Local(argsOnly = true) GameProfile profile) {
+        if (!server.isOnlineMode() || extendedConfig.forcedOfflineUuid || Files.exists(onlinePath)) {
+            return original;
+        }
+
+        PlayerEntity player = server.getPlayerManager().getPlayer(profile.id());
+        if (player != null && ((PlayerAuth) player).easyAuth$isUsingMojangAccount()) {
+            String playername = getName(profile);
+            Path offlinePath = parentPath.resolve(Uuids.getOfflinePlayerUuid(playername) + ".json");
+            if (!Files.exists(offlinePath)) {
+                return original;
+            }
+            try {
+                Files.move(offlinePath, onlinePath);
+                LogDebug("Migrated offline stats (" + offlinePath.getFileName() + ") for player " + playername + " to online stats (" + onlinePath.getFileName() + ")");
+            } catch (Exception e) {
+                LogWarn("Failed to migrate offline stats (" + offlinePath.getFileName() + ") for player " + playername + " to online stats (" + onlinePath.getFileName() + "): " + e.getMessage());
+                return original;
+            }
+            return onlinePath;
+        }
+
+        return original;
+    }
+    //?}
+
+
+    //? if < 1.21.11 {
+    /*@Inject(method = "createStatHandler(Lnet/minecraft/entity/player/PlayerEntity;)Lnet/minecraft/stat/ServerStatHandler;",
             at = @At(
                     value = "INVOKE",
                     target = "Ljava/util/Map;put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"
@@ -365,15 +400,18 @@ public abstract class PlayerManagerMixin {
         if (server.isOnlineMode() && !extendedConfig.forcedOfflineUuid && ((PlayerAuth) player).easyAuth$isUsingMojangAccount() && !onlineFile.exists()) {
             String playername = getName(player.getGameProfile());
             File offlineFile = new File(onlineFile.getParent(), Uuids.getOfflinePlayerUuid(playername) + ".json");
+            if (!offlineFile.exists()) {
+                return;
+            }
             if (!offlineFile.renameTo(onlineFile)) {
-                LogWarn("Failed to migrate offline stats (" + offlineFile.getName() + ") for player " + playername + " to online stats (" + onlineFile.getName() + ")");
+                LogWarn("Failed migrate offline stats (" + offlineFile.getName() + ") for player " + playername + " to online stats (" + onlineFile.getName() + ")");
+                serverStatHandler.file = onlineFile;
             } else {
                 LogDebug("Migrated offline stats (" + offlineFile.getName() + ") for player " + playername + " to online stats (" + onlineFile.getName() + ")");
             }
-
-            serverStatHandler.file = onlineFile;
         }
     }
+    *///?}
 
     //? if >= 1.21.9 {
     //?} else if >= 1.21.6 {

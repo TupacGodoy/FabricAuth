@@ -1,9 +1,9 @@
 package xyz.nikitacartes.easyauth.config;
 
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.configurate.objectmapping.ConfigSerializable;
 import org.spongepowered.configurate.objectmapping.meta.Comment;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 
 import static xyz.nikitacartes.easyauth.utils.StoneCutterUtils.isModLoaded;

@@ -2,6 +2,7 @@
 #### Add
 - Add support for a changing "invalid session" message when offline player connects with online nickname
 - Gamemode switching on login
+- Optional session by player
 
 #### Fix
 - Check how offline players work if they try to connect with a taken online account

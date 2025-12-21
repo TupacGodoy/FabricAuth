@@ -11,6 +11,12 @@
 ### 3.4.1
 ##### Minecraft 1.19.4, 1.20[.X], 1.21[.X]
 #### Fix
+- It wasn't possible to join the server using an online account if `forced-offline-uuid` was enabled
+
+---
+### 3.4.1
+##### Minecraft 1.19.4, 1.20[.X], 1.21[.X]
+#### Fix
 - Incompatibility with QuickBackupMulti mod [#232](https://github.com/NikitaCartes/EasyAuth/issues/232)
 - MongoDB connection [#247](https://github.com/NikitaCartes/EasyAuth/issues/247), thanks to @MemoKing34
 - Server crash during config reload [#248](https://github.com/NikitaCartes/EasyAuth/issues/248)

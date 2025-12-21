@@ -59,6 +59,10 @@ loom {
     }
     log4jConfigs.from(file("log4j.xml"))
 
+    decompilerOptions.named("vineflower") {
+        options.put("mark-corresponding-synthetics", "1") // Adds names to lambdas - useful for mixins
+    }
+
     runConfigs.all {
         ideConfigGenerated(true) // Run configurations are not created for subprojects by default
         runDir = "run" // Use a separate run directory for all configurations
@@ -186,6 +190,13 @@ tasks.named<Copy>("processGametestResources") {
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
     options.release.set(21)
+}
+
+tasks.register<Copy>("collectJars") {
+    group = "build"
+    from(tasks.remapJar.map { it.archiveFile })
+    into(rootProject.layout.buildDirectory.file("libs"))
+    dependsOn("build")
 }
 
 java {

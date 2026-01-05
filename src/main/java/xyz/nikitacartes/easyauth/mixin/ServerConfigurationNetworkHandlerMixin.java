@@ -3,7 +3,11 @@ package xyz.nikitacartes.easyauth.mixin;
 
 import com.google.common.net.InetAddresses;
 import com.mojang.authlib.GameProfile;
+import net.minecraft.network.ClientConnection;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ConnectedClientData;
 import net.minecraft.server.network.PrepareSpawnTask;
+import net.minecraft.server.network.ServerCommonNetworkHandler;
 import net.minecraft.server.network.ServerConfigurationNetworkHandler;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -25,7 +29,7 @@ import static xyz.nikitacartes.easyauth.EasyAuth.extendedConfig;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
 
 @Mixin(ServerConfigurationNetworkHandler.class)
-public abstract class ServerConfigurationNetworkHandlerMixin {
+public abstract class ServerConfigurationNetworkHandlerMixin extends ServerCommonNetworkHandler {
 
     @Shadow
     private PrepareSpawnTask prepareSpawnTask;
@@ -41,7 +45,7 @@ public abstract class ServerConfigurationNetworkHandlerMixin {
 
         PlayerEntryV1 entry = PlayersCache.get(profile.name());
         if ((entry == null) ||
-                (entry.onlineAccount == PlayerEntryV1.OnlineAccount.TRUE) ||
+                (this.server.isOnlineMode() && entry.onlineAccount == PlayerEntryV1.OnlineAccount.TRUE) ||
                 (config.floodgateAutoLogin && FloodgateApiHelper.isFloodgatePlayer(profile.id())) ||
                 (extendedConfig.skipAllAuthChecks)) {
             spawnTask.easyAuth$setAuthenticated(true);
@@ -68,6 +72,10 @@ public abstract class ServerConfigurationNetworkHandlerMixin {
 
         spawnTask.easyAuth$setAuthenticated(false);
         LogDebug(String.format("Player %s is not authenticated", profile.name()));
+    }
+
+    public ServerConfigurationNetworkHandlerMixin(MinecraftServer server, ClientConnection connection, ConnectedClientData clientData) {
+        super(server, connection, clientData);
     }
 }
 //?}

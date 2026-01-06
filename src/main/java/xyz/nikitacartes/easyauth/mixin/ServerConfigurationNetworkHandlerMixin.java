@@ -45,7 +45,7 @@ public abstract class ServerConfigurationNetworkHandlerMixin extends ServerCommo
 
         PlayerEntryV1 entry = PlayersCache.get(profile.name());
         if ((entry == null) ||
-                (this.server.isOnlineMode() && entry.onlineAccount == PlayerEntryV1.OnlineAccount.TRUE) ||
+                (this.server.isOnlineMode() && config.premiumAutoLogin && entry.onlineAccount == PlayerEntryV1.OnlineAccount.TRUE) ||
                 (config.floodgateAutoLogin && FloodgateApiHelper.isFloodgatePlayer(profile.id())) ||
                 (extendedConfig.skipAllAuthChecks)) {
             spawnTask.easyAuth$setAuthenticated(true);

@@ -240,4 +240,47 @@ public class SQLite implements DbApi {
             throw new RuntimeException(e);
         }
     }
+
+    @Override
+    public int countAccountsByIp(String ipAddress) {
+        try {
+            PreparedStatement statement = connection.prepareStatement(
+                    "SELECT COUNT(*) FROM " + config.sqlite.sqliteTable + " WHERE data LIKE ?;"
+            );
+            statement.setString(1, "%\"last_ip\":\"" + ipAddress + "\"%");
+            ResultSet resultSet = statement.executeQuery();
+            int count = 0;
+            if (resultSet.next()) {
+                count = resultSet.getInt(1);
+            }
+            resultSet.close();
+            statement.close();
+            LogDebug("Counted " + count + " accounts for IP " + ipAddress);
+            return count;
+        } catch (SQLException e) {
+            LogError("Error counting accounts by IP", e);
+            return 0;
+        }
+    }
+
+    @Override
+    public java.util.List<String> getUsernamesByIp(String ipAddress) {
+        java.util.List<String> usernames = new java.util.ArrayList<>();
+        try {
+            PreparedStatement statement = connection.prepareStatement(
+                    "SELECT username FROM " + config.sqlite.sqliteTable + " WHERE data LIKE ?;"
+            );
+            statement.setString(1, "%\"last_ip\":\"" + ipAddress + "\"%");
+            ResultSet resultSet = statement.executeQuery();
+            while (resultSet.next()) {
+                usernames.add(resultSet.getString("username"));
+            }
+            resultSet.close();
+            statement.close();
+            LogDebug("Found " + usernames.size() + " usernames for IP " + ipAddress);
+        } catch (SQLException e) {
+            LogError("Error getting usernames by IP", e);
+        }
+        return usernames;
+    }
 }

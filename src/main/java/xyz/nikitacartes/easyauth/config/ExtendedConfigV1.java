@@ -179,6 +179,11 @@ public class ExtendedConfigV1 extends ConfigTemplate {
             Check offline players with online usernames every time they join the server for online account.""")
     public boolean checkOfflinePlayersWithOnlineUsernames = false;
 
+    @Comment("""
+            
+            IP Limit Settings - Restrict the number of accounts that can be registered/logged in from the same IP address.""")
+    public IpLimitSettings ipLimit = new IpLimitSettings();
+
     public ExtendedConfigV1() {
         super("extended.conf", """
                 ##                          ##
@@ -248,5 +253,36 @@ public class ExtendedConfigV1 extends ConfigTemplate {
             
             Read timeout in milliseconds.""")
         public int readTimeout = 5000;
+    }
+
+    @ConfigSerializable
+    public static final class IpLimitSettings {
+        @Comment("""
+            
+            Enable IP-based account limit.
+            When enabled, limits the number of accounts that can be registered/logged in from the same IP address.""")
+        public boolean enabled = false;
+
+        @Comment("""
+            
+            Maximum number of accounts allowed per IP address.
+            Set to 0 to disable the limit.""")
+        public int maxAccountsPerIp = 2;
+
+        @Comment("""
+            
+            Block login attempts when the IP limit is exceeded.
+            If false, players can still log in but admins will be notified.""")
+        public boolean blockExcessLogins = true;
+
+        @Comment("""
+            
+            Notify admins (players with easyauth.admin permission) when a new IP address attempts to exceed the account limit.""")
+        public boolean notifyAdmins = true;
+
+        @Comment("""
+            
+            List of IP addresses that are exempt from the limit (e.g., localhost, trusted IPs).""")
+        public java.util.ArrayList<String> exemptIps = new java.util.ArrayList<>(java.util.Arrays.asList("127.0.0.1", "localhost"));
     }
 }

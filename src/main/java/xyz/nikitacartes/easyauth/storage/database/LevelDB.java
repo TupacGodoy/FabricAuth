@@ -104,4 +104,14 @@ public class LevelDB implements DbApi {
     public void migrateFromV1(HashMap<String, String> userCache) {
         throw new UnsupportedOperationException("LevelDB is not supported anymore");
     }
+
+    @Override
+    public int countAccountsByIp(String ipAddress) {
+        throw new UnsupportedOperationException("LevelDB is not supported anymore");
+    }
+
+    @Override
+    public java.util.List<String> getUsernamesByIp(String ipAddress) {
+        throw new UnsupportedOperationException("LevelDB is not supported anymore");
+    }
 }

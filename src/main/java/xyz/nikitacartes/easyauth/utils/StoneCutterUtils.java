@@ -188,4 +188,12 @@ public class StoneCutterUtils {
         return FabricLoader.getInstance().isModLoaded(modId);
     }
 
+    public static boolean isOperator(net.minecraft.server.PlayerManager playerManager, ServerPlayerEntity player) {
+        //? if >= 1.21.9 {
+        return playerManager.isOperator(new PlayerConfigEntry(player.getGameProfile()));
+        //?} else {
+        /*return playerManager.isOperator(player.getGameProfile());
+        *///?}
+    }
+
 }

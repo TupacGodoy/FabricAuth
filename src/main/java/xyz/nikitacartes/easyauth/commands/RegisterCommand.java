@@ -9,6 +9,7 @@ import xyz.nikitacartes.easyauth.integrations.Permissions;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.interfaces.PlayerAuth;
 import xyz.nikitacartes.easyauth.utils.StoneCutterUtils;
+import xyz.nikitacartes.easyauth.utils.IpLimitManager;
 
 import java.time.ZonedDateTime;
 
@@ -129,6 +130,21 @@ public class RegisterCommand {
             return 0;
         }
 
+        // Check IP limit before allowing registration
+        String username = StoneCutterUtils.getUsername(player);
+        String ipAddress = playerAuth.easyAuth$getIpAddress();
+        if (IpLimitManager.isIpLimitExceeded(ipAddress, username)) {
+            LogRegister("Player " + username + " exceeded IP limit from " + ipAddress);
+            if (IpLimitManager.shouldBlockExcessLogins()) {
+                IpLimitManager.notifyAdmins(source.getServer(), ipAddress, username);
+                langConfig.ipLimitExceeded.send(source);
+                return 0;
+            } else {
+                // Just notify admins but allow registration
+                IpLimitManager.notifyAdmins(source.getServer(), ipAddress, username);
+            }
+        }
+
         PlayerEntryV1 playerData = playerAuth.easyAuth$getPlayerEntryV1();
         if (!playerData.password.isEmpty()) {
             langConfig.alreadyRegistered.send(source);
@@ -146,8 +162,10 @@ public class RegisterCommand {
             playerData.lastAuthenticatedDate = ZonedDateTime.now();
             playerAuth.easyAuth$setPlayerEntryV1(playerData);
             playerData.update();
+            
+            // Invalidate IP cache after registration
+            IpLimitManager.invalidateCache(playerData.lastIp);
 
-            String username = StoneCutterUtils.getUsername(player);
             LogRegister("Player " + username + "{" + player.getUuidAsString() + "} successfully registered with password: " + playerData.password);
         });
         return 0;

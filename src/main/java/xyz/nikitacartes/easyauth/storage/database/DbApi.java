@@ -86,6 +86,22 @@ public interface DbApi {
      */
     void migrateFromV1(HashMap<String, String> userCache);
 
+    /**
+     * Counts the number of registered accounts associated with the given IP address.
+     *
+     * @param ipAddress the IP address to check
+     * @return the number of accounts registered with this IP
+     */
+    int countAccountsByIp(String ipAddress);
+
+    /**
+     * Gets all usernames associated with the given IP address.
+     *
+     * @param ipAddress the IP address to check
+     * @return list of usernames registered with this IP
+     */
+    java.util.List<String> getUsernamesByIp(String ipAddress);
+
     default PlayerEntryV1 migrateFromV1(String data, String username) {
         String lowerCaseUsername = username.toLowerCase(Locale.ENGLISH);
 

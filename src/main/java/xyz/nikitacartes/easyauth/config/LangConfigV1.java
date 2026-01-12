@@ -84,6 +84,13 @@ public class LangConfigV1 extends ConfigTemplate {
     public TranslatableText accountCheckFailed = new TranslatableText("accountCheckFailed");
     public TranslatableText databaseError = new TranslatableText("databaseError");
     public TranslatableText unknownError = new TranslatableText("unknownError");
+    public TranslatableText ipLimitExceeded = new TranslatableText("ipLimitExceeded");
+    public TranslatableText ipLimitAdminNotify = new TranslatableText("ipLimitAdminNotify");
+    public TranslatableText uuidSet = new TranslatableText("uuidSet");
+    public TranslatableText uuidCleared = new TranslatableText("uuidCleared");
+    public TranslatableText uuidChanged = new TranslatableText("uuidChanged");
+    public TranslatableText invalidUuid = new TranslatableText("invalidUuid");
+    public TranslatableText noForcedUuid = new TranslatableText("noForcedUuid");
 
     private static Map<String, String> translations = new HashMap<>();
 

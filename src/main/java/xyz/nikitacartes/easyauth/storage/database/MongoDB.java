@@ -194,4 +194,36 @@ public class MongoDB implements DbApi {
         if (!writeList.isEmpty()) collection.bulkWrite(writeList);
     }
 
+    @Override
+    public int countAccountsByIp(String ipAddress) {
+        try {
+            // Use regex to match the IP in the JSON data field
+            Document filter = new Document("data", new Document("$regex", "\"last_ip\":\"" + ipAddress + "\""));
+            long count = collection.countDocuments(filter);
+            LogDebug("Counted " + count + " accounts for IP " + ipAddress);
+            return (int) count;
+        } catch (Exception e) {
+            LogError("Error counting accounts by IP", e);
+            return 0;
+        }
+    }
+
+    @Override
+    public java.util.List<String> getUsernamesByIp(String ipAddress) {
+        java.util.List<String> usernames = new java.util.ArrayList<>();
+        try {
+            Document filter = new Document("data", new Document("$regex", "\"last_ip\":\"" + ipAddress + "\""));
+            collection.find(filter).forEach(document -> {
+                String username = document.getString("username");
+                if (username != null) {
+                    usernames.add(username);
+                }
+            });
+            LogDebug("Found " + usernames.size() + " usernames for IP " + ipAddress);
+        } catch (Exception e) {
+            LogError("Error getting usernames by IP", e);
+        }
+        return usernames;
+    }
+
 }

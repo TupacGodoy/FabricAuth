@@ -10,6 +10,7 @@ import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.utils.AuthHelper;
 import xyz.nikitacartes.easyauth.interfaces.PlayerAuth;
 import xyz.nikitacartes.easyauth.utils.StoneCutterUtils;
+import xyz.nikitacartes.easyauth.utils.IpLimitManager;
 
 import java.time.ZonedDateTime;
 
@@ -56,6 +57,21 @@ public class LoginCommand {
             langConfig.alreadyAuthenticated.send(source);
             return 0;
         }
+        
+        // Check IP limit before allowing login
+        String ipAddress = playerAuth.easyAuth$getIpAddress();
+        if (IpLimitManager.isIpLimitExceeded(ipAddress, username)) {
+            LogLogin("Player " + username + " exceeded IP limit from " + ipAddress);
+            if (IpLimitManager.shouldBlockExcessLogins()) {
+                IpLimitManager.notifyAdmins(source.getServer(), ipAddress, username);
+                langConfig.ipLimitExceeded.send(source);
+                return 0;
+            } else {
+                // Just notify admins but allow login
+                IpLimitManager.notifyAdmins(source.getServer(), ipAddress, username);
+            }
+        }
+        
         PlayerEntryV1 playerData = playerAuth.easyAuth$getPlayerEntryV1();
 
         AuthHelper.PasswordOptions passwordResult = AuthHelper.checkPassword(playerData, pass.toCharArray());
@@ -72,8 +88,15 @@ public class LoginCommand {
             playerAuth.easyAuth$restoreTrueLocation();
             playerData.lastAuthenticatedDate = ZonedDateTime.now();
             playerData.loginTries = 0;
+            String oldIp = playerData.lastIp;
             playerData.lastIp = playerAuth.easyAuth$getIpAddress();
             playerData.update();
+            
+            // Invalidate IP cache if IP changed
+            if (!oldIp.equals(playerData.lastIp)) {
+                IpLimitManager.invalidateCache(oldIp);
+                IpLimitManager.invalidateCache(playerData.lastIp);
+            }
             // player.getServer().getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, player));
             return 0;
         } else if (passwordResult == AuthHelper.PasswordOptions.NOT_REGISTERED) {

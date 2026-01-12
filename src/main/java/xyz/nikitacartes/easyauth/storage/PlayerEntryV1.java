@@ -81,6 +81,15 @@ public class PlayerEntryV1 {
     @SerializedName("data_version")
     public int dataVersion = 1;
 
+    /**
+     * Forced UUID for the player.
+     * When set, this UUID will be used instead of the default offline/online UUID.
+     * Useful for preserving player data when switching between online/offline modes.
+     */
+    @Expose
+    @SerializedName("forced_uuid")
+    public String forcedUuid = null;
+
 
     public PlayerEntryV1(String username, String usernameLowerCase, String uuid, String json) {
         PlayerEntryV1 entry = gson.fromJson(json, PlayerEntryV1.class);
@@ -98,6 +107,7 @@ public class PlayerEntryV1 {
         this.lastKickedDate = entry.lastKickedDate == null ? startOfTime : entry.lastKickedDate;
         this.registrationDate = entry.registrationDate == null ? startOfTime : entry.registrationDate;
         this.dataVersion = entry.dataVersion;
+        this.forcedUuid = entry.forcedUuid;
     }
 
     public PlayerEntryV1(String username) {

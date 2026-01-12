@@ -316,4 +316,49 @@ public class MySQL implements DbApi {
             LogError("Error migrating players data", e);
         }
     }
+
+    @Override
+    public int countAccountsByIp(String ipAddress) {
+        try {
+            reConnect();
+            PreparedStatement statement = MySQLConnection.prepareStatement(
+                    "SELECT COUNT(*) FROM " + config.mysql.mysqlTable + " WHERE JSON_EXTRACT(data, '$.last_ip') = ?;"
+            );
+            statement.setString(1, ipAddress);
+            ResultSet resultSet = statement.executeQuery();
+            int count = 0;
+            if (resultSet.next()) {
+                count = resultSet.getInt(1);
+            }
+            resultSet.close();
+            statement.close();
+            LogDebug("Counted " + count + " accounts for IP " + ipAddress);
+            return count;
+        } catch (SQLException e) {
+            LogError("Error counting accounts by IP", e);
+            return 0;
+        }
+    }
+
+    @Override
+    public java.util.List<String> getUsernamesByIp(String ipAddress) {
+        java.util.List<String> usernames = new java.util.ArrayList<>();
+        try {
+            reConnect();
+            PreparedStatement statement = MySQLConnection.prepareStatement(
+                    "SELECT username FROM " + config.mysql.mysqlTable + " WHERE JSON_EXTRACT(data, '$.last_ip') = ?;"
+            );
+            statement.setString(1, ipAddress);
+            ResultSet resultSet = statement.executeQuery();
+            while (resultSet.next()) {
+                usernames.add(resultSet.getString("username"));
+            }
+            resultSet.close();
+            statement.close();
+            LogDebug("Found " + usernames.size() + " usernames for IP " + ipAddress);
+        } catch (SQLException e) {
+            LogError("Error getting usernames by IP", e);
+        }
+        return usernames;
+    }
 }

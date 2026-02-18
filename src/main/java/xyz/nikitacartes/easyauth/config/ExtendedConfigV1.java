@@ -66,6 +66,17 @@ public class ExtendedConfigV1 extends ConfigTemplate {
 
     @Comment("""
             
+            Allow custom payload and custom click action packets to be processed while not logged in.""")
+    public boolean allowCustomPackets = false;
+
+    @Comment("""
+            
+            Allow all packets to be processed while not logged in.
+            Note: this setting overrides allowCustomPackets.""")
+    public boolean allowAllPackets = false;
+
+    @Comment("""
+            
             Hide player's inventory from them while not logged in.""")
     public boolean hideInventory = true;
 

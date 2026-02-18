@@ -178,6 +178,28 @@ public class ConfigMigration {
         EasyAuth.config.configVersion = 3;
         EasyAuth.config.save();
     }
+
+    public static void migrateFromV3() {
+        LogInfo("Migrating config from v3 to v4");
+
+        EasyAuth.extendedConfig.save();
+
+        EasyAuth.config.configVersion = 4;
+        EasyAuth.config.save();
+    }
+
+    public static void configMigration(int configVersion) {
+        // Apply migrations sequentially
+        if (configVersion < 2) {
+            migrateFromV1();
+        }
+        if (configVersion < 3) {
+            migrateFromV2();
+        }
+        if (configVersion < 4) {
+            migrateFromV3();
+        }
+    }
     
     private static String notNull(String string) {
         return string == null ? "" : string;

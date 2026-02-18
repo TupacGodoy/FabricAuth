@@ -44,11 +44,7 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
 
     @Final
     @Shadow
-    //? if >= 1.21.6 {
-    private MinecraftServer server;
-    //?} else {
-    /*public MinecraftServer server;
-    *///?}
+    public MinecraftServer server;
 
     @Unique
     private long kickTimer = config.kickTimeout * 20;
@@ -79,7 +75,7 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
     private boolean canSkipAuth = this.player.getClass() != ServerPlayerEntity.class;
 
     @Unique
-    private boolean isAuthenticated = this.player.getClass() != ServerPlayerEntity.class;
+    private volatile boolean isAuthenticated = this.player.getClass() != ServerPlayerEntity.class;
 
     @Unique
     private boolean isUsingMojangAccount = false;

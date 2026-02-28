@@ -133,7 +133,7 @@ public abstract class ServerLoginNetworkHandlerMixin {
         if (playerData != null && playerData.forcedUuid != null && !playerData.forcedUuid.isEmpty()) {
             try {
                 UUID forcedUuid = UUID.fromString(playerData.forcedUuid);
-                LogDebug("Using forced UUID " + forcedUuid + " for player " + name);
+                LogInfo("Using forced UUID " + forcedUuid + " for player " + name);
                 return new GameProfile(forcedUuid, name);
             } catch (IllegalArgumentException e) {
                 LogError("Invalid forced UUID for player " + name + ": " + playerData.forcedUuid, e);

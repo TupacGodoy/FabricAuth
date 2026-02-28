@@ -23,8 +23,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static xyz.nikitacartes.easyauth.config.ConfigMigration.migrateFromV1;
-import static xyz.nikitacartes.easyauth.config.ConfigMigration.migrateFromV2;
+import static xyz.nikitacartes.easyauth.config.ConfigMigration.*;
+import static xyz.nikitacartes.easyauth.config.MainConfigV1.CURRENT_CONFIG_VERSION;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
 public class EasyAuth {
@@ -109,8 +109,6 @@ public class EasyAuth {
         DB.close();
     }
 
-    private static final int CURRENT_CONFIG_VERSION = 3;
-
     public static void loadConfigs() {
         int configVersion = VersionConfig.load().configVersion;
 
@@ -141,6 +139,9 @@ public class EasyAuth {
         }
         if (configVersion < 3) {
             migrateFromV2();
+        }
+        if (configVersion < 4) {
+            migrateFromV3();
         }
     }
 

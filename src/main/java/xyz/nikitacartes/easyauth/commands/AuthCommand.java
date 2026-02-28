@@ -514,11 +514,7 @@ public class AuthCommand {
             entry.forcedUuid = uuid.toString();
             entry.update();
 
-            // Calculate what the offline UUID would be for reference
-            UUID offlineUuid = Uuids.getOfflinePlayerUuid(username);
-
             langConfig.uuidSet.send(source, username, uuid.toString());
-            source.sendMessage(Text.literal("§7(Offline UUID would be: " + offlineUuid + ")"));
 
             // Kick the player if online so they rejoin with the new UUID
             ServerPlayerEntity player = source.getServer().getPlayerManager().getPlayer(username);

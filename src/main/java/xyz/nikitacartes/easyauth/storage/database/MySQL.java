@@ -8,7 +8,9 @@ import xyz.nikitacartes.easyauth.config.StorageConfigV1;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.extendedConfig;
@@ -45,6 +47,7 @@ public class MySQL implements DbApi {
                                             `username_lower` VARCHAR(255) NOT NULL,
                                             `uuid` VARCHAR(255) NULL,
                                             `data` JSON NOT NULL,
+                                            `last_ip` VARCHAR(45) NULL,
                                             PRIMARY KEY (`id`), UNIQUE (`username`)
                                         ) ENGINE = InnoDB;""",
                                 config.mysql.mysqlDatabase,
@@ -71,6 +74,19 @@ public class MySQL implements DbApi {
                         throw new DBApiException("Error adding username, username_lower columns or changing uuid column", e);
                     }
                 }
+                columns.close();
+                // Check if 'last_ip' column exists
+                columns = metaData.getColumns(null, null, config.mysql.mysqlTable, "last_ip");
+                if (!columns.next()) {
+                    try (Statement alterTableStatement = MySQLConnection.createStatement()) {
+                        alterTableStatement.executeUpdate(String.format("ALTER TABLE `%s`.`%s` ADD COLUMN `last_ip` VARCHAR(45) NULL;", config.mysql.mysqlDatabase, config.mysql.mysqlTable));
+                        LogDebug("Added column 'last_ip' to the existing table.");
+                    } catch (SQLException e) {
+                        MySQLConnection = null;
+                        throw new DBApiException("Error adding last_ip column", e);
+                    }
+                }
+                columns.close();
             }
             preparedStatement.close();
         } catch (ClassNotFoundException | SQLException e) {
@@ -130,11 +146,12 @@ public class MySQL implements DbApi {
         LogDebug("Registering new player " + data.username + ": " + data.toJson());
         try {
             reConnect();
-            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("INSERT INTO  " + config.mysql.mysqlTable + " (username, username_lower, uuid, data) VALUES (?, ?, ?, ?);");
+            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("INSERT INTO  " + config.mysql.mysqlTable + " (username, username_lower, uuid, data, last_ip) VALUES (?, ?, ?, ?, ?);");
             preparedStatement.setString(1, data.username);
             preparedStatement.setString(2, data.usernameLowerCase);
             preparedStatement.setString(3, data.uuid == null ? null : data.uuid.toString());
             preparedStatement.setString(4, data.toJson());
+            preparedStatement.setString(5, data.lastIp);
             if (preparedStatement.executeUpdate() == 0) {
                 LogError("Failed to register user " + data.username + ": " + data.toJson());
             }
@@ -232,10 +249,11 @@ public class MySQL implements DbApi {
         LogDebug("Updating player data for " + data.username + ": " + data.toJson());
         try {
             reConnect();
-            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("UPDATE " + config.mysql.mysqlTable + " SET uuid = ?, data = ? WHERE username = ?;");
+            PreparedStatement preparedStatement = MySQLConnection.prepareStatement("UPDATE " + config.mysql.mysqlTable + " SET uuid = ?, data = ?, last_ip = ? WHERE username = ?;");
             preparedStatement.setString(1, data.uuid == null ? null : data.uuid.toString());
             preparedStatement.setString(2, data.toJson());
-            preparedStatement.setString(3, data.username);
+            preparedStatement.setString(3, data.lastIp);
+            preparedStatement.setString(4, data.username);
             int updatedRows = preparedStatement.executeUpdate();
             preparedStatement.close();
             if (updatedRows == 0) {
@@ -269,6 +287,51 @@ public class MySQL implements DbApi {
             LogError("Error retrieving all data", e);
         }
         return registeredPlayers;
+    }
+
+    @Override
+    public int countAccountsByIp(String ipAddress) {
+        try {
+            reConnect();
+            PreparedStatement statement = MySQLConnection.prepareStatement(
+                    "SELECT COUNT(*) FROM " + config.mysql.mysqlTable + " WHERE last_ip = ?;"
+            );
+            statement.setString(1, ipAddress);
+            ResultSet resultSet = statement.executeQuery();
+            int count = 0;
+            if (resultSet.next()) {
+                count = resultSet.getInt(1);
+            }
+            resultSet.close();
+            statement.close();
+            LogDebug("Counted " + count + " accounts for IP " + ipAddress);
+            return count;
+        } catch (SQLException e) {
+            LogError("Error counting accounts by IP", e);
+            return 0;
+        }
+    }
+
+    @Override
+    public List<String> getUsernamesByIp(String ipAddress) {
+        List<String> usernames = new ArrayList<>();
+        try {
+            reConnect();
+            PreparedStatement statement = MySQLConnection.prepareStatement(
+                    "SELECT username FROM " + config.mysql.mysqlTable + " WHERE last_ip = ?;"
+            );
+            statement.setString(1, ipAddress);
+            ResultSet resultSet = statement.executeQuery();
+            while (resultSet.next()) {
+                usernames.add(resultSet.getString("username"));
+            }
+            resultSet.close();
+            statement.close();
+            LogDebug("Found " + usernames.size() + " usernames for IP " + ipAddress);
+        } catch (SQLException e) {
+            LogError("Error getting usernames by IP", e);
+        }
+        return usernames;
     }
 
     @Override
@@ -317,48 +380,35 @@ public class MySQL implements DbApi {
         }
     }
 
+    /**
+     * Migrates IP addresses from JSON to column.
+     */
     @Override
-    public int countAccountsByIp(String ipAddress) {
+    public void migrateFromV3() {
         try {
             reConnect();
-            PreparedStatement statement = MySQLConnection.prepareStatement(
-                    "SELECT COUNT(*) FROM " + config.mysql.mysqlTable + " WHERE JSON_EXTRACT(data, '$.last_ip') = ?;"
-            );
-            statement.setString(1, ipAddress);
-            ResultSet resultSet = statement.executeQuery();
-            int count = 0;
-            if (resultSet.next()) {
-                count = resultSet.getInt(1);
-            }
-            resultSet.close();
+            Statement statement = MySQLConnection.createStatement();
+            statement.executeUpdate("UPDATE " + config.mysql.mysqlTable + " SET last_ip = JSON_UNQUOTE(JSON_EXTRACT(data, '$.last_ip'));");
             statement.close();
-            LogDebug("Counted " + count + " accounts for IP " + ipAddress);
-            return count;
+            LogInfo("Migrated IPs successfully.");
         } catch (SQLException e) {
-            LogError("Error counting accounts by IP", e);
-            return 0;
-        }
-    }
-
-    @Override
-    public java.util.List<String> getUsernamesByIp(String ipAddress) {
-        java.util.List<String> usernames = new java.util.ArrayList<>();
-        try {
-            reConnect();
-            PreparedStatement statement = MySQLConnection.prepareStatement(
-                    "SELECT username FROM " + config.mysql.mysqlTable + " WHERE JSON_EXTRACT(data, '$.last_ip') = ?;"
-            );
-            statement.setString(1, ipAddress);
-            ResultSet resultSet = statement.executeQuery();
-            while (resultSet.next()) {
-                usernames.add(resultSet.getString("username"));
+            LogError("Error migrating IPs using SQL", e);
+            LogInfo("Falling back to Java migration...");
+            // Fallback
+            try {
+                HashMap<String, PlayerEntryV1> allData = getAllData();
+                PreparedStatement preparedStatement = MySQLConnection.prepareStatement("UPDATE " + config.mysql.mysqlTable + " SET last_ip = ? WHERE username = ?;");
+                for (PlayerEntryV1 entry : allData.values()) {
+                    preparedStatement.setString(1, entry.lastIp);
+                    preparedStatement.setString(2, entry.username);
+                    preparedStatement.addBatch();
+                }
+                preparedStatement.executeBatch();
+                preparedStatement.close();
+                LogInfo("Migrated IPs successfully using Java fallback.");
+            } catch (SQLException ex) {
+                LogError("Error migrating IPs using Java fallback", ex);
             }
-            resultSet.close();
-            statement.close();
-            LogDebug("Found " + usernames.size() + " usernames for IP " + ipAddress);
-        } catch (SQLException e) {
-            LogError("Error getting usernames by IP", e);
         }
-        return usernames;
     }
 }

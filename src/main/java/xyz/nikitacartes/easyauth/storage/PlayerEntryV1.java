@@ -116,7 +116,7 @@ public class PlayerEntryV1 {
     }
 
     public PlayerEntryV1(String username, UUID uuid) {
-        new PlayerEntryV1(username);
+        this(username);
         this.uuid = uuid;
     }
 

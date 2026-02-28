@@ -19,9 +19,11 @@ import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogInfo;
 public class IpLimitManager {
 
     // Cache for IP account counts to reduce database queries
+    // ToDo: Combine both maps into a single cache that stores both list of accounts and timestamp together to avoid potential inconsistencies
     private static final ConcurrentHashMap<String, Integer> ipAccountCountCache = new ConcurrentHashMap<>();
     
     // Cache expiry time in milliseconds (5 minutes)
+    // ToDo: Make this configurable in ExtendedConfigV1
     private static final long CACHE_EXPIRY_MS = 5 * 60 * 1000;
     private static final ConcurrentHashMap<String, Long> cacheTimestamps = new ConcurrentHashMap<>();
 
@@ -32,6 +34,7 @@ public class IpLimitManager {
      * @param currentUsername the username of the player attempting to login (excluded from count)
      * @return true if the IP has exceeded the limit, false otherwise
      */
+    // ToDo: PlayerEntryV1 as optional parameter to avoid extra database query if we already have player data
     public static boolean isIpLimitExceeded(String ipAddress, String currentUsername) {
         if (!extendedConfig.ipLimit.enabled || extendedConfig.ipLimit.maxAccountsPerIp <= 0) {
             return false;
@@ -45,6 +48,7 @@ public class IpLimitManager {
 
         // Check if current user is already registered (has a password)
         // If they are registered, they should be allowed to login regardless of IP limit
+        // ToDo: Check does it needed if we already check it later
         PlayerEntryV1 playerData = DB.getUserData(currentUsername);
         if (playerData != null && !playerData.password.isEmpty()) {
             LogDebug("User " + currentUsername + " is already registered, allowing login");

@@ -7,6 +7,8 @@ import xyz.nikitacartes.easyauth.event.AuthEventHandler;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 
+import static java.util.Arrays.asList;
+
 @ConfigSerializable
 public class ExtendedConfigV1 extends ConfigTemplate {
 
@@ -266,7 +268,7 @@ public class ExtendedConfigV1 extends ConfigTemplate {
         @Comment("""
             
             Maximum number of accounts allowed per IP address.
-            Set to 0 to disable the limit.""")
+            Set to -1 to disable the limit.""")
         public int maxAccountsPerIp = 2;
 
         @Comment("""
@@ -277,12 +279,12 @@ public class ExtendedConfigV1 extends ConfigTemplate {
 
         @Comment("""
             
-            Notify admins (players with easyauth.admin permission) when a new IP address attempts to exceed the account limit.""")
+            Notify admins (players with op level >=3) when a new IP address attempts to exceed the account limit.""")
         public boolean notifyAdmins = true;
 
         @Comment("""
             
             List of IP addresses that are exempt from the limit (e.g., localhost, trusted IPs).""")
-        public java.util.ArrayList<String> exemptIps = new java.util.ArrayList<>(java.util.Arrays.asList("127.0.0.1", "localhost"));
+        public ArrayList<String> exemptIps = new ArrayList<>(asList("127.0.0.1", "localhost"));
     }
 }

@@ -9,7 +9,9 @@ import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 
 import java.io.File;
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.extendedConfig;
@@ -46,11 +48,22 @@ public class SQLite implements DbApi {
                                 username TEXT UNIQUE NOT NULL,
                                 username_lower TEXT NOT NULL,
                                 uuid TEXT NULL,
+                                last_ip TEXT NULL,
                                 data TEXT NOT NULL
                             );
                             """.formatted(config.sqlite.sqliteTable)
             );
             statement.close();
+
+            // Check if last_ip column exists
+            DatabaseMetaData metaData = connection.getMetaData();
+            ResultSet columns = metaData.getColumns(null, null, config.sqlite.sqliteTable, "last_ip");
+            if (!columns.next()) {
+                Statement alterStatement = connection.createStatement();
+                alterStatement.executeUpdate("ALTER TABLE " + config.sqlite.sqliteTable + " ADD COLUMN last_ip TEXT NULL;");
+                alterStatement.close();
+            }
+            columns.close();
 
             LogDebug("Connected to SQLite database successfully.");
         } catch (ClassNotFoundException | SQLException e) {
@@ -80,11 +93,12 @@ public class SQLite implements DbApi {
     public void registerUser(PlayerEntryV1 data) {
         LogDebug("Registering new player " + data.username + ": " + data.toJson());
         try {
-            PreparedStatement statement = connection.prepareStatement("INSERT INTO " + config.sqlite.sqliteTable + " (username, username_lower, uuid, data) VALUES (?, ?, ?, ?);");
+            PreparedStatement statement = connection.prepareStatement("INSERT INTO " + config.sqlite.sqliteTable + " (username, username_lower, uuid, data, last_ip) VALUES (?, ?, ?, ?, ?);");
             statement.setString(1, data.username);
             statement.setString(2, data.usernameLowerCase);
             statement.setObject(3, data.uuid);
             statement.setString(4, data.toJson());
+            statement.setString(5, data.lastIp);
             if (statement.executeUpdate() == 0) {
                 LogError("Failed to register user " + data.username + ": " + data.toJson());
             }
@@ -166,10 +180,11 @@ public class SQLite implements DbApi {
     public boolean updateUserData(PlayerEntryV1 data) {
         LogDebug("Updating player data for " + data.username + ": " + data.toJson());
         try {
-            PreparedStatement statement = connection.prepareStatement("UPDATE " + config.sqlite.sqliteTable + " SET uuid = ?, data = ? WHERE username = ?;");
+            PreparedStatement statement = connection.prepareStatement("UPDATE " + config.sqlite.sqliteTable + " SET uuid = ?, data = ?, last_ip = ? WHERE username = ?;");
             statement.setObject(1, data.uuid);
             statement.setString(2, data.toJson());
-            statement.setString(3, data.username);
+            statement.setString(3, data.lastIp);
+            statement.setString(4, data.username);
             int rowsAffected = statement.executeUpdate();
             statement.close();
             if (rowsAffected == 0) {
@@ -201,6 +216,49 @@ public class SQLite implements DbApi {
             LogError("Error retrieving all data", e);
         }
         return registeredPlayers;
+    }
+
+    @Override
+    public int countAccountsByIp(String ipAddress) {
+        try {
+            PreparedStatement statement = connection.prepareStatement(
+                    "SELECT COUNT(*) FROM " + config.sqlite.sqliteTable + " WHERE last_ip = ?;"
+            );
+            statement.setString(1, ipAddress);
+            ResultSet resultSet = statement.executeQuery();
+            int count = 0;
+            if (resultSet.next()) {
+                count = resultSet.getInt(1);
+            }
+            resultSet.close();
+            statement.close();
+            LogDebug("Counted " + count + " accounts for IP " + ipAddress);
+            return count;
+        } catch (SQLException e) {
+            LogError("Error counting accounts by IP", e);
+            return 0;
+        }
+    }
+
+    @Override
+    public List<String> getUsernamesByIp(String ipAddress) {
+        List<String> usernames = new ArrayList<>();
+        try {
+            PreparedStatement statement = connection.prepareStatement(
+                    "SELECT username FROM " + config.sqlite.sqliteTable + " WHERE last_ip = ?;"
+            );
+            statement.setString(1, ipAddress);
+            ResultSet resultSet = statement.executeQuery();
+            while (resultSet.next()) {
+                usernames.add(resultSet.getString("username"));
+            }
+            resultSet.close();
+            statement.close();
+            LogDebug("Found " + usernames.size() + " usernames for IP " + ipAddress);
+        } catch (SQLException e) {
+            LogError("Error getting usernames by IP", e);
+        }
+        return usernames;
     }
 
     @Override
@@ -242,45 +300,23 @@ public class SQLite implements DbApi {
     }
 
     @Override
-    public int countAccountsByIp(String ipAddress) {
+    public void migrateFromV3() {
+        LogInfo("Migrating IPs from JSON to column...");
         try {
-            PreparedStatement statement = connection.prepareStatement(
-                    "SELECT COUNT(*) FROM " + config.sqlite.sqliteTable + " WHERE data LIKE ?;"
-            );
-            statement.setString(1, "%\"last_ip\":\"" + ipAddress + "\"%");
-            ResultSet resultSet = statement.executeQuery();
-            int count = 0;
-            if (resultSet.next()) {
-                count = resultSet.getInt(1);
+            HashMap<String, PlayerEntryV1> allData = getAllData();
+            PreparedStatement statement = connection.prepareStatement("UPDATE " + config.sqlite.sqliteTable + " SET last_ip = ? WHERE username = ?;");
+
+            for (PlayerEntryV1 entry : allData.values()) {
+                statement.setString(1, entry.lastIp);
+                statement.setString(2, entry.username);
+                statement.addBatch();
             }
-            resultSet.close();
+            statement.executeBatch();
             statement.close();
-            LogDebug("Counted " + count + " accounts for IP " + ipAddress);
-            return count;
+            LogInfo("Migrated IPs successfully.");
         } catch (SQLException e) {
-            LogError("Error counting accounts by IP", e);
-            return 0;
+            LogError("Error migrating IPs", e);
         }
     }
 
-    @Override
-    public java.util.List<String> getUsernamesByIp(String ipAddress) {
-        java.util.List<String> usernames = new java.util.ArrayList<>();
-        try {
-            PreparedStatement statement = connection.prepareStatement(
-                    "SELECT username FROM " + config.sqlite.sqliteTable + " WHERE data LIKE ?;"
-            );
-            statement.setString(1, "%\"last_ip\":\"" + ipAddress + "\"%");
-            ResultSet resultSet = statement.executeQuery();
-            while (resultSet.next()) {
-                usernames.add(resultSet.getString("username"));
-            }
-            resultSet.close();
-            statement.close();
-            LogDebug("Found " + usernames.size() + " usernames for IP " + ipAddress);
-        } catch (SQLException e) {
-            LogError("Error getting usernames by IP", e);
-        }
-        return usernames;
-    }
 }

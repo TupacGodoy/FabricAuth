@@ -2,6 +2,9 @@ package xyz.nikitacartes.easyauth.utils;
 
 import com.mojang.authlib.GameProfile;
 import net.fabricmc.loader.api.FabricLoader;
+//? if >= 1.21.11 {
+import net.minecraft.command.permission.LeveledPermissionPredicate;
+//?}
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.player.PlayerEntity;
@@ -9,8 +12,10 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.s2c.play.PositionFlag;
 import net.minecraft.scoreboard.ScoreboardCriterion;
 //? if >= 1.21.9 {
+import net.minecraft.server.OperatorEntry;
 import net.minecraft.server.PlayerConfigEntry;
 //?}
+import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 //? if >= 1.21.6 {
@@ -188,12 +193,20 @@ public class StoneCutterUtils {
         return FabricLoader.getInstance().isModLoaded(modId);
     }
 
-    public static boolean isOperator(net.minecraft.server.PlayerManager playerManager, ServerPlayerEntity player) {
+    public static boolean isOperator(PlayerManager playerManager, ServerPlayerEntity player) {
         //? if >= 1.21.9 {
-        return playerManager.isOperator(new PlayerConfigEntry(player.getGameProfile()));
+        OperatorEntry operatorEntry = playerManager.getOpList().get(new PlayerConfigEntry(player.getGameProfile()));
         //?} else {
-        /*return playerManager.isOperator(player.getGameProfile());
-        *///?}
+        /*OperatorEntry operatorEntry = playerManager.getOpList().get(player.getGameProfile());
+         *///?}
+        if (operatorEntry != null) {
+            //? if >= 1.21.11 {
+            return operatorEntry.getLevel() == LeveledPermissionPredicate.ADMINS || operatorEntry.getLevel() == LeveledPermissionPredicate.OWNERS;
+            //?} else {
+            /*return operatorEntry.getPermissionLevel() >= 3;
+             *///?}
+        }
+        return false;
     }
 
 }

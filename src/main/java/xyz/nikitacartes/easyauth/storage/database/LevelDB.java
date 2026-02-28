@@ -10,6 +10,7 @@ import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 
 import static org.iq80.leveldb.impl.Iq80DBFactory.bytes;
 import static org.iq80.leveldb.impl.Iq80DBFactory.factory;
@@ -101,17 +102,22 @@ public class LevelDB implements DbApi {
     }
 
     @Override
-    public void migrateFromV1(HashMap<String, String> userCache) {
-        throw new UnsupportedOperationException("LevelDB is not supported anymore");
-    }
-
-    @Override
     public int countAccountsByIp(String ipAddress) {
         throw new UnsupportedOperationException("LevelDB is not supported anymore");
     }
 
     @Override
-    public java.util.List<String> getUsernamesByIp(String ipAddress) {
+    public List<String> getUsernamesByIp(String ipAddress) {
+        throw new UnsupportedOperationException("LevelDB is not supported anymore");
+    }
+
+    @Override
+    public void migrateFromV1(HashMap<String, String> userCache) {
+        throw new UnsupportedOperationException("LevelDB is not supported anymore");
+    }
+
+    @Override
+    public void migrateFromV3() {
         throw new UnsupportedOperationException("LevelDB is not supported anymore");
     }
 }

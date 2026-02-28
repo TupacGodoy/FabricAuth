@@ -61,7 +61,8 @@ public class MongoDB implements DbApi {
             Document document = new Document("username", data.username)
                     .append("username_lower", data.usernameLowerCase)
                     .append("uuid", data.uuid == null ? null : data.uuid.toString())
-                    .append("data", data.toJson());
+                    .append("data", data.toJson())
+                    .append("last_ip", data.lastIp);
             if (collection.insertOne(document).getInsertedId() == null) {
                 LogError("Failed to insert data: " + data.toJson());
             }
@@ -135,7 +136,8 @@ public class MongoDB implements DbApi {
             Document document = new Document("username", data.username)
                     .append("username_lower", data.usernameLowerCase)
                     .append("uuid", data.uuid == null ? null : data.uuid.toString())
-                    .append("data", data.toJson());
+                    .append("data", data.toJson())
+                    .append("last_ip", data.lastIp);
             if (collection.replaceOne(eq("username", data.username), document).getModifiedCount() == 0) {
                 LogError("Failed to update data: " + data.toJson());
                 return false;
@@ -163,6 +165,35 @@ public class MongoDB implements DbApi {
             LogError("Error retrieving all user data", e);
         }
         return registeredPlayers;
+    }
+
+    @Override
+    public int countAccountsByIp(String ipAddress) {
+        try {
+            long count = collection.countDocuments(eq("last_ip", ipAddress));
+            LogDebug("Counted " + count + " accounts for IP " + ipAddress);
+            return (int) count;
+        } catch (Exception e) {
+            LogError("Error counting accounts by IP", e);
+            return 0;
+        }
+    }
+
+    @Override
+    public List<String> getUsernamesByIp(String ipAddress) {
+        List<String> usernames = new ArrayList<>();
+        try {
+            collection.find(eq("last_ip", ipAddress)).forEach(document -> {
+                String username = document.getString("username");
+                if (username != null) {
+                    usernames.add(username);
+                }
+            });
+            LogDebug("Found " + usernames.size() + " usernames for IP " + ipAddress);
+        } catch (Exception e) {
+            LogError("Error getting usernames by IP", e);
+        }
+        return usernames;
     }
 
     @Override
@@ -195,35 +226,21 @@ public class MongoDB implements DbApi {
     }
 
     @Override
-    public int countAccountsByIp(String ipAddress) {
+    public void migrateFromV3() {
+        LogInfo("Migrating IPs from JSON to field...");
         try {
-            // Use regex to match the IP in the JSON data field
-            Document filter = new Document("data", new Document("$regex", "\"last_ip\":\"" + ipAddress + "\""));
-            long count = collection.countDocuments(filter);
-            LogDebug("Counted " + count + " accounts for IP " + ipAddress);
-            return (int) count;
-        } catch (Exception e) {
-            LogError("Error counting accounts by IP", e);
-            return 0;
-        }
-    }
-
-    @Override
-    public java.util.List<String> getUsernamesByIp(String ipAddress) {
-        java.util.List<String> usernames = new java.util.ArrayList<>();
-        try {
-            Document filter = new Document("data", new Document("$regex", "\"last_ip\":\"" + ipAddress + "\""));
-            collection.find(filter).forEach(document -> {
-                String username = document.getString("username");
-                if (username != null) {
-                    usernames.add(username);
+            for (Document document : collection.find()) {
+                String data = document.getString("data");
+                if (data != null) {
+                    // Create dummy entry to parse JSON
+                    PlayerEntryV1 entry = new PlayerEntryV1(document.getString("username"), document.getString("username_lower"), null, data);
+                    collection.updateOne(eq("_id", document.get("_id")), new Document("$set", new Document("last_ip", entry.lastIp)));
                 }
-            });
-            LogDebug("Found " + usernames.size() + " usernames for IP " + ipAddress);
+            }
+            LogInfo("Migrated IPs successfully.");
         } catch (Exception e) {
-            LogError("Error getting usernames by IP", e);
+            LogError("Error migrating IPs", e);
         }
-        return usernames;
     }
 
 }

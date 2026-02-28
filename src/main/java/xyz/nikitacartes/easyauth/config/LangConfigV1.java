@@ -86,6 +86,7 @@ public class LangConfigV1 extends ConfigTemplate {
     public TranslatableText unknownError = new TranslatableText("unknownError");
     public TranslatableText ipLimitExceeded = new TranslatableText("ipLimitExceeded");
     public TranslatableText ipLimitAdminNotify = new TranslatableText("ipLimitAdminNotify");
+    public TranslatableText sessionLimitExceeded = new TranslatableText("sessionLimitExceeded");
     public TranslatableText uuidSet = new TranslatableText("uuidSet");
     public TranslatableText uuidCleared = new TranslatableText("uuidCleared");
     public TranslatableText uuidChanged = new TranslatableText("uuidChanged");

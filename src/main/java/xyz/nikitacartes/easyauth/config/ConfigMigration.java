@@ -208,7 +208,7 @@ public class ConfigMigration {
 
         LogInfo("Migration completed in " + (System.currentTimeMillis() - now) + "ms");
     }
-    
+
     private static String notNull(String string) {
         return string == null ? "" : string;
     }

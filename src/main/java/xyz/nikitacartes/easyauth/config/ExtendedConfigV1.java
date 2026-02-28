@@ -273,9 +273,9 @@ public class ExtendedConfigV1 extends ConfigTemplate {
 
         @Comment("""
             
-            Block login attempts when the IP limit is exceeded.
-            If false, players can still log in but admins will be notified.""")
-        public boolean blockExcessLogins = true;
+            Block registration attempts when the IP limit is exceeded.
+            If false, players can still register but admins will be notified.""")
+        public boolean blockExcessRegistration = true;
 
         @Comment("""
             
@@ -286,5 +286,24 @@ public class ExtendedConfigV1 extends ConfigTemplate {
             
             List of IP addresses that are exempt from the limit (e.g., localhost, trusted IPs).""")
         public ArrayList<String> exemptIps = new ArrayList<>(asList("127.0.0.1", "localhost"));
+
+        @Comment("""
+            
+            Cache expiry time in seconds for IP account count cache.
+            Lower values mean more frequent database queries but more accurate counts.""")
+        public int cacheExpirySeconds = 300;
+
+        @Comment("""
+            
+            Maximum number of concurrent online sessions allowed from the same IP address.
+            Set to -1 to disable the limit.
+            This check is performed at player join time.""")
+        public int maxConcurrentSessionsPerIp = -1;
+
+        @Comment("""
+            
+            Whether online (premium) players are exempt from the concurrent session limit.
+            If true, premium players that auto-login will not be blocked by the session limit.""")
+        public boolean exemptOnlinePlayers = false;
     }
 }

@@ -44,6 +44,7 @@
   "text.easyauth.accountCheckFailed": "§cMojang服务器不可用。请稍后再试。",
   "text.easyauth.ipLimitExceeded": "§4您的IP地址注册账户数量已达上限。每个IP最多允许 %d 个账户。",
   "text.easyauth.ipLimitAdminNotify": "§e[EasyAuth] §cIP限制警告: §f玩家 §e%s §f来自IP §e%s §f超出了 §e%d §f个账户的限制。已有账户: §e%s",
+  "text.easyauth.sessionLimitExceeded": "§4您的IP地址连接数过多。请稍后再试。",
   "text.easyauth.uuidSet": "§a玩家 §e%s §a的强制UUID已设置为 §e%s§a。玩家将被踢出以应用更改。",
   "text.easyauth.uuidCleared": "§a玩家 §e%s §a的强制UUID已清除。玩家下次登录将使用默认UUID。",
   "text.easyauth.uuidChanged": "§6管理员已更改您的UUID。请重新连接。",

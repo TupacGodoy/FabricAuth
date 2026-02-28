@@ -11,8 +11,8 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.s2c.play.PositionFlag;
 import net.minecraft.scoreboard.ScoreboardCriterion;
-//? if >= 1.21.9 {
 import net.minecraft.server.OperatorEntry;
+//? if >= 1.21.9 {
 import net.minecraft.server.PlayerConfigEntry;
 //?}
 import net.minecraft.server.PlayerManager;

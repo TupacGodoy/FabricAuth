@@ -57,21 +57,6 @@ public class LoginCommand {
             langConfig.alreadyAuthenticated.send(source);
             return 0;
         }
-        
-        // Check IP limit before allowing login
-        String ipAddress = playerAuth.easyAuth$getIpAddress();
-        if (IpLimitManager.isIpLimitExceeded(ipAddress, username)) {
-            LogLogin("Player " + username + " exceeded IP limit from " + ipAddress);
-            if (IpLimitManager.shouldBlockExcessLogins()) {
-                IpLimitManager.notifyAdmins(source.getServer(), ipAddress, username);
-                langConfig.ipLimitExceeded.send(source);
-                return 0;
-            } else {
-                // Just notify admins but allow login
-                IpLimitManager.notifyAdmins(source.getServer(), ipAddress, username);
-            }
-        }
-        
         PlayerEntryV1 playerData = playerAuth.easyAuth$getPlayerEntryV1();
 
         AuthHelper.PasswordOptions passwordResult = AuthHelper.checkPassword(playerData, pass.toCharArray());

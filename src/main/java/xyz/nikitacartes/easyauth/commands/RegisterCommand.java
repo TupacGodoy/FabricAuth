@@ -133,9 +133,10 @@ public class RegisterCommand {
         // Check IP limit before allowing registration
         String username = StoneCutterUtils.getUsername(player);
         String ipAddress = playerAuth.easyAuth$getIpAddress();
-        if (IpLimitManager.isIpLimitExceeded(ipAddress, username)) {
+        PlayerEntryV1 playerData = playerAuth.easyAuth$getPlayerEntryV1();
+        if (IpLimitManager.isIpLimitExceeded(ipAddress, username, playerData)) {
             LogRegister("Player " + username + " exceeded IP limit from " + ipAddress);
-            if (IpLimitManager.shouldBlockExcessLogins()) {
+            if (IpLimitManager.shouldBlockExcessRegistration()) {
                 IpLimitManager.notifyAdmins(source.getServer(), ipAddress, username);
                 langConfig.ipLimitExceeded.send(source);
                 return 0;
@@ -145,7 +146,6 @@ public class RegisterCommand {
             }
         }
 
-        PlayerEntryV1 playerData = playerAuth.easyAuth$getPlayerEntryV1();
         if (!playerData.password.isEmpty()) {
             langConfig.alreadyRegistered.send(source);
             return 0;

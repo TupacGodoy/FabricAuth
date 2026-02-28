@@ -124,5 +124,5 @@ public interface DbApi {
     /**
      * Migrates IP addresses from JSON to column.
      */
-    void migrateFromV3();
+    void migrateFromV4();
 }

@@ -133,16 +133,7 @@ public class EasyAuth {
         EasyAuth.extendedConfig = ExtendedConfigV1.load();
         EasyAuth.storageConfig = StorageConfigV1.load();
 
-        // Apply migrations sequentially
-        if (configVersion < 2) {
-            migrateFromV1();
-        }
-        if (configVersion < 3) {
-            migrateFromV2();
-        }
-        if (configVersion < 4) {
-            migrateFromV3();
-        }
+        configMigration(configVersion);
     }
 
     public static void saveConfigs() {

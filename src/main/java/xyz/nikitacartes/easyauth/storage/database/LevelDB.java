@@ -117,7 +117,7 @@ public class LevelDB implements DbApi {
     }
 
     @Override
-    public void migrateFromV3() {
+    public void migrateFromV4() {
         throw new UnsupportedOperationException("LevelDB is not supported anymore");
     }
 }

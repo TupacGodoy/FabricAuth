@@ -226,7 +226,7 @@ public class MongoDB implements DbApi {
     }
 
     @Override
-    public void migrateFromV3() {
+    public void migrateFromV4() {
         LogInfo("Migrating IPs from JSON to field...");
         try {
             for (Document document : collection.find()) {

@@ -384,7 +384,7 @@ public class MySQL implements DbApi {
      * Migrates IP addresses from JSON to column.
      */
     @Override
-    public void migrateFromV3() {
+    public void migrateFromV4() {
         try {
             reConnect();
             Statement statement = MySQLConnection.createStatement();

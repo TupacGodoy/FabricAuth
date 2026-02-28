@@ -300,7 +300,7 @@ public class SQLite implements DbApi {
     }
 
     @Override
-    public void migrateFromV3() {
+    public void migrateFromV4() {
         LogInfo("Migrating IPs from JSON to column...");
         try {
             HashMap<String, PlayerEntryV1> allData = getAllData();

@@ -4,6 +4,12 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.ClientConnection;
+import net.minecraft.network.packet.Packet;
+import net.minecraft.network.packet.c2s.play.*;
+//? if >= 1.20.2 {
+import net.minecraft.network.packet.c2s.common.*;
+//?}
+import net.minecraft.network.packet.c2s.query.QueryPingC2SPacket;
 import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
 //? if >= 1.21.9 {
 import net.minecraft.server.PlayerConfigEntry;
@@ -44,6 +50,112 @@ public class AuthEventHandler {
     public static long lastAcceptedPacket = 0;
 
     public static Pattern usernamePattern;
+
+    public static boolean isAllowedPacket(Packet<?> packet) {
+        if (packet instanceof KeepAliveC2SPacket
+                || packet instanceof ResourcePackStatusC2SPacket
+                || packet instanceof TeleportConfirmC2SPacket
+                || packet instanceof PlayerSessionC2SPacket
+                || packet instanceof MessageAcknowledgmentC2SPacket
+                || packet instanceof ClientStatusC2SPacket
+                || packet instanceof RequestCommandCompletionsC2SPacket
+                || packet instanceof CommandExecutionC2SPacket
+                || packet instanceof QueryPingC2SPacket
+                //? if >= 1.21.5 {
+                || packet instanceof PlayerLoadedC2SPacket
+                //?}
+                //? if >= 1.21.2 {
+                || packet instanceof ClientTickEndC2SPacket
+                //?}
+                //? if >= 1.20.5 {
+                || packet instanceof CookieResponseC2SPacket
+                || packet instanceof ChatCommandSignedC2SPacket
+                //?}
+                //? if >= 1.20.2 {
+                || packet instanceof CommonPongC2SPacket
+                || packet instanceof ClientOptionsC2SPacket
+                || packet instanceof AcknowledgeChunksC2SPacket
+                || packet instanceof AcknowledgeReconfigurationC2SPacket
+                //?} else {
+                 /*|| packet instanceof PlayPongC2SPacket
+                *///?}
+        ) {
+            return true;
+        }
+
+        if (extendedConfig.allowCustomPackets && (
+                packet instanceof CustomPayloadC2SPacket
+                //? if >= 1.21.6 {
+                || packet instanceof CustomClickActionC2SPacket
+                //?}
+        )) {
+            return true;
+        }
+
+        // Movement packets are handled separately
+        if (packet instanceof PlayerMoveC2SPacket ||
+                packet instanceof PlayerMoveC2SPacket.Full ||
+                packet instanceof PlayerMoveC2SPacket.LookAndOnGround ||
+                packet instanceof PlayerMoveC2SPacket.OnGroundOnly ||
+                packet instanceof PlayerMoveC2SPacket.PositionAndOnGround ||
+                packet instanceof VehicleMoveC2SPacket ||
+                packet instanceof PlayerInputC2SPacket) {
+            return true;
+        }
+
+        if (extendedConfig.allowChat && packet instanceof ChatMessageC2SPacket) {
+            return true;
+        }
+
+        if (extendedConfig.allowBlockInteraction && packet instanceof PlayerInteractBlockC2SPacket) {
+            return true;
+        }
+
+        if (extendedConfig.allowEntityInteraction && packet instanceof PlayerInteractEntityC2SPacket) {
+            return true;
+        }
+
+        if (extendedConfig.allowItemUsing && packet instanceof PlayerInteractItemC2SPacket) {
+            return true;
+        }
+
+        if (packet instanceof HandSwingC2SPacket) {
+            return extendedConfig.allowBlockInteraction || extendedConfig.allowEntityInteraction || extendedConfig.allowEntityAttacking;
+        }
+        
+        if (packet instanceof PlayerActionC2SPacket actionPacket) {
+            var action = actionPacket.getAction();
+            if (action == PlayerActionC2SPacket.Action.START_DESTROY_BLOCK ||
+                    action == PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK ||
+                    action == PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK) {
+                return extendedConfig.allowBlockBreaking;
+            }
+            if (action == PlayerActionC2SPacket.Action.DROP_ALL_ITEMS ||
+                    action == PlayerActionC2SPacket.Action.DROP_ITEM) {
+                return extendedConfig.allowItemDropping;
+            }
+            if (action == PlayerActionC2SPacket.Action.SWAP_ITEM_WITH_OFFHAND) {
+                return extendedConfig.allowItemMoving;
+            }
+            if (action == PlayerActionC2SPacket.Action.RELEASE_USE_ITEM) {
+                return extendedConfig.allowItemUsing;
+            }
+            return false;
+        }
+
+        if (extendedConfig.allowItemMoving && (
+                packet instanceof ClickSlotC2SPacket ||
+                packet instanceof CreativeInventoryActionC2SPacket ||
+                packet instanceof UpdateSelectedSlotC2SPacket ||
+                packet instanceof CloseHandledScreenC2SPacket ||
+                packet instanceof ButtonClickC2SPacket
+        )) {
+            return true;
+        }
+
+        return false;
+    }
+
     /**
      * Player pre-join.
      * Returns text as a reason for disconnect or null to pass

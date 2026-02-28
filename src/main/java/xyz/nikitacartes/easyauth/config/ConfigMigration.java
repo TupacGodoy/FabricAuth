@@ -180,7 +180,16 @@ public class ConfigMigration {
     }
 
     public static void migrateFromV3() {
-        LogInfo("Migrating DB from v3 to v4");
+        LogInfo("Migrating config from v3 to v4");
+
+        EasyAuth.extendedConfig.save();
+
+        EasyAuth.config.configVersion = 4;
+        EasyAuth.config.save();
+    }
+
+    public static void migrateFromV4() {
+        LogInfo("Migrating DB from v4 to v5");
         long now = System.currentTimeMillis();
 
         DbApi db;
@@ -198,15 +207,31 @@ public class ConfigMigration {
             return;
         }
 
-        db.migrateFromV3();
+        db.migrateFromV4();
         db.close();
 
-        EasyAuth.config.configVersion = 4;
+        EasyAuth.config.configVersion = 5;
         EasyAuth.config.save();
         EasyAuth.langConfig.save();
         EasyAuth.extendedConfig.save();
 
         LogInfo("Migration completed in " + (System.currentTimeMillis() - now) + "ms");
+    }
+
+    public static void configMigration(int configVersion) {
+        // Apply migrations sequentially
+        if (configVersion < 2) {
+            migrateFromV1();
+        }
+        if (configVersion < 3) {
+            migrateFromV2();
+        }
+        if (configVersion < 4) {
+            migrateFromV3();
+        }
+        if (configVersion < 5) {
+            migrateFromV4();
+        }
     }
 
     private static String notNull(String string) {

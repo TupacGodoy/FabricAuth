@@ -128,6 +128,17 @@ public abstract class ServerLoginNetworkHandlerMixin {
 
     @Unique
     private GameProfile getGameProfile(String name) {
+        // Check if player has a forced UUID set
+        PlayerEntryV1 playerData = PlayersCache.get(name);
+        if (playerData != null && playerData.forcedUuid != null && !playerData.forcedUuid.isEmpty()) {
+            try {
+                UUID forcedUuid = UUID.fromString(playerData.forcedUuid);
+                LogInfo("Using forced UUID " + forcedUuid + " for player " + name);
+                return new GameProfile(forcedUuid, name);
+            } catch (IllegalArgumentException e) {
+                LogError("Invalid forced UUID for player " + name + ": " + playerData.forcedUuid, e);
+            }
+        }
         //? if >= 1.20.2 {
         return new GameProfile(Uuids.getOfflinePlayerUuid(name), name);
         //?} else {

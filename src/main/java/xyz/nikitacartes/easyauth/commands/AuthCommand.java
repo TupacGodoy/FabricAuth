@@ -13,6 +13,7 @@ import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Uuids;
 import xyz.nikitacartes.easyauth.config.deprecated.AuthConfig;
 import xyz.nikitacartes.easyauth.integrations.Permissions;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
@@ -22,6 +23,7 @@ import xyz.nikitacartes.easyauth.utils.StoneCutterUtils;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.mojang.brigadier.arguments.BoolArgumentType.bool;
@@ -176,6 +178,36 @@ public class AuthCommand {
                         .requires(Permissions.require("easyauth.commands.auth.getOnlinePlayers", 3))
                         .executes(ctx -> getOnlinePlayers(ctx.getSource()))
                 )
+                .then(literal("setUuid")
+                        .requires(Permissions.require("easyauth.commands.auth.setUuid", 4))
+                        .then(argument("username", word())
+                                .then(argument("uuid", string())
+                                        .executes(ctx -> setUuid(
+                                                ctx.getSource(),
+                                                getString(ctx, "username"),
+                                                getString(ctx, "uuid")
+                                        ))
+                                )
+                        )
+                )
+                .then(literal("clearUuid")
+                        .requires(Permissions.require("easyauth.commands.auth.clearUuid", 4))
+                        .then(argument("username", word())
+                                .executes(ctx -> clearUuid(
+                                        ctx.getSource(),
+                                        getString(ctx, "username")
+                                ))
+                        )
+                )
+                .then(literal("getUuid")
+                        .requires(Permissions.require("easyauth.commands.auth.getUuid", 3))
+                        .then(argument("username", word())
+                                .executes(ctx -> getUuid(
+                                        ctx.getSource(),
+                                        getString(ctx, "username")
+                                ))
+                        )
+                )
         );
     }
 
@@ -312,8 +344,19 @@ public class AuthCommand {
                 langConfig.userNotRegistered.send(source);
                 return;
             }
-            playerData.password = AuthHelper.hashPassword(password.toCharArray());
+            String newPasswordHash = AuthHelper.hashPassword(password.toCharArray());
+            playerData.password = newPasswordHash;
             playerData.update();
+            
+            // Also update the cached PlayerEntryV1 if the player is online
+            ServerPlayerEntity player = source.getServer().getPlayerManager().getPlayer(username);
+            if (player != null) {
+                PlayerEntryV1 cachedEntry = ((PlayerAuth) player).easyAuth$getPlayerEntryV1();
+                if (cachedEntry != null) {
+                    cachedEntry.password = newPasswordHash;
+                }
+            }
+            
             langConfig.userdataUpdated.send(source);
         });
         return 0;
@@ -442,6 +485,140 @@ public class AuthCommand {
                 }
                 message.append(Text.literal("authenticated: " + playerAuth.easyAuth$isAuthenticated() + "; Mojang account: " + playerAuth.easyAuth$isUsingMojangAccount() + "\n"));
             });
+            source.sendMessage(message);
+        });
+        return 1;
+    }
+
+    /**
+     * Sets a forced UUID for a player.
+     * This UUID will be used instead of the default offline/online UUID when the player joins.
+     *
+     * @param source   executioner of the command
+     * @param username username of the player
+     * @param uuidStr  the UUID to force for this player
+     * @return 1 on success
+     */
+    private static int setUuid(ServerCommandSource source, String username, String uuidStr) {
+        THREADPOOL.submit(() -> {
+            // Validate UUID format
+            UUID uuid;
+            try {
+                uuid = UUID.fromString(uuidStr);
+            } catch (IllegalArgumentException e) {
+                langConfig.invalidUuid.send(source, uuidStr);
+                return;
+            }
+
+            PlayerEntryV1 entry = DB.getUserDataOrCreate(username);
+            entry.forcedUuid = uuid.toString();
+            entry.update();
+
+            langConfig.uuidSet.send(source, username, uuid.toString());
+
+            // Kick the player if online so they rejoin with the new UUID
+            ServerPlayerEntity player = source.getServer().getPlayerManager().getPlayer(username);
+            if (player != null) {
+                player.networkHandler.disconnect(langConfig.uuidChanged.get());
+            }
+        });
+        return 1;
+    }
+
+    /**
+     * Clears the forced UUID for a player, reverting to default behavior.
+     *
+     * @param source   executioner of the command
+     * @param username username of the player
+     * @return 1 on success
+     */
+    private static int clearUuid(ServerCommandSource source, String username) {
+        THREADPOOL.submit(() -> {
+            PlayerEntryV1 entry = DB.getUserData(username);
+            if (entry == null) {
+                langConfig.userNotRegistered.send(source);
+                return;
+            }
+
+            if (entry.forcedUuid == null || entry.forcedUuid.isEmpty()) {
+                langConfig.noForcedUuid.send(source, username);
+                return;
+            }
+
+            entry.forcedUuid = null;
+            entry.update();
+
+            langConfig.uuidCleared.send(source, username);
+
+            // Kick the player if online so they rejoin with the default UUID
+            ServerPlayerEntity player = source.getServer().getPlayerManager().getPlayer(username);
+            if (player != null) {
+                player.networkHandler.disconnect(langConfig.uuidChanged.get());
+            }
+        });
+        return 1;
+    }
+
+    /**
+     * Gets UUID information for a player.
+     *
+     * @param source   executioner of the command
+     * @param username username of the player
+     * @return 1 on success
+     */
+    private static int getUuid(ServerCommandSource source, String username) {
+        THREADPOOL.submit(() -> {
+            PlayerEntryV1 entry = DB.getUserData(username);
+            
+            UUID offlineUuid = Uuids.getOfflinePlayerUuid(username);
+            
+            MutableText message = Text.literal("");
+            message.append(Text.literal("UUID info for ").formatted(Formatting.GRAY));
+            message.append(Text.literal(username).formatted(Formatting.YELLOW));
+            message.append(Text.literal(":\n").formatted(Formatting.GRAY));
+            
+            // Offline UUID
+            message.append(Text.literal("  Offline UUID: ").formatted(Formatting.GRAY));
+            message.append(Text.literal(offlineUuid.toString()).formatted(Formatting.WHITE)
+                    //? if >= 1.21.5 {
+                    .setStyle(Style.EMPTY.withClickEvent(new ClickEvent.CopyToClipboard(offlineUuid.toString())))
+                    //?} else {
+                    /*.setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, offlineUuid.toString())))
+                    *///?}
+            );
+            message.append(Text.literal("\n"));
+            
+            // Forced UUID
+            message.append(Text.literal("  Forced UUID: ").formatted(Formatting.GRAY));
+            if (entry != null && entry.forcedUuid != null && !entry.forcedUuid.isEmpty()) {
+                message.append(Text.literal(entry.forcedUuid).formatted(Formatting.GREEN)
+                        //? if >= 1.21.5 {
+                        .setStyle(Style.EMPTY.withClickEvent(new ClickEvent.CopyToClipboard(entry.forcedUuid)))
+                        //?} else {
+                        /*.setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, entry.forcedUuid)))
+                        *///?}
+                );
+            } else {
+                message.append(Text.literal("(none)").formatted(Formatting.DARK_GRAY));
+            }
+            message.append(Text.literal("\n"));
+            
+            // Current UUID (if online)
+            ServerPlayerEntity player = source.getServer().getPlayerManager().getPlayer(username);
+            message.append(Text.literal("  Current UUID: ").formatted(Formatting.GRAY));
+            if (player != null) {
+                String currentUuid = player.getUuidAsString();
+                message.append(Text.literal(currentUuid).formatted(Formatting.AQUA)
+                        //? if >= 1.21.5 {
+                        .setStyle(Style.EMPTY.withClickEvent(new ClickEvent.CopyToClipboard(currentUuid)))
+                        //?} else {
+                        /*.setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, currentUuid)))
+                        *///?}
+                );
+            } else {
+                message.append(Text.literal("(player offline)").formatted(Formatting.DARK_GRAY));
+            }
+            
             source.sendMessage(message);
         });
         return 1;

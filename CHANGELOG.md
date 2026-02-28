@@ -8,6 +8,28 @@
 - Check how offline players work if they try to connect with a taken online account
 
 ---
+### 3.4.3
+##### Minecraft 1.19.4, 1.20[.X], 1.21[.X]
+#### Add
+- IP limit controls [#200](https://github.com/NikitaCartes/EasyAuth/issues/200), thanks to @virgil698 [#252](https://github.com/NikitaCartes/EasyAuth/pull/252)
+- New config options for IP limit:
+  - `ipLimit.enabled`
+  - `ipLimit.maxAccountsPerIp`
+  - `ipLimit.blockExcessRegistration`
+  - `ipLimit.notifyAdmins`
+  - `ipLimit.exemptIps`
+  - `ipLimit.cacheExpirySeconds`
+  - `ipLimit.maxConcurrentSessionsPerIp`
+  - `ipLimit.exemptOnlinePlayers`
+- UUID management commands [#249](https://github.com/NikitaCartes/EasyAuth/issues/249)
+  - `/auth setUuid`
+  - `/auth clearUuid`
+  - `/auth getUuid`
+
+#### Fix
+- `/auth update` to also refresh cached online player data [#244](https://github.com/NikitaCartes/EasyAuth/issues/244)
+
+---
 ### 3.4.2
 ##### Minecraft 1.19.4, 1.20[.X], 1.21[.X]
 #### Fix

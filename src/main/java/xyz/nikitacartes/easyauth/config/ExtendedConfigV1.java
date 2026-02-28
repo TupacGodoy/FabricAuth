@@ -7,6 +7,8 @@ import xyz.nikitacartes.easyauth.event.AuthEventHandler;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 
+import static java.util.Arrays.asList;
+
 @ConfigSerializable
 public class ExtendedConfigV1 extends ConfigTemplate {
 
@@ -190,6 +192,11 @@ public class ExtendedConfigV1 extends ConfigTemplate {
             Check offline players with online usernames every time they join the server for online account.""")
     public boolean checkOfflinePlayersWithOnlineUsernames = false;
 
+    @Comment("""
+            
+            IP Limit Settings - Restrict the number of accounts that can be registered/logged in from the same IP address.""")
+    public IpLimitSettings ipLimit = new IpLimitSettings();
+
     public ExtendedConfigV1() {
         super("extended.conf", """
                 ##                          ##
@@ -259,5 +266,55 @@ public class ExtendedConfigV1 extends ConfigTemplate {
             
             Read timeout in milliseconds.""")
         public int readTimeout = 5000;
+    }
+
+    @ConfigSerializable
+    public static final class IpLimitSettings {
+        @Comment("""
+            
+            Enable IP-based account limit.
+            When enabled, limits the number of accounts that can be registered/logged in from the same IP address.""")
+        public boolean enabled = false;
+
+        @Comment("""
+            
+            Maximum number of accounts allowed per IP address.
+            Set to -1 to disable the limit.""")
+        public int maxAccountsPerIp = 2;
+
+        @Comment("""
+            
+            Block registration attempts when the IP limit is exceeded.
+            If false, players can still register but admins will be notified.""")
+        public boolean blockExcessRegistration = true;
+
+        @Comment("""
+            
+            Notify admins (players with op level >=3) when a new IP address attempts to exceed the account limit.""")
+        public boolean notifyAdmins = true;
+
+        @Comment("""
+            
+            List of IP addresses that are exempt from the limit (e.g., localhost, trusted IPs).""")
+        public ArrayList<String> exemptIps = new ArrayList<>(asList("127.0.0.1", "localhost"));
+
+        @Comment("""
+            
+            Cache expiry time in seconds for IP account count cache.
+            Lower values mean more frequent database queries but more accurate counts.""")
+        public int cacheExpirySeconds = 300;
+
+        @Comment("""
+            
+            Maximum number of concurrent online sessions allowed from the same IP address.
+            Set to -1 to disable the limit.
+            This check is performed at player join time.""")
+        public int maxConcurrentSessionsPerIp = -1;
+
+        @Comment("""
+            
+            Whether online (premium) players are exempt from the concurrent session limit.
+            If true, premium players that auto-login will not be blocked by the session limit.""")
+        public boolean exemptOnlinePlayers = false;
     }
 }

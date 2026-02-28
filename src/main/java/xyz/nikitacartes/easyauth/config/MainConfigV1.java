@@ -6,6 +6,8 @@ import org.spongepowered.configurate.objectmapping.meta.Comment;
 @ConfigSerializable
 public class MainConfigV1 extends ConfigTemplate {
 
+    public static final int CURRENT_CONFIG_VERSION = 4;
+
     @Comment("""
             Whether online players should skip the authentication process.
             You have to set online-mode to true in server.properties!
@@ -92,7 +94,7 @@ public class MainConfigV1 extends ConfigTemplate {
             
             Config Version. Used for automatic migration of config files.
             Do not change this value manually.""")
-    public long configVersion = 2;
+    public long configVersion = CURRENT_CONFIG_VERSION;
 
     public MainConfigV1() {
         super("main.conf", """

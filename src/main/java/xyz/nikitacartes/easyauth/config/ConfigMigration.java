@@ -188,6 +188,36 @@ public class ConfigMigration {
         EasyAuth.config.save();
     }
 
+    public static void migrateFromV4() {
+        LogInfo("Migrating DB from v4 to v5");
+        long now = System.currentTimeMillis();
+
+        DbApi db;
+        if (EasyAuth.storageConfig.databaseType.equalsIgnoreCase("mysql")) {
+            db = new MySQL(EasyAuth.storageConfig);
+        } else if (EasyAuth.storageConfig.databaseType.equalsIgnoreCase("mongodb")) {
+            db = new MongoDB(EasyAuth.storageConfig);
+        } else {
+            db = new SQLite(EasyAuth.storageConfig);
+        }
+        try {
+            db.connect();
+        } catch (DBApiException e) {
+            LogError("Migration connection error: ", e);
+            return;
+        }
+
+        db.migrateFromV4();
+        db.close();
+
+        EasyAuth.config.configVersion = 5;
+        EasyAuth.config.save();
+        EasyAuth.langConfig.save();
+        EasyAuth.extendedConfig.save();
+
+        LogInfo("Migration completed in " + (System.currentTimeMillis() - now) + "ms");
+    }
+
     public static void configMigration(int configVersion) {
         // Apply migrations sequentially
         if (configVersion < 2) {
@@ -199,8 +229,11 @@ public class ConfigMigration {
         if (configVersion < 4) {
             migrateFromV3();
         }
+        if (configVersion < 5) {
+            migrateFromV4();
+        }
     }
-    
+
     private static String notNull(String string) {
         return string == null ? "" : string;
     }

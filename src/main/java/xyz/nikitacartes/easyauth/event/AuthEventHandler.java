@@ -29,6 +29,7 @@ import xyz.nikitacartes.easyauth.integrations.VanishIntegration;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.integrations.FloodgateApiHelper;
 import xyz.nikitacartes.easyauth.interfaces.PlayerAuth;
+import xyz.nikitacartes.easyauth.utils.IpLimitManager;
 import xyz.nikitacartes.easyauth.utils.PlayersCache;
 import xyz.nikitacartes.easyauth.utils.StoneCutterUtils;
 
@@ -172,21 +173,21 @@ public class AuthEventHandler {
         String incomingPlayerUsername = StoneCutterUtils.getName(profile);
         PlayerEntity onlinePlayer = manager.getPlayer(incomingPlayerUsername);
 
+        String ip = socketAddress.toString();
+        if (ip.contains("/")) {
+            ip = ip.substring(ip.indexOf(47) + 1);
+        }
+
+        if (ip.contains(":")) {
+            ip = ip.substring(0, ip.indexOf(58));
+        }
+
+        // Player needs to be kicked, since there's already a player with that name
+        // playing on the server
         if ((onlinePlayer != null) && ((PlayerAuth) onlinePlayer).easyAuth$isAuthenticated() && extendedConfig.preventAnotherLocationKick) {
-            // Player needs to be kicked, since there's already a player with that name
-            // playing on the server
 
             // if joining from same IP, allow the player to join
-            String string = socketAddress.toString();
-            if (string.contains("/")) {
-                string = string.substring(string.indexOf(47) + 1);
-            }
-
-            if (string.contains(":")) {
-                string = string.substring(0, string.indexOf(58));
-            }
-
-            if (!((PlayerAuth) onlinePlayer).easyAuth$getIpAddress().equals(string)) {
+            if (!((PlayerAuth) onlinePlayer).easyAuth$getIpAddress().equals(ip)) {
                 return langConfig.playerAlreadyOnline.getNonTranslatable(incomingPlayerUsername);
             }
         }
@@ -207,6 +208,14 @@ public class AuthEventHandler {
 
         if (config.maxLoginTries != -1 && playerEntryV1.lastKickedDate.plusSeconds(config.resetLoginAttemptsTimeout).isAfter(ZonedDateTime.now())) {
             return langConfig.loginTriesExceeded.getNonTranslatable();
+        }
+
+        // Check concurrent session limit per IP
+        boolean isOnlinePlayer = config.premiumAutoLogin && (onlinePlayer != null) && ((PlayerAuth) onlinePlayer).easyAuth$isUsingMojangAccount();
+        if (IpLimitManager.isConcurrentSessionLimitExceeded(manager.getServer(), ip, isOnlinePlayer)) {
+            LogDebug("Player " + incomingPlayerUsername + " blocked: concurrent session limit exceeded for IP " + ip);
+            IpLimitManager.notifyAdmins(manager.getServer(), ip, incomingPlayerUsername);
+            return langConfig.sessionLimitExceeded.getNonTranslatable();
         }
 
         return null;

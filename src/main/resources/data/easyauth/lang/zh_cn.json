@@ -41,5 +41,13 @@
   "text.easyauth.selfMarkAsOnline": "§a你已将自己标记为正版账户玩家。",
   "text.easyauth.selfMarkAsOnlineWarning": "§6您即将标记自己为正版账户玩家。\n§6除非您拥有一个正版账户，否则将无法登录。\n§6所有与离线UUID关联的数据（例如村民的折扣、宠物）都将丢失。\n§a如要继续，请输入 /account online §c密码§e true。",
   "text.easyauth.accountNotFound": "§c未找到正版账户。",
-  "text.easyauth.accountCheckFailed": "§cMojang服务器不可用。请稍后再试。"
+  "text.easyauth.accountCheckFailed": "§cMojang服务器不可用。请稍后再试。",
+  "text.easyauth.ipLimitExceeded": "§4您的IP地址注册账户数量已达上限。每个IP最多允许 %d 个账户。",
+  "text.easyauth.ipLimitAdminNotify": "§e[EasyAuth] §cIP限制警告: §f玩家 §e%s §f来自IP §e%s §f超出了 §e%d §f个账户的限制。已有账户: §e%s",
+  "text.easyauth.sessionLimitExceeded": "§4您的IP地址连接数过多。请稍后再试。",
+  "text.easyauth.uuidSet": "§a玩家 §e%s §a的强制UUID已设置为 §e%s§a。玩家将被踢出以应用更改。",
+  "text.easyauth.uuidCleared": "§a玩家 §e%s §a的强制UUID已清除。玩家下次登录将使用默认UUID。",
+  "text.easyauth.uuidChanged": "§6管理员已更改您的UUID。请重新连接。",
+  "text.easyauth.invalidUuid": "§c无效的UUID格式: §e%s§c。请使用格式: 12345678-1234-1234-1234-123456789abc",
+  "text.easyauth.noForcedUuid": "§c玩家 §e%s §c没有设置强制UUID。"
 }

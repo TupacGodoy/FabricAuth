@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static xyz.nikitacartes.easyauth.config.ConfigMigration.*;
+import static xyz.nikitacartes.easyauth.config.MainConfigV1.CURRENT_CONFIG_VERSION;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
 public class EasyAuth {
@@ -107,8 +108,6 @@ public class EasyAuth {
         // Closing DbApi connection
         DB.close();
     }
-
-    private static final int CURRENT_CONFIG_VERSION = 4;
 
     public static void loadConfigs() {
         int configVersion = VersionConfig.load().configVersion;

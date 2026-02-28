@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.time.ZoneOffset;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.getUnixZero;
@@ -29,7 +30,7 @@ public interface DbApi {
     /**
      * Tells whether DbApi connection is closed.
      *
-     * @return false if connection is open, otherwise false
+     * @return false if connection is open, otherwise true
      */
     boolean isClosed();
 
@@ -86,6 +87,22 @@ public interface DbApi {
      */
     void migrateFromV1(HashMap<String, String> userCache);
 
+    /**
+     * Counts the number of registered accounts associated with the given IP address.
+     *
+     * @param ipAddress the IP address to check
+     * @return the number of accounts registered with this IP
+     */
+    int countAccountsByIp(String ipAddress);
+
+    /**
+     * Gets all usernames associated with the given IP address.
+     *
+     * @param ipAddress the IP address to check
+     * @return list of usernames registered with this IP
+     */
+    List<String> getUsernamesByIp(String ipAddress);
+
     default PlayerEntryV1 migrateFromV1(String data, String username) {
         String lowerCaseUsername = username.toLowerCase(Locale.ENGLISH);
 
@@ -103,4 +120,9 @@ public interface DbApi {
 
         return playerEntry;
     }
+
+    /**
+     * Migrates IP addresses from JSON to column.
+     */
+    void migrateFromV4();
 }

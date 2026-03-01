@@ -2,6 +2,7 @@
 #### Add
 - Add support for a changing "invalid session" message when offline player connects with online nickname
 - Gamemode switching on login
+- Op status switching on login
 - Optional session by player
 
 #### Fix
@@ -25,6 +26,7 @@
   - `/auth setUuid`
   - `/auth clearUuid`
   - `/auth getUuid`
+- PostgreSQL support, thanks to @DanielTrejoBorjas
 
 #### Fix
 - `/auth update` to also refresh cached online player data [#244](https://github.com/NikitaCartes/EasyAuth/issues/244)

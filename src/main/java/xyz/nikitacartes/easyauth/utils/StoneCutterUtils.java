@@ -216,7 +216,7 @@ public class StoneCutterUtils {
                 operatorEntry.getLevel() == LeveledPermissionPredicate.ADMINS ||
                 operatorEntry.getLevel() == LeveledPermissionPredicate.OWNERS;
         //?} else {
-        /*return operatorEntry.getPermissionLevel() >= 3;
+        /*return operatorEntry.getPermissionLevel() >= 2;
          *///?}
     }
 

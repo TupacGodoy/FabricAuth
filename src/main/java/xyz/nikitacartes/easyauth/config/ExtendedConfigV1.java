@@ -164,7 +164,7 @@ public class ExtendedConfigV1 extends ConfigTemplate {
 
     @Comment("""
             
-            If true, 'skipAllAuthChecks' does not apply to operator players.""")
+            If true, 'skipAllAuthChecks' does not apply to operator (op level >=2) players.""")
     public boolean skipAllAuthChecksNotForOperators = true;
 
     @Comment("""

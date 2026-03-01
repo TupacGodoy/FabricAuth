@@ -2,13 +2,15 @@ package xyz.nikitacartes.easyauth.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
-import xyz.nikitacartes.easyauth.utils.PlayerAuth;
-import xyz.nikitacartes.easyauth.utils.TranslationHelper;
+import xyz.nikitacartes.easyauth.integrations.Permissions;
+import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
+import xyz.nikitacartes.easyauth.interfaces.PlayerAuth;
 
 import static net.minecraft.server.command.CommandManager.literal;
+import static xyz.nikitacartes.easyauth.EasyAuth.getUnixZero;
+import static xyz.nikitacartes.easyauth.EasyAuth.langConfig;
 
 public class LogoutCommand {
 
@@ -22,13 +24,19 @@ public class LogoutCommand {
 
     private static int logout(ServerCommandSource serverCommandSource) throws CommandSyntaxException {
         ServerPlayerEntity player = serverCommandSource.getPlayerOrThrow();
+        PlayerAuth playerAuth = (PlayerAuth) player;
 
-        if (((PlayerAuth) player).isAuthenticated()) {
+        if (playerAuth.easyAuth$isAuthenticated() && !playerAuth.easyAuth$canSkipAuth()) {
             // player.getServer().getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.REMOVE_PLAYER, player));
-            ((PlayerAuth) player).setAuthenticated(false);
-            player.sendMessage(TranslationHelper.getSuccessfulLogout(), false);
+            playerAuth.easyAuth$setAuthenticated(false);
+
+            PlayerEntryV1 playerData = playerAuth.easyAuth$getPlayerEntryV1();
+            playerData.lastAuthenticatedDate = getUnixZero();
+            playerData.update();
+
+            langConfig.successfulLogout.send(serverCommandSource);
         } else {
-            player.sendMessage(TranslationHelper.getCannotLogout(), false);
+            langConfig.cannotLogout.send(serverCommandSource);
         }
         return 1;
     }

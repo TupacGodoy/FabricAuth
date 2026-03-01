@@ -8,33 +8,37 @@ import net.minecraft.util.Uuids;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import xyz.nikitacartes.easyauth.EasyAuth;
+import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
+import xyz.nikitacartes.easyauth.utils.PlayersCache;
 
-import javax.net.ssl.HttpsURLConnection;
-import java.io.File;
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static xyz.nikitacartes.easyauth.EasyAuth.*;
-import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
-import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogError;
+import static xyz.nikitacartes.easyauth.integrations.MojangApi.getUuid;
+import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
 @Mixin(ServerLoginNetworkHandler.class)
 public abstract class ServerLoginNetworkHandlerMixin {
     @Shadow
-    GameProfile profile;
+    public GameProfile profile;
 
     @Shadow
-    ServerLoginNetworkHandler.State state;
+    private ServerLoginNetworkHandler.State state;
 
     @Final
     @Shadow
     MinecraftServer server;
+
+    @Unique
+    private static final Pattern pattern = Pattern.compile("^[a-zA-Z0-9_]{1,16}$");
 
     /**
      * Checks whether the player has purchased an account.
@@ -48,65 +52,71 @@ public abstract class ServerLoginNetworkHandlerMixin {
             method = "onHello(Lnet/minecraft/network/packet/c2s/login/LoginHelloC2SPacket;)V",
             at = @At(
                     value = "INVOKE",
-                    target = "Lcom/mojang/authlib/GameProfile;<init>(Ljava/util/UUID;Ljava/lang/String;)V",
+                    //? if >= 1.20.2 {
+                    target = "Lnet/minecraft/server/MinecraftServer;isOnlineMode()Z"
+                    //?} else {
+                    /*target = "Lcom/mojang/authlib/GameProfile;<init>(Ljava/util/UUID;Ljava/lang/String;)V",
                     shift = At.Shift.AFTER,
                     remap = false
+                    *///?}
             ),
             cancellable = true
     )
     private void checkPremium(LoginHelloC2SPacket packet, CallbackInfo ci) {
+        String username = packet.name();
+
+        LogDebug("UUID of player " + username + " is " + packet.profileId());
+
+        PlayerEntryV1 playerData = PlayersCache.loadOrRegister(username);
+
         if (server.isOnlineMode()) {
             try {
-                String playername = packet.name().toLowerCase();
-                Pattern pattern = Pattern.compile("^[a-z0-9_]{3,16}$");
-                Matcher matcher = pattern.matcher(playername);
-                if (config.main.forcedOfflinePlayers.contains(playername)) {
-                    LogDebug("Player " + playername + " is forced to be offline");
-                    mojangAccountNamesCache.remove(playername);
-                    state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
+                Matcher matcher = pattern.matcher(username);
 
-                    this.profile = new GameProfile(null, packet.name());
+                if (playerData.onlineAccount == PlayerEntryV1.OnlineAccount.FALSE) {
+                    LogDebug("Player " + username + " is forced to be offline");
+
+                    state = getReadyState();
+                    this.profile = getGameProfile(packet.name());
                     ci.cancel();
                     return;
                 }
-                if (mojangAccountNamesCache.contains(playername) || config.experimental.verifiedOnlinePlayer.contains(playername)) {
-                    LogDebug("Player " + playername + " is cached as online player. Authentication continues as vanilla");
-                    mojangAccountNamesCache.add(playername);
+                if (playerData.onlineAccount == PlayerEntryV1.OnlineAccount.TRUE) {
+                    LogDebug("Player " + username + " is cached as online player. Authentication continues as vanilla");
                     return;
                 }
-                if ((playerCacheMap.containsKey(Uuids.getOfflinePlayerUuid(playername).toString()) || !matcher.matches())) {
+                if (!matcher.matches()) {
                     // Player definitely doesn't have a mojang account
-                    LogDebug("Player " + playername + " is cached as offline player");
-                    state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
+                    LogDebug("Player " + username + " doesn't have a valid username for Mojang account");
 
-                    this.profile = new GameProfile(null, packet.name());
+                    state = getReadyState();
+                    playerData.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
+                    playerData.update();
+
+                    this.profile = getGameProfile(packet.name());
                     ci.cancel();
                 } else {
-                    // Checking account status from API
-                    LogDebug("Checking player " + playername + " for premium status");
-                    HttpsURLConnection httpsURLConnection = (HttpsURLConnection) new URL("https://api.mojang.com/users/profiles/minecraft/" + playername).openConnection();
-                    httpsURLConnection.setRequestMethod("GET");
-                    httpsURLConnection.setConnectTimeout(5000);
-                    httpsURLConnection.setReadTimeout(5000);
+                    UUID onlineUuid = getUuid(username);
 
-                    int response = httpsURLConnection.getResponseCode();
-                    if (response == HttpURLConnection.HTTP_OK) {
-                        // Player has a Mojang account
-                        httpsURLConnection.disconnect();
-                        LogDebug("Player " + playername + " has a Mojang account");
-
+                    if ((EasyAuth.extendedConfig.preventOfflinePlayersWithOnlineUsernames && onlineUuid != null) || checkUuid(packet.profileId(), onlineUuid)) {
                         // Caches the request
-                        mojangAccountNamesCache.add(playername);
-                        config.experimental.verifiedOnlinePlayer.add(playername);
-                        config.save(new File("./mods/EasyAuth/config.json"));
-                        // Authentication continues in original method
-                    } else if (response == HttpURLConnection.HTTP_NO_CONTENT || response == HttpURLConnection.HTTP_NOT_FOUND) {
-                        // Player doesn't have a Mojang account
-                        httpsURLConnection.disconnect();
-                        LogDebug("Player " + playername + " doesn't have a Mojang account");
-                        state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
-
-                        this.profile = new GameProfile(null, packet.name());
+                        playerData.onlineAccount = PlayerEntryV1.OnlineAccount.TRUE;
+                        playerData.update();
+                        // Authentication continues in the original method
+                    } else {
+                        if (onlineUuid == null) {
+                            LogDebug("Player " + username + " doesn't have a Mojang account");
+                            playerData.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
+                            playerData.update();
+                        } else {
+                            LogInfo("Player " + username + " has a Mojang account, but UUID mismatch: expected " + onlineUuid + ", got " + packet.profileId());
+                            if (!EasyAuth.extendedConfig.checkOfflinePlayersWithOnlineUsernames) {
+                                playerData.onlineAccount = PlayerEntryV1.OnlineAccount.FALSE;
+                                playerData.update();
+                            }
+                        }
+                        state = getReadyState();
+                        this.profile = getGameProfile(packet.name());
                         ci.cancel();
                     }
                 }
@@ -114,5 +124,44 @@ public abstract class ServerLoginNetworkHandlerMixin {
                 LogError("checkPremium error", e);
             }
         }
+    }
+
+    @Unique
+    private GameProfile getGameProfile(String name) {
+        // Check if player has a forced UUID set
+        PlayerEntryV1 playerData = PlayersCache.get(name);
+        if (playerData != null && playerData.forcedUuid != null && !playerData.forcedUuid.isEmpty()) {
+            try {
+                UUID forcedUuid = UUID.fromString(playerData.forcedUuid);
+                LogInfo("Using forced UUID " + forcedUuid + " for player " + name);
+                return new GameProfile(forcedUuid, name);
+            } catch (IllegalArgumentException e) {
+                LogError("Invalid forced UUID for player " + name + ": " + playerData.forcedUuid, e);
+            }
+        }
+        //? if >= 1.20.2 {
+        return new GameProfile(Uuids.getOfflinePlayerUuid(name), name);
+        //?} else {
+        /*return new GameProfile(null, name);
+        *///?}
+    }
+
+    @Unique
+    private ServerLoginNetworkHandler.State getReadyState() {
+        //? if >= 1.20.2 {
+        return ServerLoginNetworkHandler.State.VERIFYING;
+        //?} else {
+        /*return ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
+        *///?}
+    }
+
+    @Unique
+    private boolean checkUuid(UUID uuid, UUID onlineUuid) {
+        return uuid.equals(onlineUuid);
+    }
+
+    @Unique
+    private boolean checkUuid(Optional<UUID> uuid, UUID onlineUuid) {
+        return uuid.isPresent() && uuid.get().equals(onlineUuid);
     }
 }

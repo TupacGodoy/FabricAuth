@@ -27,5 +27,17 @@
   "text.easyauth.playerAlreadyOnline": "§cO jogador %s já está online!",
   "text.easyauth.worldSpawnSet": "§aPonto de surgimento para login definido com sucesso.",
   "text.easyauth.corruptedPlayerData": "§cSeus dados estão provavelmente corrompidos. Por favor contate um administrador.",
-  "text.easyauth.userNotRegistered": "§cEsse jogador não está registrado!"
+  "text.easyauth.userNotRegistered": "§cEsse jogador não está registrado!",
+  "text.easyauth.cannotLogout": "§cVocê não pode desconectar!",
+  "text.easyauth.offlineUuid": "UUID offline para o jogador %s é (clique para copiar)\n%s",
+  "text.easyauth.registeredPlayers": "Lista de jogadores registrados:",
+  "text.easyauth.validSession": "§aVocê tem uma sessão válida. Não é necessário autenticar.",
+  "text.easyauth.onlinePlayerLogin": "§aVocê está usando uma conta original. Não é necessário autenticar.",
+  "text.easyauth.differentUsernameCase": "Você está usando uma formatação diferente no seu nome de usuário. Por favor utilize a correta.",
+  "text.easyauth.wrongGlobalPassword": "§4Senha global errada!",
+  "text.easyauth.registerRequiredWithGlobalPassword": "§6Digite /register \u003csenha global\u003e \u003csenha\u003e \u003csenha\u003e para reivindicar essa conta.",
+  "text.easyauth.markAsOffline": "§aJogador %s foi definido como conta pirata.",
+  "text.easyauth.markAsOnline": "§aJogador %s foi definido como conta original.",
+  "text.easyauth.selfMarkAsOnline": "§aVocê se definiu como conta original.",
+  "text.easyauth.selfMarkAsOnlineWarning": "§6Você quer se definir como conta original.\n§6Você não será capaz de autenticar caso não tenha uma conta original.\n§6Dados atrelados ao uuid offline (disconto de aldeões, discontos, pets) serão perdidos.\n§aSe deseja prosseguir, digite /account online <senha> true."
 }

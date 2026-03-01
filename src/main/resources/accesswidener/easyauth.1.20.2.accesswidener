@@ -1,0 +1,10 @@
+accessWidener	v1	named
+
+accessible class net/minecraft/server/network/ServerLoginNetworkHandler$State
+accessible method net/minecraft/server/network/ServerLoginNetworkHandler createOfflineProfile (Ljava/lang/String;)Lcom/mojang/authlib/GameProfile;
+accessible field net/minecraft/server/network/ServerLoginNetworkHandler profile Lcom/mojang/authlib/GameProfile;
+accessible field net/minecraft/stat/ServerStatHandler file Ljava/io/File;
+mutable field net/minecraft/stat/ServerStatHandler file Ljava/io/File;
+accessible class net/minecraft/util/UserCache$Entry
+accessible field net/minecraft/server/network/ServerPlayerEntity server Lnet/minecraft/server/MinecraftServer;
+accessible field net/minecraft/server/network/ServerPlayNetworkHandler requestedTeleportId I

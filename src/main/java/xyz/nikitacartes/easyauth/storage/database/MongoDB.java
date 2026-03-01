@@ -1,39 +1,44 @@
 package xyz.nikitacartes.easyauth.storage.database;
 
-
 import com.mongodb.MongoClientException;
 import com.mongodb.MongoCommandException;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
+import com.mongodb.ConnectionString;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.client.*;
 import com.mongodb.client.model.InsertOneModel;
-import com.mongodb.client.model.ReplaceOneModel;
+import net.minecraft.util.Uuids;
 import org.bson.Document;
-import xyz.nikitacartes.easyauth.storage.AuthConfig;
-import xyz.nikitacartes.easyauth.storage.PlayerCache;
+import org.bson.UuidRepresentation;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import xyz.nikitacartes.easyauth.config.StorageConfigV1;
+import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 import static com.mongodb.client.model.Filters.eq;
+import static xyz.nikitacartes.easyauth.EasyAuth.extendedConfig;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 
 public class MongoDB implements DbApi {
-    private final AuthConfig config;
+    private final StorageConfigV1 config;
     private MongoCollection<Document> collection;
     private MongoClient mongoClient;
 
-    public MongoDB(AuthConfig config) {
+    public MongoDB(StorageConfigV1 config) {
         this.config = config;
     }
 
     public void connect() throws DBApiException {
         LogDebug("You are using Mongo DB");
         try {
-            mongoClient = MongoClients.create(config.main.MongoDBConnectionString);
-            MongoDatabase database = mongoClient.getDatabase(config.main.MongoDBDatabase);
+            ConnectionString connString = new ConnectionString(config.mongodb.mongodbConnectionString);
+            MongoClientSettings settings = MongoClientSettings.builder()
+                    .applyConnectionString(connString)
+                    .uuidRepresentation(UuidRepresentation.STANDARD)
+                    .build();
+            mongoClient = MongoClients.create(settings);
+            MongoDatabase database = mongoClient.getDatabase(config.mongodb.mongodbDatabase);
             collection = database.getCollection("players");
         } catch (MongoClientException | MongoCommandException e) {
             throw new DBApiException("Failed connecting to MongoDB", e);
@@ -50,44 +55,192 @@ public class MongoDB implements DbApi {
     public boolean isClosed() { return mongoClient == null; }
 
     @Override
-    public boolean registerUser(String uuid, String data) {
-        LogError("RegisterUser isn't implemented in MongoDB");
-        return false;
+    public void registerUser(PlayerEntryV1 data) {
+        LogDebug("Registering new player " + data.username + ": " + data.toJson());
+        try {
+            Document document = new Document("username", data.username)
+                    .append("username_lower", data.usernameLowerCase)
+                    .append("uuid", data.uuid == null ? null : data.uuid.toString())
+                    .append("data", data.toJson())
+                    .append("last_ip", data.lastIp);
+            if (collection.insertOne(document).getInsertedId() == null) {
+                LogError("Failed to insert data: " + data.toJson());
+            }
+        } catch (MongoCommandException e) {
+            LogError("Failed to insert data: " + data.toJson(), e);
+        }
     }
 
-    public boolean isUserRegistered(String uuid) {
-        return collection.find(eq("UUID", uuid)).iterator().hasNext();
+    public @Nullable PlayerEntryV1 getUserData(String username) {
+        MongoCursor<Document> findIterable;
+        try {
+            if (extendedConfig.allowCaseInsensitiveUsername) {
+                findIterable = collection.find(eq("username", username)).iterator();
+            } else {
+                findIterable = collection.find(eq("username_lower", username.toLowerCase(Locale.ENGLISH))).iterator();
+            }
+            PlayerEntryV1 playerEntry = null;
+            if (findIterable.hasNext()) {
+                Document document = findIterable.next();
+                playerEntry = new PlayerEntryV1(document.getString("username"),
+                                            document.getString("username_lower"),
+                                            document.getString("uuid"),
+                                            document.getString("data"));
+            }
+            while (findIterable.hasNext()) {
+                Document document = findIterable.next();
+                String dbUsername = document.getString("username");
+                if (dbUsername.equals(username)) {
+                    playerEntry = new PlayerEntryV1(dbUsername,
+                                                document.getString("username_lower"),
+                                                document.getString("uuid"),
+                                                document.getString("data"));
+                    break;
+                }
+            }
+            LogDebug("Retrieved player data for " + username + ": " + (playerEntry != null ? playerEntry.toJson() : "null"));
+            return playerEntry;
+        } catch (Exception e) {
+            LogError("Error retrieving user data for " + username, e);
+            return null;
+        }
     }
 
-    public void deleteUserData(String uuid) {
-        collection.deleteOne(eq("UUID", uuid));
+    public @NotNull PlayerEntryV1 getUserDataOrCreate(String username) {
+        PlayerEntryV1 playerEntry = getUserData(username);
+        if (playerEntry == null) {
+            playerEntry = new PlayerEntryV1(username);
+            registerUser(playerEntry);
+        }
+        return playerEntry;
+    }
+
+    public boolean deleteUserData(String username) {
+        LogDebug("Deleting player data for " + username);
+        try {
+            if (collection.deleteOne(eq("username", username)).getDeletedCount() == 0) {
+                LogError("Failed to delete data for username: " + username);
+                return false;
+            }
+            return true;
+        } catch (Exception e) {
+            LogError("Error deleting user data", e);
+            return false;
+        }
     }
 
     @Override
-    public void updateUserData(String uuid, String data) {
-        LogError("updateUserData isn't implemented in MongoDB");
-    }
-
-    public String getUserData(String uuid) {
-        if (isUserRegistered(uuid)) {
-            Document data = collection.find(eq("UUID", uuid)).iterator().next();
-            return data.toJson();
+    public boolean updateUserData(PlayerEntryV1 data) {
+        LogDebug("Updating player data for " + data.username + ": " + data.toJson());
+        try {
+            Document document = new Document("username", data.username)
+                    .append("username_lower", data.usernameLowerCase)
+                    .append("uuid", data.uuid == null ? null : data.uuid.toString())
+                    .append("data", data.toJson())
+                    .append("last_ip", data.lastIp);
+            if (collection.replaceOne(eq("username", data.username), document).getModifiedCount() == 0) {
+                LogError("Failed to update data: " + data.toJson());
+                return false;
+            }
+            return true;
+        } catch (Exception e) {
+            LogError("Error updating user data: " + data.toJson(), e);
+            return false;
         }
-        return "";
     }
 
-    public void saveAll(HashMap<String, PlayerCache> playerCacheMap) {
+    @Override
+    public HashMap<String, PlayerEntryV1> getAllData() {
+        HashMap<String, PlayerEntryV1> registeredPlayers = new HashMap<>();
+        try {
+            collection.find().forEach(document -> {
+                String username = document.getString("username");
+                if (username == null) return;
+                String username_lower = document.getString("username_lower");
+                String uuid = document.getString("uuid");
+                String data = document.getString("data");
+                registeredPlayers.put(username, new PlayerEntryV1(username, username_lower, uuid, data));
+            });
+        } catch (Exception e) {
+            LogError("Error retrieving all user data", e);
+        }
+        return registeredPlayers;
+    }
+
+    @Override
+    public int countAccountsByIp(String ipAddress) {
+        try {
+            long count = collection.countDocuments(eq("last_ip", ipAddress));
+            LogDebug("Counted " + count + " accounts for IP " + ipAddress);
+            return (int) count;
+        } catch (Exception e) {
+            LogError("Error counting accounts by IP", e);
+            return 0;
+        }
+    }
+
+    @Override
+    public List<String> getUsernamesByIp(String ipAddress) {
+        List<String> usernames = new ArrayList<>();
+        try {
+            collection.find(eq("last_ip", ipAddress)).forEach(document -> {
+                String username = document.getString("username");
+                if (username != null) {
+                    usernames.add(username);
+                }
+            });
+            LogDebug("Found " + usernames.size() + " usernames for IP " + ipAddress);
+        } catch (Exception e) {
+            LogError("Error getting usernames by IP", e);
+        }
+        return usernames;
+    }
+
+    @Override
+    public void migrateFromV1(HashMap<String, String> userCache) {
         List<InsertOneModel<Document>> writeList = new ArrayList<>();
-        List<ReplaceOneModel<Document>> updateList = new ArrayList<>();
-        playerCacheMap.forEach((uuid, playerCache) -> {
-            // Save as BSON not JSON stringified
-            if (!isUserRegistered(uuid)) {
-                writeList.add(new InsertOneModel<>(new Document("UUID", uuid).append("password", playerCache.password)));
+        userCache.forEach((username, uuid) -> {
+            MongoCursor<Document> findIterable;
+            String data = null;
+
+            findIterable = collection.find(eq("UUID", uuid)).iterator();
+            if (findIterable.hasNext()) {
+                data = findIterable.next().toJson();
             } else {
-                updateList.add(new ReplaceOneModel<>(eq("UUID", uuid), new Document("UUID", uuid).append("password", playerCache.password).append("is_authenticated", playerCache.isAuthenticated).append("last_ip", playerCache.lastIp).append("valid_until", playerCache.validUntil).append("last_kicked", playerCache.lastKicked)));
+                String lowerCaseUsername = username.toLowerCase(Locale.ENGLISH);
+                String lowerCaseUuid = Uuids.getOfflinePlayerUuid(lowerCaseUsername).toString();
+                findIterable = collection.find(eq("UUID", lowerCaseUuid)).iterator();
+                if (findIterable.hasNext()) {
+                    data = findIterable.next().toJson();
+                }
+            }
+            if (data != null) {
+                PlayerEntryV1 playerEntry = migrateFromV1(data, username);
+                writeList.add(new InsertOneModel<>(new Document("username", playerEntry.username)
+                        .append("username_lower", playerEntry.usernameLowerCase)
+                        .append("uuid", playerEntry.uuid)
+                        .append("data", playerEntry.toJson())));
             }
         });
         if (!writeList.isEmpty()) collection.bulkWrite(writeList);
-        if (!updateList.isEmpty()) collection.bulkWrite(updateList);
     }
+
+    @Override
+    public void migrateFromV4() {
+        LogInfo("Migrating IPs from JSON to field...");
+        try {
+            for (Document document : collection.find()) {
+                String data = document.getString("data");
+                if (data != null) {
+                    // Create dummy entry to parse JSON
+                    PlayerEntryV1 entry = new PlayerEntryV1(document.getString("username"), document.getString("username_lower"), null, data);
+                    collection.updateOne(eq("_id", document.get("_id")), new Document("$set", new Document("last_ip", entry.lastIp)));
+                }
+            }
+            LogInfo("Migrated IPs successfully.");
+        } catch (Exception e) {
+            LogError("Error migrating IPs", e);
+        }
+    }
+
 }

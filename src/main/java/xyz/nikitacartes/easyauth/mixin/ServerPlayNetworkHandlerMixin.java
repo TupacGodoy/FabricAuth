@@ -1,9 +1,8 @@
 package xyz.nikitacartes.easyauth.mixin;
 
-import net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket;
-import net.minecraft.network.packet.c2s.play.CreativeInventoryActionC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import net.minecraft.network.packet.c2s.play.*;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.ActionResult;
@@ -13,8 +12,10 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import xyz.nikitacartes.easyauth.interfaces.PlayerAuth;
 
 import static net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket.Action.SWAP_ITEM_WITH_OFFHAND;
+import static xyz.nikitacartes.easyauth.EasyAuth.extendedConfig;
 
 @Mixin(ServerPlayNetworkHandler.class)
 public abstract class ServerPlayNetworkHandlerMixin {
@@ -27,7 +28,13 @@ public abstract class ServerPlayNetworkHandlerMixin {
             method = "onChatMessage(Lnet/minecraft/network/packet/c2s/play/ChatMessageC2SPacket;)V",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;validateMessage(Ljava/lang/String;Ljava/time/Instant;Lnet/minecraft/network/message/LastSeenMessageList$Acknowledgment;)Ljava/util/Optional;",
+                    //? if >= 1.20.5 {
+                    target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;validateAcknowledgment(Lnet/minecraft/network/message/LastSeenMessageList$Acknowledgment;)Ljava/util/Optional;",
+                    //?} else if >= 1.20.3 {
+                    //target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;validateMessage(Lnet/minecraft/network/message/LastSeenMessageList$Acknowledgment;)Ljava/util/Optional;",
+                    //?} else {
+                    /*target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;validateMessage(Ljava/lang/String;Ljava/time/Instant;Lnet/minecraft/network/message/LastSeenMessageList$Acknowledgment;)Ljava/util/Optional;",
+                    *///?}
                     shift = At.Shift.BEFORE
             ),
             cancellable = true
@@ -92,4 +99,13 @@ public abstract class ServerPlayNetworkHandlerMixin {
             ci.cancel();
         }
     }
+
+    //? if >= 1.20.2 {
+    @WrapMethod(method = "onPlayerSession(Lnet/minecraft/network/packet/c2s/play/PlayerSessionC2SPacket;)V")
+    private void onPlayerSessionWrap(PlayerSessionC2SPacket packet, Operation<Void> original) {
+        if (!extendedConfig.forcedOfflineUuid || !((PlayerAuth) this.player).easyAuth$isUsingMojangAccount()) {
+            original.call(packet);
+        }
+    }
+    //?}
 }

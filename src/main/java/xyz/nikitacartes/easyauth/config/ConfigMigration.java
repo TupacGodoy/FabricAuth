@@ -170,25 +170,6 @@ public class ConfigMigration {
         LogInfo("Migration completed in " + (System.currentTimeMillis() - now) + "ms");
     }
 
-    public static void migrateFromV2() {
-        LogInfo("Migrating config from v2 to v3");
-
-        EasyAuth.extendedConfig.save();
-        EasyAuth.langConfig.save();
-
-        EasyAuth.config.configVersion = 3;
-        EasyAuth.config.save();
-    }
-
-    public static void migrateFromV3() {
-        LogInfo("Migrating config from v3 to v4");
-
-        EasyAuth.extendedConfig.save();
-
-        EasyAuth.config.configVersion = 4;
-        EasyAuth.config.save();
-    }
-
     public static void migrateFromV4() {
         LogInfo("Migrating DB from v4 to v5");
         long now = System.currentTimeMillis();
@@ -204,20 +185,23 @@ public class ConfigMigration {
         db.migrateFromV4();
         db.close();
 
-        EasyAuth.config.configVersion = 5;
-        EasyAuth.config.save();
         EasyAuth.langConfig.save();
         EasyAuth.extendedConfig.save();
+
+        EasyAuth.config.configVersion = 5;
+        EasyAuth.config.save();
 
         LogInfo("Migration completed in " + (System.currentTimeMillis() - now) + "ms");
     }
 
-    public static void migrateFromV5() {
-        LogInfo("Migrating config from v5 to v6");
+    public static void saveAndMigrateTo(int targetVersion) {
+        LogInfo("Backing up config and migrating to v" + targetVersion);
 
         EasyAuth.storageConfig.save();
+        EasyAuth.extendedConfig.save();
+        EasyAuth.langConfig.save();
 
-        EasyAuth.config.configVersion = 6;
+        EasyAuth.config.configVersion = targetVersion;
         EasyAuth.config.save();
     }
 
@@ -226,17 +210,14 @@ public class ConfigMigration {
         if (configVersion < 2) {
             migrateFromV1();
         }
-        if (configVersion < 3) {
-            migrateFromV2();
-        }
         if (configVersion < 4) {
-            migrateFromV3();
+            saveAndMigrateTo(4);
         }
         if (configVersion < 5) {
             migrateFromV4();
         }
-        if (configVersion < 6) {
-            migrateFromV5();
+        if (configVersion < 7) {
+            saveAndMigrateTo(7);
         }
     }
 

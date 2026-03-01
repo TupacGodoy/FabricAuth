@@ -13,7 +13,7 @@
 ##### Minecraft 1.19.4, 1.20[.X], 1.21[.X]
 #### Add
 - IP limit controls [#200](https://github.com/NikitaCartes/EasyAuth/issues/200), thanks to @virgil698 [#252](https://github.com/NikitaCartes/EasyAuth/pull/252)
-- New config options for IP limit:
+- New config options for IP limit in `extended.conf`:
   - `ipLimit.enabled`
   - `ipLimit.maxAccountsPerIp`
   - `ipLimit.blockExcessRegistration`
@@ -22,11 +22,14 @@
   - `ipLimit.cacheExpirySeconds`
   - `ipLimit.maxConcurrentSessionsPerIp`
   - `ipLimit.exemptOnlinePlayers`
-- UUID management commands [#249](https://github.com/NikitaCartes/EasyAuth/issues/249)
+- UUID management commands, thanks to @virgil698 [#249](https://github.com/NikitaCartes/EasyAuth/issues/249)
   - `/auth setUuid`
   - `/auth clearUuid`
   - `/auth getUuid`
-- PostgreSQL support, thanks to @DanielTrejoBorjas
+- PostgreSQL support, thanks to @DanielTrejoBorjas [#226](https://github.com/NikitaCartes/EasyAuth/pull/226), [#258](https://github.com/NikitaCartes/EasyAuth/pull/258)
+- New options in `extended.conf` for preventing OPs and registered players from joining without logging with `skipAllAuthChecks` enabled, thanks to @Fenix5fire [#184](https://github.com/NikitaCartes/EasyAuth/pull/184)
+  - `skipAllAuthChecksNotForOperators`
+  - `skipAllAuthChecksNotForRegisteredPlayers`
 
 #### Fix
 - `/auth update` to also refresh cached online player data [#244](https://github.com/NikitaCartes/EasyAuth/issues/244)

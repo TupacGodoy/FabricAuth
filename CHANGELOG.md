@@ -33,6 +33,7 @@
 
 #### Fix
 - `/auth update` to also refresh cached online player data [#244](https://github.com/NikitaCartes/EasyAuth/issues/244)
+- Problem with loading configurations files [#225](https://github.com/NikitaCartes/EasyAuth/issues/225)
 
 ---
 ### 3.4.2

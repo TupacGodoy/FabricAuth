@@ -40,7 +40,7 @@ public abstract class ConfigTemplate {
             try {
                 return loader.load().get(configClass);
             } catch (ConfigurateException e) {
-                throw new RuntimeException("[EasyAuth] Failed to load config file", e);
+                throw new RuntimeException("[EasyAuth] Config file " + configPath + " is corrupted. To regenerate it, delete the existing main.conf", e);
             }
         } else {
             return null;

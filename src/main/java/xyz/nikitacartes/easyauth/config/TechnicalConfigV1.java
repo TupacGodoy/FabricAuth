@@ -66,12 +66,7 @@ public class TechnicalConfigV1 extends ConfigTemplate {
     }
 
     public static TechnicalConfigV1 load() {
-        TechnicalConfigV1 config = loadConfig(TechnicalConfigV1.class, "technical.conf");
-        if (config == null) {
-            throw new RuntimeException("Failed to load technical.conf");
-        }
-        config.loadedMods();
-        return config;
+        return create();
     }
 
     private void loadedMods() {

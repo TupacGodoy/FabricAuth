@@ -55,7 +55,7 @@ public class StorageConfigV1 extends ConfigTemplate {
     public static StorageConfigV1 load() {
         StorageConfigV1 config = loadConfig(StorageConfigV1.class, "storage.conf");
         if (config == null) {
-            throw new RuntimeException("Failed to load storage.conf");
+            throw new RuntimeException("storage.conf was not found. To regenerate the config files, delete the existing main.conf");
         }
         return config;
     }

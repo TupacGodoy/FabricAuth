@@ -228,7 +228,7 @@ public class ExtendedConfigV1 extends ConfigTemplate {
     public static ExtendedConfigV1 load() {
         ExtendedConfigV1 config = loadConfig(ExtendedConfigV1.class, "extended.conf");
         if (config == null) {
-            throw new RuntimeException("Failed to load extended.conf");
+            throw new RuntimeException("extended.conf was not found. To regenerate the config files, delete the existing main.conf");
         }
         AuthEventHandler.usernamePattern = Pattern.compile(config.usernameRegexp);
         return config;

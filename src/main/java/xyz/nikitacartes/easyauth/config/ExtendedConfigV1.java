@@ -160,7 +160,7 @@ public class ExtendedConfigV1 extends ConfigTemplate {
     @Comment("""
             
             If true, 'skipAllAuthChecks' does not apply to registered players.""")
-    public boolean skipAllAuthChecksNotForRegisteredPLayers = true;
+    public boolean skipAllAuthChecksNotForRegisteredPlayers = true;
 
     @Comment("""
             

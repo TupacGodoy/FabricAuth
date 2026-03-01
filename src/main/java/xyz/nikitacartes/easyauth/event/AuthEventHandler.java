@@ -316,7 +316,7 @@ public class AuthEventHandler {
         }
 
         PlayerAuth playerAuth = (PlayerAuth) player;
-        if (extendedConfig.skipAllAuthChecksNotForRegisteredPLayers && !playerAuth.easyAuth$getPlayerEntryV1().password.isEmpty()) {
+        if (extendedConfig.skipAllAuthChecksNotForRegisteredPlayers && !playerAuth.easyAuth$getPlayerEntryV1().password.isEmpty()) {
             return false;
         }
 

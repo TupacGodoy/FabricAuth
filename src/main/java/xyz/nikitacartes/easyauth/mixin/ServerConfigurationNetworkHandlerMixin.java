@@ -86,7 +86,7 @@ public abstract class ServerConfigurationNetworkHandlerMixin extends ServerCommo
             return false;
         }
 
-        if (extendedConfig.skipAllAuthChecksNotForRegisteredPLayers && entry != null && !entry.password.isEmpty()) {
+        if (extendedConfig.skipAllAuthChecksNotForRegisteredPlayers && entry != null && !entry.password.isEmpty()) {
             return false;
         }
 

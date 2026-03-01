@@ -116,7 +116,7 @@ public class MainConfigV1 extends ConfigTemplate {
     public static MainConfigV1 load() {
         MainConfigV1 config = loadConfig(MainConfigV1.class, "main.conf");
         if (config == null) {
-            throw new RuntimeException("Failed to load main.conf");
+            throw new RuntimeException("main.conf was not found. How? To regenerate the config files, delete the existing main.conf");
         }
         return config;
     }

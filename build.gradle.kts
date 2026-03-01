@@ -57,7 +57,6 @@ loom {
             sourceSet(sourceSets["client"])
         }
     }
-    log4jConfigs.from(file("log4j.xml"))
 
     decompilerOptions.named("vineflower") {
         options.put("mark-corresponding-synthetics", "1") // Adds names to lambdas - useful for mixins

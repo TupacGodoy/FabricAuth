@@ -159,6 +159,16 @@ public class ExtendedConfigV1 extends ConfigTemplate {
 
     @Comment("""
             
+            If true, 'skipAllAuthChecks' does not apply to registered players.""")
+    public boolean skipAllAuthChecksNotForRegisteredPLayers = true;
+
+    @Comment("""
+            
+            If true, 'skipAllAuthChecks' does not apply to operator players.""")
+    public boolean skipAllAuthChecksNotForOperators = true;
+
+    @Comment("""
+            
             Allow players to join the server with same username as previously registered player, but in different case.""")
     public boolean allowCaseInsensitiveUsername = false;
 

@@ -256,7 +256,7 @@ public class AuthEventHandler {
             cache.update();
         }
 
-        if (extendedConfig.skipAllAuthChecks) {
+        if (isSkipAllAuthChecksApplicable(player)) {
             playerAuth.easyAuth$setAuthenticated(true);
         }
 
@@ -275,7 +275,7 @@ public class AuthEventHandler {
         } else if (playerAuth.easyAuth$isAuthenticated()) {
             langConfig.validSession.send(player);
             return;
-        } else if (extendedConfig.skipAllAuthChecks) {
+        } else if (isSkipAllAuthChecksApplicable(player)) {
             return;
         }
 
@@ -308,6 +308,23 @@ public class AuthEventHandler {
         if (config.hidePlayerCoords) {
             ((PlayerAuth) player).easyAuth$restoreTrueLocation();
         }
+    }
+
+    public static boolean isSkipAllAuthChecksApplicable(ServerPlayerEntity player) {
+        if (!extendedConfig.skipAllAuthChecks) {
+            return false;
+        }
+
+        PlayerAuth playerAuth = (PlayerAuth) player;
+        if (extendedConfig.skipAllAuthChecksNotForRegisteredPLayers && !playerAuth.easyAuth$getPlayerEntryV1().password.isEmpty()) {
+            return false;
+        }
+
+        if (extendedConfig.skipAllAuthChecksNotForOperators && StoneCutterUtils.isAdministrator(player.server.getPlayerManager(), player)) {
+            return false;
+        }
+
+        return true;
     }
 
     // Player execute command

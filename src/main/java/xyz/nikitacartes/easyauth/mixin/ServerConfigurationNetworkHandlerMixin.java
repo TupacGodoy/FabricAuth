@@ -12,6 +12,7 @@ import net.minecraft.server.network.ServerConfigurationNetworkHandler;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -19,6 +20,7 @@ import xyz.nikitacartes.easyauth.interfaces.PrepareSpawnTaskInterface;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import xyz.nikitacartes.easyauth.integrations.FloodgateApiHelper;
 import xyz.nikitacartes.easyauth.utils.PlayersCache;
+import xyz.nikitacartes.easyauth.utils.StoneCutterUtils;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -47,7 +49,7 @@ public abstract class ServerConfigurationNetworkHandlerMixin extends ServerCommo
         if ((entry == null) ||
                 (this.server.isOnlineMode() && config.premiumAutoLogin && entry.onlineAccount == PlayerEntryV1.OnlineAccount.TRUE) ||
                 (config.floodgateAutoLogin && FloodgateApiHelper.isFloodgatePlayer(profile.id())) ||
-                (extendedConfig.skipAllAuthChecks)) {
+                easyAuth$isSkipAllAuthChecksApplicable(entry)) {
             spawnTask.easyAuth$setAuthenticated(true);
             LogDebug(String.format("Player %s is considered authenticated by default", profile.name()));
 
@@ -76,6 +78,23 @@ public abstract class ServerConfigurationNetworkHandlerMixin extends ServerCommo
 
     public ServerConfigurationNetworkHandlerMixin(MinecraftServer server, ClientConnection connection, ConnectedClientData clientData) {
         super(server, connection, clientData);
+    }
+
+    @Unique
+    private boolean easyAuth$isSkipAllAuthChecksApplicable(PlayerEntryV1 entry) {
+        if (!extendedConfig.skipAllAuthChecks) {
+            return false;
+        }
+
+        if (extendedConfig.skipAllAuthChecksNotForRegisteredPLayers && entry != null && !entry.password.isEmpty()) {
+            return false;
+        }
+
+        if (extendedConfig.skipAllAuthChecksNotForOperators && StoneCutterUtils.isAdministrator(this.server.getPlayerManager(), this.profile)) {
+            return false;
+        }
+
+        return true;
     }
 }
 //?}

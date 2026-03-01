@@ -193,20 +193,57 @@ public class StoneCutterUtils {
         return FabricLoader.getInstance().isModLoaded(modId);
     }
 
-    public static boolean isOperator(PlayerManager playerManager, ServerPlayerEntity player) {
+    public static boolean isAdministrator(PlayerManager playerManager, ServerPlayerEntity player) {
+        return isAdministrator(playerManager, player.getGameProfile());
+    }
+
+    public static boolean isAdministrator(PlayerManager playerManager, GameProfile profile) {
         //? if >= 1.21.9 {
-        OperatorEntry operatorEntry = playerManager.getOpList().get(new PlayerConfigEntry(player.getGameProfile()));
+        OperatorEntry operatorEntry = playerManager.getOpList().get(new PlayerConfigEntry(profile));
         //?} else {
-        /*OperatorEntry operatorEntry = playerManager.getOpList().get(player.getGameProfile());
+        /*OperatorEntry operatorEntry = playerManager.getOpList().get(profile);
          *///?}
-        if (operatorEntry != null) {
-            //? if >= 1.21.11 {
-            return operatorEntry.getLevel() == LeveledPermissionPredicate.ADMINS || operatorEntry.getLevel() == LeveledPermissionPredicate.OWNERS;
-            //?} else {
-            /*return operatorEntry.getPermissionLevel() >= 3;
-             *///?}
+        return isAdministrator(operatorEntry);
+    }
+
+    private static boolean isAdministrator(OperatorEntry operatorEntry) {
+        if (operatorEntry == null) {
+            return false;
         }
-        return false;
+
+        //? if >= 1.21.11 {
+        return operatorEntry.getLevel() == LeveledPermissionPredicate.GAMEMASTERS ||
+                operatorEntry.getLevel() == LeveledPermissionPredicate.ADMINS ||
+                operatorEntry.getLevel() == LeveledPermissionPredicate.OWNERS;
+        //?} else {
+        /*return operatorEntry.getPermissionLevel() >= 3;
+         *///?}
+    }
+
+    public static boolean isOperator(PlayerManager playerManager, ServerPlayerEntity player) {
+        return isOperator(playerManager, player.getGameProfile());
+    }
+
+    public static boolean isOperator(PlayerManager playerManager, GameProfile profile) {
+        //? if >= 1.21.9 {
+        OperatorEntry operatorEntry = playerManager.getOpList().get(new PlayerConfigEntry(profile));
+        //?} else {
+        /*OperatorEntry operatorEntry = playerManager.getOpList().get(profile);
+         *///?}
+        return isOperator(operatorEntry);
+    }
+
+    private static boolean isOperator(OperatorEntry operatorEntry) {
+        if (operatorEntry == null) {
+            return false;
+        }
+
+        //? if >= 1.21.11 {
+        return operatorEntry.getLevel() == LeveledPermissionPredicate.ADMINS ||
+                operatorEntry.getLevel() == LeveledPermissionPredicate.OWNERS;
+        //?} else {
+        /*return operatorEntry.getPermissionLevel() >= 3;
+         *///?}
     }
 
 }

@@ -25,7 +25,7 @@ public abstract class ClientConnectionMixin {
         if (isServerPlayNetworkHandler) {
             ServerPlayerEntity player = ((ServerPlayNetworkHandler) listener).player;
             if (!((PlayerAuth) player).easyAuth$isAuthenticated()) {
-                if (!AuthEventHandler.isAllowedPacket(packet)) {
+                if (!AuthEventHandler.isAllowedPacket(player, packet)) {
                     ci.cancel();
                 }
             }

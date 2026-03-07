@@ -68,7 +68,13 @@ public class ExtendedConfigV1 extends ConfigTemplate {
 
     @Comment("""
             
-            Allow custom payload and custom click action packets to be processed while not logged in.""")
+            Allow custom payload and custom click action packets to be processed by non-op players (op level 0 or 1) while not logged in.""")
+    public boolean allowCustomPacketsForNonOp = false;
+
+    @Comment("""
+            
+            Allow custom payload and custom click action packets to be processed by all players while not logged in.
+            Note: this setting overrides allowCustomPacketsForNonOp.""")
     public boolean allowCustomPackets = false;
 
     @Comment("""

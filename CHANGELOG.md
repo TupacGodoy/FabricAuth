@@ -30,6 +30,7 @@
 - New options in `extended.conf` for preventing OPs and registered players from joining without logging with `skipAllAuthChecks` enabled, thanks to @Fenix5fire [#184](https://github.com/NikitaCartes/EasyAuth/pull/184)
   - `skipAllAuthChecksNotForOperators`
   - `skipAllAuthChecksNotForRegisteredPlayers`
+- Option `allowCustomPacketsForNonOp` to allow handling custom packets for non-OP players
 
 #### Fix
 - `/auth update` to also refresh cached online player data [#244](https://github.com/NikitaCartes/EasyAuth/issues/244)
@@ -42,6 +43,10 @@
 - It wasn't possible to join the server using an online account if `forced-offline-uuid` was enabled
 - `hide-player-coords` not working for players with `ONLINE` status on `online-mode` servers [#251](https://github.com/NikitaCartes/EasyAuth/issues/251)
 - Packets are being handled for not authenticated players (#230)(https://github.com/NikitaCartes/EasyAuth/issues/230)
+
+#### Add
+- Option `allowCustomPackets` to allow handling custom packets (used by other mods) for not authenticated players
+- Option `allowAllPackets` to allow handling all packets for not authenticated players (including vanilla packets)
 
 ---
 ### 3.4.1

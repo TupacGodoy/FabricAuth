@@ -35,6 +35,10 @@ import xyz.nikitacartes.easyauth.utils.StoneCutterUtils;
 
 import java.net.SocketAddress;
 import java.time.ZonedDateTime;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -51,7 +55,9 @@ public class AuthEventHandler {
 
     public static Pattern usernamePattern;
 
-    public static boolean isAllowedPacket(Packet<?> packet) {
+    private static final Map<UUID, Boolean> administratorCache = new ConcurrentHashMap<>();
+
+    public static boolean isAllowedPacket(ServerPlayerEntity player, Packet<?> packet) {
         if (packet instanceof KeepAliveC2SPacket
                 || packet instanceof ResourcePackStatusC2SPacket
                 || packet instanceof TeleportConfirmC2SPacket
@@ -80,15 +86,6 @@ public class AuthEventHandler {
                  /*|| packet instanceof PlayPongC2SPacket
                 *///?}
         ) {
-            return true;
-        }
-
-        if (extendedConfig.allowCustomPackets && (
-                packet instanceof CustomPayloadC2SPacket
-                //? if >= 1.21.6 {
-                || packet instanceof CustomClickActionC2SPacket
-                //?}
-        )) {
             return true;
         }
 
@@ -153,7 +150,25 @@ public class AuthEventHandler {
             return true;
         }
 
+        if ((extendedConfig.allowCustomPacketsForNonOp || extendedConfig.allowCustomPackets) &&
+            (packet instanceof CustomPayloadC2SPacket
+                //? if >= 1.21.6 {
+                || packet instanceof CustomClickActionC2SPacket
+                // ?}
+            )) {
+            if (extendedConfig.allowCustomPackets || !isAdministratorCached(player)) {
+                return true;
+            } else if (config.debug && packet instanceof CustomPayloadC2SPacket) {
+                LogDebug("Blocked custom packet " + ((CustomPayloadC2SPacket) packet).payload().getId());
+            }
+        }
+
         return false;
+    }
+
+    public static boolean isAdministratorCached(ServerPlayerEntity player) {
+        UUID playerUuid = player.getUuid();
+        return administratorCache.computeIfAbsent(playerUuid, ignored -> StoneCutterUtils.isAdministrator(player.server.getPlayerManager(), player));
     }
 
     /**
@@ -223,6 +238,10 @@ public class AuthEventHandler {
 
     public static void loadPlayerData(ServerPlayerEntity player, ClientConnection connection) {
         PlayerAuth playerAuth = (PlayerAuth) player;
+
+        UUID playerUuid = player.getUuid();
+        PlayerManager playerManager = player.server.getPlayerManager();
+        administratorCache.put(playerUuid, StoneCutterUtils.isAdministrator(playerManager, player));
 
         // Create in case of Carpet player
         String username = StoneCutterUtils.getUsername(player);
@@ -295,6 +314,9 @@ public class AuthEventHandler {
     }
 
     public static void onPlayerLeave(ServerPlayerEntity player) {
+        UUID playerUuid = player.getUuid();
+        administratorCache.remove(playerUuid);
+
         PlayerAuth playerAuth = (PlayerAuth) player;
         if (playerAuth.easyAuth$canSkipAuth())
             return;
@@ -320,7 +342,7 @@ public class AuthEventHandler {
             return false;
         }
 
-        if (extendedConfig.skipAllAuthChecksNotForOperators && StoneCutterUtils.isAdministrator(player.server.getPlayerManager(), player)) {
+        if (extendedConfig.skipAllAuthChecksNotForOperators && isAdministratorCached(player)) {
             return false;
         }
 
@@ -336,25 +358,47 @@ public class AuthEventHandler {
         if (player == null) {
             return ActionResult.PASS;
         }
+        if (command == null) {
+            return ActionResult.PASS;
+        }
+        if (((PlayerAuth) player).easyAuth$isAuthenticated()) {
+            return ActionResult.PASS;
+        }
+
         if (command.startsWith("login ")
                 || command.startsWith("register ")
                 || (extendedConfig.aliases.login && command.startsWith("l "))
                 || (extendedConfig.aliases.register && command.startsWith("reg "))) {
             return ActionResult.PASS;
         }
-        if (!((PlayerAuth) player).easyAuth$isAuthenticated()) {
-            String username = StoneCutterUtils.getUsername(player);
-            for (String allowedCommand : extendedConfig.allowedCommands) {
-                if (command.startsWith(allowedCommand)) {
-                    LogDebug("Player " + username + " executed command " + command + " without being authenticated.");
-                    return ActionResult.PASS;
-                }
-            }
-            LogDebug("Player " + username + " tried to execute command " + command + " without being authenticated.");
-            ((PlayerAuth) player).easyAuth$sendAuthMessage();
-            return ActionResult.FAIL;
+
+        String normalizedCommand = command.trim();
+        if (normalizedCommand.startsWith("/")) {
+            normalizedCommand = normalizedCommand.substring(1);
         }
-        return ActionResult.PASS;
+
+        String lowercaseCommand = normalizedCommand.toLowerCase(Locale.ENGLISH);
+        if (lowercaseCommand.equals("op")
+                || lowercaseCommand.startsWith("op ")
+                || lowercaseCommand.equals("minecraft:op")
+                || lowercaseCommand.startsWith("minecraft:op ")
+                || lowercaseCommand.equals("deop")
+                || lowercaseCommand.startsWith("deop ")
+                || lowercaseCommand.equals("minecraft:deop")
+                || lowercaseCommand.startsWith("minecraft:deop ")) {
+            administratorCache.clear();
+        }
+
+        String username = StoneCutterUtils.getUsername(player);
+        for (String allowedCommand : extendedConfig.allowedCommands) {
+            if (command.startsWith(allowedCommand)) {
+                LogDebug("Player " + username + " executed command " + command + " without being authenticated.");
+                return ActionResult.PASS;
+            }
+        }
+        LogDebug("Player " + username + " tried to execute command " + command + " without being authenticated.");
+        ((PlayerAuth) player).easyAuth$sendAuthMessage();
+        return ActionResult.FAIL;
     }
 
     // Player chatting

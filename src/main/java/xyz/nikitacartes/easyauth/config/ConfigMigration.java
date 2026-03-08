@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.gameDirectory;
+import static xyz.nikitacartes.easyauth.config.MainConfigV1.CURRENT_CONFIG_VERSION;
 import static xyz.nikitacartes.easyauth.config.StorageConfigV1.getDbApi;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogError;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogInfo;
@@ -216,8 +217,8 @@ public class ConfigMigration {
         if (configVersion < 5) {
             migrateFromV4();
         }
-        if (configVersion < 7) {
-            saveAndMigrateTo(7);
+        if (configVersion < CURRENT_CONFIG_VERSION) {
+            saveAndMigrateTo(CURRENT_CONFIG_VERSION);
         }
     }
 

@@ -31,6 +31,7 @@
   - `skipAllAuthChecksNotForOperators`
   - `skipAllAuthChecksNotForRegisteredPlayers`
 - Option `allowCustomPacketsForNonOp` to allow handling custom packets for non-OP players
+- Option `allowedCustomPackets` to specify list of custom packets that always allowed
 
 #### Fix
 - `/auth update` to also refresh cached online player data [#244](https://github.com/NikitaCartes/EasyAuth/issues/244)

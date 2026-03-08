@@ -164,7 +164,7 @@ public class AuthEventHandler {
             //?} else if >= 1.20.2 {
             /*String customPacketIdentifier = ((CustomPayloadC2SPacket) packet).payload().id().toString();
             *///?} else {
-            /*String customPacketIdentifier = ((CustomPayloadC2SPacket) packet).getChannel().id().toString();
+            /*String customPacketIdentifier = ((CustomPayloadC2SPacket) packet).getChannel().toString();
              *///?}
 
             if (isAllowedCustomPacket(customPacketIdentifier)) {

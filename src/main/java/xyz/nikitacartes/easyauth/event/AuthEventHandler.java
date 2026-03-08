@@ -544,8 +544,8 @@ public class AuthEventHandler {
             //? if >= 1.21.9 {
             netHandler.profile = Uuids.getOfflinePlayerProfile(netHandler.profile.name());
             //?} else if >= 1.20.3 {
-            //netHandler.profile = Uuids.getOfflinePlayerProfile(netHandler.profile.getName());
-            //?} else if >= 1.20.2 {
+            /*netHandler.profile = Uuids.getOfflinePlayerProfile(netHandler.profile.getName());
+            *///?} else if >= 1.20.2 {
             /*netHandler.profile = ServerLoginNetworkHandler.createOfflineProfile(netHandler.profile.getName());
             *///?} else {
             /*netHandler.profile = netHandler.toOfflineProfile(netHandler.profile);

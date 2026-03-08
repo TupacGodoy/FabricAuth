@@ -82,10 +82,10 @@ public class StoneCutterUtils {
         //? if >= 1.21.9 {
         return player.getEntityWorld();
         //?} else if >= 1.21.6 {
-        // return player.getWorld();
-        //?} else if >= 1.20 {
-        // return player.getServerWorld();
-        //?} else {
+         /*return player.getWorld();
+        *///?} else if >= 1.20 {
+         /*return player.getServerWorld();
+        *///?} else {
          /*return player.getWorld();
         *///?}
     }

@@ -96,11 +96,11 @@ public abstract class PlayerManagerMixin {
         ((PlayerAuth) player).easyAuth$setSkipAuth();
     }
     //?} else if >= 1.20.2 {
-    //@Inject(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V", at = @At("HEAD"))
-    //private void onPlayerConnectHead(ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData, CallbackInfo ci) {
-    //    AuthEventHandler.loadPlayerData(player, connection);
-    //}
-    //?} else {
+    /*@Inject(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/server/network/ConnectedClientData;)V", at = @At("HEAD"))
+    private void onPlayerConnectHead(ClientConnection connection, ServerPlayerEntity player, ConnectedClientData clientData, CallbackInfo ci) {
+        AuthEventHandler.loadPlayerData(player, connection);
+    }
+    *///?} else {
     /*@Inject(method = "onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;)V", at = @At("HEAD"))
     private void onPlayerConnectHead(ClientConnection connection, ServerPlayerEntity player, CallbackInfo ci) {
         AuthEventHandler.loadPlayerData(player, connection);
@@ -415,8 +415,8 @@ public abstract class PlayerManagerMixin {
 
     //? if >= 1.21.9 {
     //?} else if >= 1.21.6 {
-    /*
-    @WrapOperation(method = "method_68176(Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/storage/ReadView;)V",
+    
+    /*@WrapOperation(method = "method_68176(Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/storage/ReadView;)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;readRootVehicle(Lnet/minecraft/storage/ReadView;)V"))
     private static void doNotMountPlayerToVehicle(ServerPlayerEntity instance, ReadView view, Operation<Void> original) {
         if (config.hidePlayerCoords && !((PlayerAuth) instance).easyAuth$isAuthenticated()) {
@@ -424,8 +424,8 @@ public abstract class PlayerManagerMixin {
         }
         original.call(instance, view);
     }
-     */
-    //?} else if >= 1.21.5 {
+     
+    *///?} else if >= 1.21.5 {
     /*@WrapOperation(method = "method_68176(Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/nbt/NbtCompound;)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;readRootVehicle(Lnet/minecraft/nbt/NbtCompound;)V"))
     private static void doNotMountPlayerToVehicle(ServerPlayerEntity serverPlayerEntity, NbtCompound nbtCompound, Operation<Void> original) {

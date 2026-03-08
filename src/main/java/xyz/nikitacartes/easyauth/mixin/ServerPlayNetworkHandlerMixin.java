@@ -31,8 +31,8 @@ public abstract class ServerPlayNetworkHandlerMixin {
                     //? if >= 1.20.5 {
                     target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;validateAcknowledgment(Lnet/minecraft/network/message/LastSeenMessageList$Acknowledgment;)Ljava/util/Optional;",
                     //?} else if >= 1.20.3 {
-                    //target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;validateMessage(Lnet/minecraft/network/message/LastSeenMessageList$Acknowledgment;)Ljava/util/Optional;",
-                    //?} else {
+                    /*target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;validateMessage(Lnet/minecraft/network/message/LastSeenMessageList$Acknowledgment;)Ljava/util/Optional;",
+                    *///?} else {
                     /*target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;validateMessage(Ljava/lang/String;Ljava/time/Instant;Lnet/minecraft/network/message/LastSeenMessageList$Acknowledgment;)Ljava/util/Optional;",
                     *///?}
                     shift = At.Shift.BEFORE

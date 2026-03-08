@@ -51,10 +51,9 @@ import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
  */
 public class AuthEventHandler {
 
-    public static long lastAcceptedPacket = 0;
-
     public static Pattern usernamePattern;
 
+    private static final Map<UUID, Long> lastAcceptedPacketByPlayer = new ConcurrentHashMap<>();
     private static final Map<UUID, Boolean> administratorCache = new ConcurrentHashMap<>();
 
     public static boolean isAllowedPacket(ServerPlayerEntity player, Packet<?> packet) {
@@ -353,6 +352,7 @@ public class AuthEventHandler {
     public static void onPlayerLeave(ServerPlayerEntity player) {
         UUID playerUuid = player.getUuid();
         administratorCache.remove(playerUuid);
+        lastAcceptedPacketByPlayer.remove(playerUuid);
 
         PlayerAuth playerAuth = (PlayerAuth) player;
         if (playerAuth.easyAuth$canSkipAuth())
@@ -452,9 +452,12 @@ public class AuthEventHandler {
         // Player will fall if enabled (prevent fly kick)
         // Otherwise, movement should be disabled
         if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !extendedConfig.allowMovement) {
-            if (System.nanoTime() >= lastAcceptedPacket + extendedConfig.teleportationTimeoutMs * 1000000) {
+            UUID playerUuid = player.getUuid();
+            long now = System.nanoTime();
+            long lastAcceptedPacket = lastAcceptedPacketByPlayer.getOrDefault(playerUuid, 0L);
+            if (now >= lastAcceptedPacket + extendedConfig.teleportationTimeoutMs * 1_000_000L) {
                 player.networkHandler.requestTeleport(player.getX(), player.getY(), player.getZ(), player.getYaw(), player.getPitch());
-                lastAcceptedPacket = System.nanoTime();
+                lastAcceptedPacketByPlayer.put(playerUuid, now);
             }
             return ActionResult.FAIL;
         }

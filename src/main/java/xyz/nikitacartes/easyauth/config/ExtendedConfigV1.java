@@ -82,7 +82,8 @@ public class ExtendedConfigV1 extends ConfigTemplate {
             
             List of allowed custom packet identifiers for players who are not logged in.
             Works similarly to allowedCommands by checking packet identifier prefix.
-            For custom payload packets, use channel identifiers (e.g. voicechat:request_secret).""")
+            For custom payload packets, use channel identifiers (e.g. voicechat:request_secret).
+            With debug logging enabled, you can see declined custom packets in the console with their identifiers.""")
     public List<String> allowedCustomPackets = new ArrayList<>();
 
     @Comment("""
@@ -110,7 +111,7 @@ public class ExtendedConfigV1 extends ConfigTemplate {
             
             Cancellation of packets with player's movement and teleportation back leads to an increase number of these packets.
             That setting limits players teleportation.
-            This setting is server-wide so maximum rate would be (1000/teleportation-timeout-ms) per seconds for all unauthorised players.
+            This setting is per-player so maximum rate would be (1000/teleportation-timeout-ms) per seconds for each unauthorised player.
             Value 0 would effectively disable this setting so players will be teleported after each packet.""")
     public long teleportationTimeoutMs = 20;
 

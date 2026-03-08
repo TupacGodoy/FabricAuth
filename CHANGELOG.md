@@ -36,6 +36,7 @@
 #### Fix
 - `/auth update` to also refresh cached online player data [#244](https://github.com/NikitaCartes/EasyAuth/issues/244)
 - Problem with loading configurations files [#225](https://github.com/NikitaCartes/EasyAuth/issues/225)
+- Fail to freeze player before login [#261](https://github.com/NikitaCartes/EasyAuth/issues/261)
 
 ---
 ### 3.4.2
@@ -43,7 +44,7 @@
 #### Fix
 - It wasn't possible to join the server using an online account if `forced-offline-uuid` was enabled
 - `hide-player-coords` not working for players with `ONLINE` status on `online-mode` servers [#251](https://github.com/NikitaCartes/EasyAuth/issues/251)
-- Packets are being handled for not authenticated players (#230)(https://github.com/NikitaCartes/EasyAuth/issues/230)
+- Packets are being handled for not authenticated players [#230](https://github.com/NikitaCartes/EasyAuth/issues/230)
 
 #### Add
 - Option `allowCustomPackets` to allow handling custom packets (used by other mods) for not authenticated players

@@ -5,6 +5,7 @@ import org.spongepowered.configurate.objectmapping.meta.Comment;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import static java.util.Arrays.asList;
@@ -76,6 +77,13 @@ public class ExtendedConfigV1 extends ConfigTemplate {
             Allow custom payload and custom click action packets to be processed by all players while not logged in.
             Note: this setting overrides allowCustomPacketsForNonOp.""")
     public boolean allowCustomPackets = false;
+
+    @Comment("""
+            
+            List of allowed custom packet identifiers for players who are not logged in.
+            Works similarly to allowedCommands by checking packet identifier prefix.
+            For custom payload packets, use channel identifiers (e.g. voicechat:request_secret).""")
+    public List<String> allowedCustomPackets = new ArrayList<>();
 
     @Comment("""
             

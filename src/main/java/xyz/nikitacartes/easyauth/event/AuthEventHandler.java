@@ -150,18 +150,41 @@ public class AuthEventHandler {
             return true;
         }
 
-        if ((extendedConfig.allowCustomPacketsForNonOp || extendedConfig.allowCustomPackets) &&
-            (packet instanceof CustomPayloadC2SPacket
-                //? if >= 1.21.6 {
-                || packet instanceof CustomClickActionC2SPacket
-                // ?}
-            )) {
-            if (extendedConfig.allowCustomPackets || !isAdministratorCached(player)) {
+        if (packet instanceof CustomPayloadC2SPacket) {
+            if (extendedConfig.allowCustomPackets) {
                 return true;
-            } else if (config.debug && packet instanceof CustomPayloadC2SPacket) {
-                LogDebug("Blocked custom packet " + ((CustomPayloadC2SPacket) packet).payload().getId());
+            }
+
+            if (extendedConfig.allowCustomPacketsForNonOp && !isAdministratorCached(player)) {
+                return true;
+            }
+
+            //? if >= 1.20.5 {
+            String customPacketIdentifier = ((CustomPayloadC2SPacket) packet).payload().getId().id().toString();
+            //?} else if >= 1.20.2 {
+            /*String customPacketIdentifier = ((CustomPayloadC2SPacket) packet).payload().id().toString();
+            *///?} else {
+            /*String customPacketIdentifier = ((CustomPayloadC2SPacket) packet).getChannel().id().toString();
+             *///?}
+
+            if (isAllowedCustomPacket(customPacketIdentifier)) {
+                return true;
+            }
+
+            if (config.debug) {
+                LogDebug("Blocked custom packet " + customPacketIdentifier);
             }
         }
+
+        //? if >= 1.21.6 {
+        if (packet instanceof CustomClickActionC2SPacket) {
+            if (extendedConfig.allowCustomPackets) {
+                return true;
+            }
+
+            return extendedConfig.allowCustomPacketsForNonOp && !isAdministratorCached(player);
+        }
+        //?}
 
         return false;
     }
@@ -169,6 +192,20 @@ public class AuthEventHandler {
     public static boolean isAdministratorCached(ServerPlayerEntity player) {
         UUID playerUuid = player.getUuid();
         return administratorCache.computeIfAbsent(playerUuid, ignored -> StoneCutterUtils.isAdministrator(player.server.getPlayerManager(), player));
+    }
+
+    private static boolean isAllowedCustomPacket(String packetIdentifier) {
+        if (packetIdentifier == null || extendedConfig.allowedCustomPackets == null) {
+            return false;
+        }
+
+        for (String allowedPacketIdentifier : extendedConfig.allowedCustomPackets) {
+            if (packetIdentifier.equals(allowedPacketIdentifier)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

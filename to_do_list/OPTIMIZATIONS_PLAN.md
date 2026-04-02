@@ -98,7 +98,7 @@ List of optimizations to implement (highest to lowest priority):
 
 - [x] 1. PlayersCache - ConcurrentHashMap (COMPLETED)
 - [x] 2. PlayerEntryV1 - Write-back batching (COMPLETED)
-- [ ] 3. MojangApi - HTTP cache
+- [x] 3. MojangApi - HTTP cache (COMPLETED)
 - [ ] 4. TemporalCache - Real LRU
 - [ ] 5. AuthEventHandler - Bitmask flags
 - [ ] 6. MySQL - Prepared Statements cache

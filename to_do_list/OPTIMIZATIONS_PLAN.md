@@ -97,7 +97,7 @@ List of optimizations to implement (highest to lowest priority):
 # Progress
 
 - [x] 1. PlayersCache - ConcurrentHashMap (COMPLETED)
-- [ ] 2. PlayerEntryV1 - Write-back batching
+- [x] 2. PlayerEntryV1 - Write-back batching (COMPLETED)
 - [ ] 3. MojangApi - HTTP cache
 - [ ] 4. TemporalCache - Real LRU
 - [ ] 5. AuthEventHandler - Bitmask flags

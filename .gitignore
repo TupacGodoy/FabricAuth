@@ -28,3 +28,4 @@ run/
 /versions/*/src/
 
 CLAUDE.md
+.claude

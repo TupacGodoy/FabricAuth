@@ -10,6 +10,11 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
 
@@ -19,6 +24,19 @@ public class PlayerEntryV1 {
             .excludeFieldsWithoutExposeAnnotation()
             .registerTypeAdapter(ZonedDateTime.class, new ZonedDateTimeAdapter())
             .create();
+
+    // Write-back cache for batched database updates
+    private static final ScheduledExecutorService WRITE_BACK_SCHEDULER = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "PlayerEntryV1-WriteBack");
+        t.setDaemon(true);
+        return t;
+    });
+
+    // Tracks players with pending updates
+    private static final ConcurrentHashMap<String, PlayerEntryV1> PENDING_UPDATES = new ConcurrentHashMap<>();
+
+    // Debounce delay in milliseconds
+    private static final long WRITE_BACK_DELAY_MS = 1000;
 
     public String username;
     public String usernameLowerCase;
@@ -90,6 +108,10 @@ public class PlayerEntryV1 {
     @SerializedName("forced_uuid")
     public String forcedUuid = null;
 
+    // Cached JSON to avoid redundant serialization
+    private transient volatile String cachedJson = null;
+    // Dirty flag to track if data has changed
+    private transient AtomicBoolean dirty = new AtomicBoolean(false);
 
     public PlayerEntryV1(String username, String usernameLowerCase, String uuid, String json) {
         PlayerEntryV1 entry = gson.fromJson(json, PlayerEntryV1.class);
@@ -121,14 +143,68 @@ public class PlayerEntryV1 {
     }
 
     public String toJson() {
-        return gson.toJson(this);
+        return getCachedJson();
     }
 
-    /*
-     * Update entry in database.
+    /**
+     * Marks this entry as dirty for write-back batching.
+     * Multiple calls within the debounce window will be batched into a single DB write.
      */
     public void update() {
-        THREADPOOL.execute(() -> DB.updateUserData(this));
+        dirty.set(true);
+        cachedJson = null; // Invalidate cache
+
+        // Only schedule if not already pending
+        if (!PENDING_UPDATES.containsKey(usernameLowerCase)) {
+            PENDING_UPDATES.put(usernameLowerCase, this);
+            WRITE_BACK_SCHEDULER.schedule(
+                () -> flushUpdate(usernameLowerCase),
+                WRITE_BACK_DELAY_MS,
+                TimeUnit.MILLISECONDS
+            );
+        }
+    }
+
+    /**
+     * Flushes pending update to database.
+     * Called by the write-back scheduler after debounce period.
+     */
+    private void flushUpdate(String usernameLower) {
+        PlayerEntryV1 pending = PENDING_UPDATES.remove(usernameLower);
+        if (pending != null && pending.dirty.compareAndSet(true, false)) {
+            try {
+                DB.updateUserData(pending);
+            } catch (Exception e) {
+                // Re-mark as dirty on failure for retry
+                pending.dirty.set(true);
+                PENDING_UPDATES.put(usernameLower, pending);
+            }
+        }
+    }
+
+    /**
+     * Forces immediate flush of all pending updates.
+     * Useful for server shutdown or critical data consistency.
+     */
+    public static void flushAllPending() {
+        for (String username : PENDING_UPDATES.keySet()) {
+            PlayerEntryV1 entry = PENDING_UPDATES.remove(username);
+            if (entry != null && entry.dirty.compareAndSet(true, false)) {
+                DB.updateUserData(entry);
+            }
+        }
+    }
+
+    /**
+     * Gets cached JSON representation, computing if necessary.
+     */
+    public String getCachedJson() {
+        String cached = cachedJson;
+        if (cached == null || dirty.get()) {
+            cached = gson.toJson(this);
+            cachedJson = cached;
+        }
+        return cached;
     }
 
     public enum OnlineAccount {

@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.config;
 import static xyz.nikitacartes.easyauth.EasyAuth.extendedConfig;
@@ -36,6 +37,10 @@ public class MySQL implements DbApi {
     private static final String DELETE_USER_SQL = "DELETE FROM %s WHERE username = ?;";
     private static final String COUNT_ACCOUNTS_BY_IP_SQL = "SELECT COUNT(*) FROM %s WHERE last_ip = ?;";
     private static final String GET_USERNAMES_BY_IP_SQL = "SELECT username FROM %s WHERE last_ip = ?;";
+
+    // ThreadLocal cache for prepared statements - avoids re-preparation overhead
+    private static final ThreadLocal<Map<String, PreparedStatement>> PREPARED_STATEMENT_CACHE =
+            ThreadLocal.withInitial(ConcurrentHashMap::new);
 
     public MySQL(StorageConfigV1 config) {
         this.config = config;
@@ -168,6 +173,9 @@ public class MySQL implements DbApi {
 
     @Override
     public void close() {
+        // Clear prepared statement cache
+        clearPreparedStatementCache();
+
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
             LogInfo("MySQL connection pool closed");
@@ -183,6 +191,39 @@ public class MySQL implements DbApi {
         return dataSource.getConnection();
     }
 
+    /**
+     * Gets a cached prepared statement for the current thread/connection.
+     * Statements are cached per SQL string to avoid re-preparation overhead.
+     */
+    private PreparedStatement getCachedPreparedStatement(Connection conn, String sql) throws SQLException {
+        Map<String, PreparedStatement> cache = PREPARED_STATEMENT_CACHE.get();
+        return cache.computeIfAbsent(sql, key -> {
+            try {
+                return conn.prepareStatement(key);
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to prepare statement", e);
+            }
+        });
+    }
+
+    /**
+     * Clears the prepared statement cache for the current thread.
+     * Should be called when returning connections to the pool.
+     */
+    private void clearPreparedStatementCache() {
+        Map<String, PreparedStatement> cache = PREPARED_STATEMENT_CACHE.get();
+        for (PreparedStatement stmt : cache.values()) {
+            try {
+                if (stmt != null && !stmt.isClosed()) {
+                    stmt.close();
+                }
+            } catch (SQLException e) {
+                LogDebug("Error closing cached statement: " + e.getMessage());
+            }
+        }
+        cache.clear();
+    }
+
     @Override
     public void registerUser(PlayerEntryV1 data) {
         if (xyz.nikitacartes.easyauth.EasyAuth.config.debug) {
@@ -191,7 +232,7 @@ public class MySQL implements DbApi {
 
         String sql = String.format(INSERT_USER_SQL, config.mysql.mysqlTable);
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = getCachedPreparedStatement(conn, sql)) {
 
             stmt.setString(1, data.username);
             stmt.setString(2, data.usernameLowerCase);
@@ -215,7 +256,7 @@ public class MySQL implements DbApi {
         String sql = String.format(SELECT_USER_SQL, config.mysql.mysqlTable, column);
 
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = getCachedPreparedStatement(conn, sql)) {
 
             stmt.setString(1, lookupName);
 
@@ -249,7 +290,7 @@ public class MySQL implements DbApi {
     public boolean deleteUserData(String username) {
         String sql = String.format(DELETE_USER_SQL, config.mysql.mysqlTable);
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = getCachedPreparedStatement(conn, sql)) {
 
             stmt.setString(1, username);
             return stmt.executeUpdate() > 0;
@@ -263,7 +304,7 @@ public class MySQL implements DbApi {
     public boolean updateUserData(PlayerEntryV1 data) {
         String sql = String.format(UPDATE_USER_SQL, config.mysql.mysqlTable);
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = getCachedPreparedStatement(conn, sql)) {
 
             stmt.setString(1, data.uuid == null ? null : data.uuid.toString());
             stmt.setString(2, data.toJson());
@@ -307,7 +348,7 @@ public class MySQL implements DbApi {
     public int countAccountsByIp(String ipAddress) {
         String sql = String.format(COUNT_ACCOUNTS_BY_IP_SQL, config.mysql.mysqlTable);
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = getCachedPreparedStatement(conn, sql)) {
 
             stmt.setString(1, ipAddress);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -327,7 +368,7 @@ public class MySQL implements DbApi {
         String sql = String.format(GET_USERNAMES_BY_IP_SQL, config.mysql.mysqlTable);
 
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = getCachedPreparedStatement(conn, sql)) {
 
             stmt.setString(1, ipAddress);
             try (ResultSet rs = stmt.executeQuery()) {

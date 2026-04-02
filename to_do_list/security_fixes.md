@@ -1,28 +1,68 @@
-# Security Fixes To-Do List
+# Security Audit - EasyAuth
 
-## Priority: CRITICAL
+## Date: 2026-04-02
 
-- [ ] **Fix password logging in RegisterCommand.java:169** - Remove password from log statement
-- [ ] **Add command visibility warnings** - Document that passwords in commands are visible in logs
+## Vulnerabilities - STATUS
 
-## Priority: HIGH
+### FIXED
 
-- [ ] **Add password complexity requirements** - Minimum length, strength validation
-- [ ] **Add input validation for passwords** - Max length, null character rejection, Unicode normalization
-- [ ] **Review authentication state synchronization** - Ensure atomic state transitions
-- [ ] **Add session token validation** - Beyond IP-based session matching
+#### 1. [CRITICAL] Password Logging in Plain Text - FIXED 2026-04-02
+**File:** `RegisterCommand.java:203`
+**Fix:** Removed password from log statement.
 
-## Priority: MEDIUM
+#### 2. [CRITICAL] Command Argument Visibility - FIXED 2026-04-02
+**File:** `MainConfigV1.java`
+**Fix:** Added security warning in config comment about command visibility.
 
-- [ ] **Add per-IP login rate limiting** - Prevent brute force across multiple accounts
-- [ ] **Add salt to global password** - Strengthen global password storage
-- [ ] **Add database connection fail-safe** - Block auth if DB unavailable
-- [ ] **Audit debug logs for sensitive data** - Remove any remaining sensitive info
+#### 3. [HIGH] Timing Attack on Password Verification - FIXED 2026-04-02
+**File:** `HasherBCrypt.java`, `HasherArgon2.java`
+**Fix:** Added constant-time dummy verification for cached password path.
 
-## Priority: LOW
+#### 4. [HIGH] Insufficient Password Requirements - ALREADY IMPLEMENTED
+**File:** `ExtendedConfigV1.java`
+**Status:** `minPasswordLength=8`, `maxPasswordLength=64`, `requirePasswordComplexity=true`
 
-- [ ] **Add memory-based cache eviction** - Prevent memory exhaustion
-- [ ] **Add production debug warnings** - Warn when debug mode enabled
+#### 5. [MEDIUM] No Rate Limiting on Authentication Attempts (Per-IP) - FIXED 2026-04-02
+**File:** `IpLimitManager.java`, `LoginCommand.java`
+**Fix:** Added per-IP login rate limiting (10 attempts per minute window).
 
----
-*Last updated: 2026-04-02*
+#### 6. [HIGH] Missing Input Validation on Passwords - FIXED 2026-04-02
+**File:** `LoginCommand.java`, `RegisterCommand.java`
+**Fix:** Added Unicode normalization (NFC), null character rejection, whitespace/control character rejection.
+
+### REMAINING
+
+#### 1. [HIGH] Race Condition in Player Authentication State
+**File:** `AuthEventHandler.java`, `PlayerAuth` interface
+**Issue:** Authentication state changes may have race conditions.
+**Recommendation:** Ensure atomic state transitions and proper synchronization.
+
+#### 2. [MEDIUM] Session Fixation Potential
+**File:** `AuthEventHandler.java:379-383`
+**Issue:** Session auto-login based on IP match without additional validation.
+**Recommendation:** Add session token or additional verification beyond IP match.
+
+#### 3. [MEDIUM] Global Password Storage
+**File:** `TechnicalConfigV1.java`
+**Issue:** Global password stored in config file (even if hashed).
+**Recommendation:** Add salting to global password.
+
+#### 4. [MEDIUM] Database Connection Not Always Validated
+**File:** `EasyAuth.java:79-82`
+**Issue:** Server continues if database check fails in some cases.
+**Recommendation:** Fail-safe: stop server or block all auth if DB unavailable.
+
+#### 5. [LOW] Cache Memory Leak Potential
+**File:** `TemporalCache.java`, `PlayersCache.java`
+**Issue:** While LRU eviction exists, high-traffic servers could still experience memory pressure.
+**Recommendation:** Add memory-based eviction in addition to count-based.
+
+#### 6. [LOW] Debug Mode Information Disclosure
+**File:** Multiple files with `config.debug` checks
+**Issue:** Debug mode may expose sensitive information in logs.
+**Recommendation:** Audit all debug logs, add warnings about enabling debug in production.
+
+## Summary
+
+- **Fixed:** 6 vulnerabilities (2 CRITICAL, 3 HIGH, 1 MEDIUM)
+- **Remaining:** 6 vulnerabilities (1 HIGH, 4 MEDIUM, 2 LOW)

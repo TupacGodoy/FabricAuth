@@ -101,5 +101,5 @@ List of optimizations to implement (highest to lowest priority):
 - [x] 3. MojangApi - HTTP cache (COMPLETED)
 - [x] 4. TemporalCache - Real LRU (COMPLETED)
 - [x] 5. AuthEventHandler - Bitmask flags (COMPLETED)
-- [ ] 6. MySQL - Prepared Statements cache
-- [ ] 7. HasherArgon2/BCrypt - Verification cache
+- [x] 6. MySQL - Prepared Statements cache (COMPLETED)
+- [x] 7. HasherArgon2/BCrypt - Verification cache (COMPLETED)

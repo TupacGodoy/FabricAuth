@@ -51,7 +51,32 @@ public class LoginCommand {
         PlayerAuth playerAuth = (PlayerAuth) player;
 
         String username = StoneCutterUtils.getUsername(player);
+
+        // Validate password input - reject null characters
+        if (pass.indexOf('\0') != -1) {
+            langConfig.invalidPassword.send(source);
+            return 0;
+        }
+
+        // Normalize Unicode password to NFC form for consistent comparison
+        String normalizedPass = java.text.Normalizer.normalize(pass, java.text.Normalizer.Form.NFC);
+
+        // Validate password length (after normalization)
+        if (normalizedPass.length() > extendedConfig.maxPasswordLength && extendedConfig.maxPasswordLength != -1) {
+            langConfig.maxPasswordChars.send(source, extendedConfig.maxPasswordLength);
+            return 0;
+        }
+
+        String ipAddress = playerAuth.easyAuth$getIpAddress();
         LogLogin("Player " + username + " is trying to login");
+
+        // Check login rate limit per IP
+        if (IpLimitManager.isLoginRateLimitExceeded(ipAddress)) {
+            LogLogin("Player " + username + " blocked by login rate limit from IP " + ipAddress);
+            langConfig.loginTriesExceeded.send(source);
+            return 0;
+        }
+
         if (playerAuth.easyAuth$isAuthenticated()) {
             LogLogin("Player " + username + " is already authenticated");
             langConfig.alreadyAuthenticated.send(source);
@@ -59,7 +84,7 @@ public class LoginCommand {
         }
         PlayerEntryV1 playerData = playerAuth.easyAuth$getPlayerEntryV1();
 
-        AuthHelper.PasswordOptions passwordResult = AuthHelper.checkPassword(playerData, pass.toCharArray());
+        AuthHelper.PasswordOptions passwordResult = AuthHelper.checkPassword(playerData, normalizedPass.toCharArray());
 
         if (passwordResult == AuthHelper.PasswordOptions.CORRECT) {
             LogLogin("Player " + username + " provide correct password");
@@ -82,6 +107,10 @@ public class LoginCommand {
                 IpLimitManager.invalidateCache(oldIp);
                 IpLimitManager.invalidateCache(playerData.lastIp);
             }
+
+            // Clear login attempts cache after successful authentication
+            IpLimitManager.clearLoginAttempts(playerAuth.easyAuth$getIpAddress());
+
             // player.getServer().getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, player));
             return 0;
         } else if (passwordResult == AuthHelper.PasswordOptions.NOT_REGISTERED) {

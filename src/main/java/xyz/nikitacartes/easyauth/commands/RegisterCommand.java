@@ -122,12 +122,46 @@ public class RegisterCommand {
             return 0;
         }
 
-        if (pass1.length() < extendedConfig.minPasswordLength) {
+        // Validate password input - reject null characters
+        if (pass1.indexOf('\0') != -1 || pass2.indexOf('\0') != -1) {
+            langConfig.invalidPassword.send(source);
+            return 0;
+        }
+
+        // Normalize Unicode passwords to NFC form for consistent comparison
+        String normalizedPass1 = java.text.Normalizer.normalize(pass1, java.text.Normalizer.Form.NFC);
+        String normalizedPass2 = java.text.Normalizer.normalize(pass2, java.text.Normalizer.Form.NFC);
+
+        if (normalizedPass1.length() < extendedConfig.minPasswordLength) {
             langConfig.minPasswordChars.send(source, extendedConfig.minPasswordLength);
             return 0;
-        } else if (pass1.length() > extendedConfig.maxPasswordLength && extendedConfig.maxPasswordLength != -1) {
+        } else if (normalizedPass1.length() > extendedConfig.maxPasswordLength && extendedConfig.maxPasswordLength != -1) {
             langConfig.maxPasswordChars.send(source, extendedConfig.maxPasswordLength);
             return 0;
+        }
+
+        // Reject passwords with only whitespace or control characters
+        if (normalizedPass1.trim().isEmpty() || normalizedPass1.matches("^[\\p{Cntrl}\\p{Space}]+$")) {
+            langConfig.invalidPassword.send(source);
+            return 0;
+        }
+
+        // Validate password complexity if enabled
+        if (extendedConfig.requirePasswordComplexity) {
+            boolean hasUpper = false;
+            boolean hasLower = false;
+            boolean hasDigit = false;
+
+            for (char c : normalizedPass1.toCharArray()) {
+                if (Character.isUpperCase(c)) hasUpper = true;
+                else if (Character.isLowerCase(c)) hasLower = true;
+                else if (Character.isDigit(c)) hasDigit = true;
+            }
+
+            if (!hasUpper || !hasLower || !hasDigit) {
+                langConfig.passwordTooWeak.send(source);
+                return 0;
+            }
         }
 
         // Check IP limit before allowing registration
@@ -156,17 +190,17 @@ public class RegisterCommand {
         // player.getServer().getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, player));
 
         THREADPOOL.submit(() -> {
-            playerData.password = hashPassword(pass1.toCharArray());
+            playerData.password = hashPassword(normalizedPass1.toCharArray());
             playerData.registrationDate = ZonedDateTime.now();
             playerData.lastIp = playerAuth.easyAuth$getIpAddress();
             playerData.lastAuthenticatedDate = ZonedDateTime.now();
             playerAuth.easyAuth$setPlayerEntryV1(playerData);
             playerData.update();
-            
+
             // Invalidate IP cache after registration
             IpLimitManager.invalidateCache(playerData.lastIp);
 
-            LogRegister("Player " + username + "{" + player.getUuidAsString() + "} successfully registered with password: " + playerData.password);
+            LogRegister("Player " + username + "{" + player.getUuidAsString() + "} successfully registered (password omitted for security)");
         });
         return 0;
     }

@@ -30,13 +30,21 @@ public class HasherArgon2 {
      * @param password character array of password string
      * @param hashed   hashed password
      * @return true if password was correct
+     *
+     * SECURITY NOTE: This method uses a cache to improve performance. The cache
+     * stores only successful verifications to prevent timing attacks that could
+     * distinguish between cached and non-cached hashes. Rate limiting should be
+     * used in conjunction to mitigate brute-force attacks.
      */
     public static boolean verify(char[] password, String hashed) {
         long now = System.currentTimeMillis();
 
-        // Check cache first
+        // Check cache first - only for successful verifications
         Long expiry = VERIFICATION_CACHE.get(hashed);
         if (expiry != null && expiry > now) {
+            // Always perform constant-time dummy verification to maintain timing consistency
+            // This prevents timing attacks that distinguish cached vs non-cached hashes
+            HASHER.verify("$argon2id$v=19$m=65536,t=1,p=1$XXXXXXXXXXXXX$XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", password);
             return true;
         }
 

@@ -24,6 +24,12 @@ public class IpLimitManager {
     private record IpCacheEntry(List<String> usernames, long timestamp) {}
     private static final ConcurrentHashMap<String, IpCacheEntry> ipCache = new ConcurrentHashMap<>();
 
+    // Rate limiting for login attempts per IP
+    private record LoginAttempt(long timestamp) {}
+    private static final ConcurrentHashMap<String, java.util.List<LoginAttempt>> loginAttemptsCache = new ConcurrentHashMap<>();
+    private static final long LOGIN_WINDOW_MS = 60_000L; // 1 minute window
+    private static final int MAX_LOGIN_ATTEMPTS_PER_WINDOW = 10; // Max 10 login attempts per minute per IP
+
     /**
      * Checks if the given IP address has exceeded the account limit.
      *
@@ -233,5 +239,61 @@ public class IpLimitManager {
      */
     public static boolean shouldBlockExcessRegistration() {
         return extendedConfig.ipLimit.enabled && extendedConfig.ipLimit.blockExcessRegistration;
+    }
+
+    /**
+     * Checks if the given IP address has exceeded the login rate limit.
+     *
+     * @param ipAddress the IP address to check
+     * @return true if the IP has exceeded the rate limit, false otherwise
+     */
+    public static boolean isLoginRateLimitExceeded(String ipAddress) {
+        if (!extendedConfig.ipLimit.enabled) {
+            return false;
+        }
+
+        long now = System.currentTimeMillis();
+        java.util.List<LoginAttempt> attempts = loginAttemptsCache.computeIfAbsent(ipAddress, k ->
+            Collections.synchronizedList(new java.util.ArrayList<>()));
+
+        // Remove old attempts outside the window
+        attempts.removeIf(attempt -> now - attempt.timestamp() > LOGIN_WINDOW_MS);
+
+        // Check if limit exceeded
+        if (attempts.size() >= MAX_LOGIN_ATTEMPTS_PER_WINDOW) {
+            LogDebug("IP " + ipAddress + " exceeded login rate limit (" + attempts.size() + " attempts in last minute)");
+            return true;
+        }
+
+        // Record this attempt
+        attempts.add(new LoginAttempt(now));
+        return false;
+    }
+
+    /**
+     * Clears login attempts cache for a specific IP address.
+     * Should be called after successful authentication.
+     *
+     * @param ipAddress the IP address to clear
+     */
+    public static void clearLoginAttempts(String ipAddress) {
+        loginAttemptsCache.remove(ipAddress);
+    }
+
+    /**
+     * Gets the number of login attempts from the given IP address in the current window.
+     *
+     * @param ipAddress the IP address to check
+     * @return the number of login attempts
+     */
+    public static int getLoginAttemptCount(String ipAddress) {
+        java.util.List<LoginAttempt> attempts = loginAttemptsCache.get(ipAddress);
+        if (attempts == null) {
+            return 0;
+        }
+        long now = System.currentTimeMillis();
+        return (int) attempts.stream()
+            .filter(attempt -> now - attempt.timestamp() > LOGIN_WINDOW_MS)
+            .count();
     }
 }

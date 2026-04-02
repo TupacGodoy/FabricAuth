@@ -100,6 +100,6 @@ List of optimizations to implement (highest to lowest priority):
 - [x] 2. PlayerEntryV1 - Write-back batching (COMPLETED)
 - [x] 3. MojangApi - HTTP cache (COMPLETED)
 - [x] 4. TemporalCache - Real LRU (COMPLETED)
-- [ ] 5. AuthEventHandler - Bitmask flags
+- [x] 5. AuthEventHandler - Bitmask flags (COMPLETED)
 - [ ] 6. MySQL - Prepared Statements cache
 - [ ] 7. HasherArgon2/BCrypt - Verification cache

@@ -9,6 +9,7 @@ import xyz.nikitacartes.easyauth.commands.*;
 import xyz.nikitacartes.easyauth.config.*;
 import xyz.nikitacartes.easyauth.storage.database.*;
 import xyz.nikitacartes.easyauth.integrations.LuckPermsIntegration;
+import xyz.nikitacartes.easyauth.event.AuthEventHandler;
 
 import java.io.File;
 import java.io.FileReader;
@@ -114,6 +115,7 @@ public class EasyAuth {
             EasyAuth.langConfig = LangConfigV1.create();
             EasyAuth.extendedConfig = ExtendedConfigV1.create();
             EasyAuth.storageConfig = StorageConfigV1.create();
+            AuthEventHandler.refreshConfigFlags();
             return;
         }
 
@@ -129,6 +131,7 @@ public class EasyAuth {
         EasyAuth.storageConfig = StorageConfigV1.load();
 
         configMigration(configVersion);
+        AuthEventHandler.refreshConfigFlags();
     }
 
     public static void saveConfigs() {

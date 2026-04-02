@@ -56,6 +56,52 @@ public class AuthEventHandler {
 
     public static Pattern usernamePattern;
 
+    // Pre-computed config flags bitmask for fast access
+    // Updated only on config reload via refreshConfigFlags()
+    private static volatile int configFlags = 0;
+
+    // Flag bit positions
+    private static final int FLAG_ALLOW_CHAT = 1 << 0;
+    private static final int FLAG_ALLOW_BLOCK_INTERACTION = 1 << 1;
+    private static final int FLAG_ALLOW_ENTITY_INTERACTION = 1 << 2;
+    private static final int FLAG_ALLOW_ITEM_USING = 1 << 3;
+    private static final int FLAG_ALLOW_BLOCK_BREAKING = 1 << 4;
+    private static final int FLAG_ALLOW_ITEM_DROPPING = 1 << 5;
+    private static final int FLAG_ALLOW_ITEM_MOVING = 1 << 6;
+    private static final int FLAG_ALLOW_ENTITY_ATTACKING = 1 << 7;
+    private static final int FLAG_ALLOW_MOVEMENT = 1 << 8;
+    private static final int FLAG_ALLOW_COMMANDS = 1 << 9;
+    private static final int FLAG_ALLOW_CUSTOM_PACKETS = 1 << 10;
+    private static final int FLAG_ALLOW_CUSTOM_PACKETS_FOR_NON_OP = 1 << 11;
+
+    /**
+     * Refreshes pre-computed config flags.
+     * Call this whenever config is reloaded.
+     */
+    public static void refreshConfigFlags() {
+        int flags = 0;
+        if (extendedConfig.allowChat) flags |= FLAG_ALLOW_CHAT;
+        if (extendedConfig.allowBlockInteraction) flags |= FLAG_ALLOW_BLOCK_INTERACTION;
+        if (extendedConfig.allowEntityInteraction) flags |= FLAG_ALLOW_ENTITY_INTERACTION;
+        if (extendedConfig.allowItemUsing) flags |= FLAG_ALLOW_ITEM_USING;
+        if (extendedConfig.allowBlockBreaking) flags |= FLAG_ALLOW_BLOCK_BREAKING;
+        if (extendedConfig.allowItemDropping) flags |= FLAG_ALLOW_ITEM_DROPPING;
+        if (extendedConfig.allowItemMoving) flags |= FLAG_ALLOW_ITEM_MOVING;
+        if (extendedConfig.allowEntityAttacking) flags |= FLAG_ALLOW_ENTITY_ATTACKING;
+        if (extendedConfig.allowMovement) flags |= FLAG_ALLOW_MOVEMENT;
+        if (extendedConfig.allowCommands) flags |= FLAG_ALLOW_COMMANDS;
+        if (extendedConfig.allowCustomPackets) flags |= FLAG_ALLOW_CUSTOM_PACKETS;
+        if (extendedConfig.allowCustomPacketsForNonOp) flags |= FLAG_ALLOW_CUSTOM_PACKETS_FOR_NON_OP;
+        configFlags = flags;
+    }
+
+    /**
+     * Fast flag check using bitmask.
+     */
+    private static boolean hasConfigFlag(int flag) {
+        return (configFlags & flag) != 0;
+    }
+
     // Optimized temporal data stores with automatic cleanup
     private static final TemporalCache<UUID, Long> lastAcceptedPacketByPlayer = new TemporalCache<>(
             300_000, // 5 minute TTL
@@ -127,34 +173,34 @@ public class AuthEventHandler {
             return true;
         }
 
-        // Config-dependent checks - check config flags first (cheaper than instanceof)
-        if (extendedConfig.allowChat && packetClass == ChatMessageC2SPacket.class) {
+        // Config-dependent checks - use pre-computed flags (bitmask check is faster than field access)
+        if (hasConfigFlag(FLAG_ALLOW_CHAT) && packetClass == ChatMessageC2SPacket.class) {
             return true;
         }
 
-        if (extendedConfig.allowBlockInteraction && packetClass == PlayerInteractBlockC2SPacket.class) {
+        if (hasConfigFlag(FLAG_ALLOW_BLOCK_INTERACTION) && packetClass == PlayerInteractBlockC2SPacket.class) {
             return true;
         }
 
-        if (extendedConfig.allowEntityInteraction && packetClass == PlayerInteractEntityC2SPacket.class) {
+        if (hasConfigFlag(FLAG_ALLOW_ENTITY_INTERACTION) && packetClass == PlayerInteractEntityC2SPacket.class) {
             return true;
         }
 
-        if (extendedConfig.allowItemUsing && packetClass == PlayerInteractItemC2SPacket.class) {
+        if (hasConfigFlag(FLAG_ALLOW_ITEM_USING) && packetClass == PlayerInteractItemC2SPacket.class) {
             return true;
         }
 
         if (packetClass == HandSwingC2SPacket.class) {
-            return extendedConfig.allowBlockInteraction ||
-                   extendedConfig.allowEntityInteraction ||
-                   extendedConfig.allowEntityAttacking;
+            return hasConfigFlag(FLAG_ALLOW_BLOCK_INTERACTION) ||
+                   hasConfigFlag(FLAG_ALLOW_ENTITY_INTERACTION) ||
+                   hasConfigFlag(FLAG_ALLOW_ENTITY_ATTACKING);
         }
 
         if (packetClass == PlayerActionC2SPacket.class) {
             return handlePlayerActionPacket((PlayerActionC2SPacket) packet);
         }
 
-        if (extendedConfig.allowItemMoving && ITEM_MOVING_PACKETS.contains(packetClass)) {
+        if (hasConfigFlag(FLAG_ALLOW_ITEM_MOVING) && ITEM_MOVING_PACKETS.contains(packetClass)) {
             return true;
         }
 
@@ -174,20 +220,20 @@ public class AuthEventHandler {
     private static boolean handlePlayerActionPacket(PlayerActionC2SPacket packet) {
         PlayerActionC2SPacket.Action action = packet.getAction();
         return switch (action) {
-            case START_DESTROY_BLOCK, ABORT_DESTROY_BLOCK, STOP_DESTROY_BLOCK -> extendedConfig.allowBlockBreaking;
-            case DROP_ALL_ITEMS, DROP_ITEM -> extendedConfig.allowItemDropping;
-            case SWAP_ITEM_WITH_OFFHAND -> extendedConfig.allowItemMoving;
-            case RELEASE_USE_ITEM -> extendedConfig.allowItemUsing;
+            case START_DESTROY_BLOCK, ABORT_DESTROY_BLOCK, STOP_DESTROY_BLOCK -> hasConfigFlag(FLAG_ALLOW_BLOCK_BREAKING);
+            case DROP_ALL_ITEMS, DROP_ITEM -> hasConfigFlag(FLAG_ALLOW_ITEM_DROPPING);
+            case SWAP_ITEM_WITH_OFFHAND -> hasConfigFlag(FLAG_ALLOW_ITEM_MOVING);
+            case RELEASE_USE_ITEM -> hasConfigFlag(FLAG_ALLOW_ITEM_USING);
             default -> false;
         };
     }
 
     private static boolean handleCustomPayloadPacket(ServerPlayerEntity player, CustomPayloadC2SPacket packet) {
-        if (extendedConfig.allowCustomPackets) {
+        if (hasConfigFlag(FLAG_ALLOW_CUSTOM_PACKETS)) {
             return true;
         }
 
-        if (extendedConfig.allowCustomPacketsForNonOp && !isAdministratorCached(player)) {
+        if (hasConfigFlag(FLAG_ALLOW_CUSTOM_PACKETS_FOR_NON_OP) && !isAdministratorCached(player)) {
             return true;
         }
 
@@ -211,10 +257,10 @@ public class AuthEventHandler {
 
     //? if >= 1.21.6 {
     private static boolean handleCustomClickActionPacket(ServerPlayerEntity player) {
-        if (extendedConfig.allowCustomPackets) {
+        if (hasConfigFlag(FLAG_ALLOW_CUSTOM_PACKETS)) {
             return true;
         }
-        return extendedConfig.allowCustomPacketsForNonOp && !isAdministratorCached(player);
+        return hasConfigFlag(FLAG_ALLOW_CUSTOM_PACKETS_FOR_NON_OP) && !isAdministratorCached(player);
     }
     //?}
 
@@ -419,7 +465,7 @@ public class AuthEventHandler {
     // Player execute command
     public static ActionResult onPlayerCommand(ServerPlayerEntity player, String command) {
         // Getting the message to then be able to check it
-        if (extendedConfig.allowCommands) {
+        if (hasConfigFlag(FLAG_ALLOW_COMMANDS)) {
             return ActionResult.PASS;
         }
         if (player == null) {
@@ -470,7 +516,7 @@ public class AuthEventHandler {
 
     // Player chatting
     public static ActionResult onPlayerChat(ServerPlayerEntity player) {
-        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !extendedConfig.allowChat) {
+        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !hasConfigFlag(FLAG_ALLOW_CHAT)) {
             ((PlayerAuth) player).easyAuth$sendAuthMessage();
             return ActionResult.FAIL;
         }
@@ -485,7 +531,7 @@ public class AuthEventHandler {
         // Player will fall if enabled (prevent fly kick)
         // Otherwise, movement should be disabled
         PlayerAuth playerAuth = (PlayerAuth) player;
-        if (!playerAuth.easyAuth$isAuthenticated() && !extendedConfig.allowMovement) {
+        if (!playerAuth.easyAuth$isAuthenticated() && !hasConfigFlag(FLAG_ALLOW_MOVEMENT)) {
             UUID playerUuid = player.getUuid();
             long now = System.currentTimeMillis();
 
@@ -503,7 +549,7 @@ public class AuthEventHandler {
 
     // Using a block (right-click function)
     public static ActionResult onUseBlock(PlayerEntity player) {
-        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !extendedConfig.allowBlockInteraction) {
+        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !hasConfigFlag(FLAG_ALLOW_BLOCK_INTERACTION)) {
             ((PlayerAuth) player).easyAuth$sendAuthMessage();
             return ActionResult.FAIL;
         }
@@ -512,7 +558,7 @@ public class AuthEventHandler {
 
     // Breaking a block
     public static boolean onBreakBlock(PlayerEntity player) {
-        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !extendedConfig.allowBlockBreaking) {
+        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !hasConfigFlag(FLAG_ALLOW_BLOCK_BREAKING)) {
             ((PlayerAuth) player).easyAuth$sendAuthMessage();
             return false;
         }
@@ -522,7 +568,7 @@ public class AuthEventHandler {
     // Using an item
     //? if >= 1.21.2 {
     public static ActionResult onUseItem(PlayerEntity player) {
-        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !extendedConfig.allowItemUsing) {
+        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !hasConfigFlag(FLAG_ALLOW_ITEM_USING)) {
             ((PlayerAuth) player).easyAuth$sendAuthMessage();
             return ActionResult.FAIL;
         }
@@ -531,7 +577,7 @@ public class AuthEventHandler {
     }
     //?} else {
     /*public static TypedActionResult<ItemStack> onUseItem(PlayerEntity player) {
-        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !extendedConfig.allowItemUsing) {
+        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !hasConfigFlag(FLAG_ALLOW_ITEM_USING)) {
             ((PlayerAuth) player).easyAuth$sendAuthMessage();
             return TypedActionResult.fail(ItemStack.EMPTY);
         }
@@ -542,7 +588,7 @@ public class AuthEventHandler {
 
     // Dropping an item
     public static ActionResult onDropItem(PlayerEntity player) {
-        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !extendedConfig.allowItemDropping) {
+        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !hasConfigFlag(FLAG_ALLOW_ITEM_DROPPING)) {
             ((PlayerAuth) player).easyAuth$sendAuthMessage();
             return ActionResult.FAIL;
         }
@@ -551,7 +597,7 @@ public class AuthEventHandler {
 
     // Changing inventory (item moving etc.)
     public static ActionResult onTakeItem(ServerPlayerEntity player) {
-        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !extendedConfig.allowItemMoving) {
+        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !hasConfigFlag(FLAG_ALLOW_ITEM_MOVING)) {
             ((PlayerAuth) player).easyAuth$sendAuthMessage();
             return ActionResult.FAIL;
         }
@@ -561,7 +607,7 @@ public class AuthEventHandler {
 
     // Attacking an entity
     public static ActionResult onAttackEntity(PlayerEntity player) {
-        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !extendedConfig.allowEntityAttacking) {
+        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !hasConfigFlag(FLAG_ALLOW_ENTITY_ATTACKING)) {
             ((PlayerAuth) player).easyAuth$sendAuthMessage();
             return ActionResult.FAIL;
         }
@@ -571,7 +617,7 @@ public class AuthEventHandler {
 
     // Interacting with entity
     public static ActionResult onUseEntity(PlayerEntity player) {
-        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !extendedConfig.allowEntityInteraction) {
+        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !hasConfigFlag(FLAG_ALLOW_ENTITY_INTERACTION)) {
             ((PlayerAuth) player).easyAuth$sendAuthMessage();
             return ActionResult.FAIL;
         }

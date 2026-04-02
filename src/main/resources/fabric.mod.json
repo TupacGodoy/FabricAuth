@@ -1,17 +1,18 @@
 {
   "schemaVersion": 1,
-  "id": "easyauth",
+  "id": "authfabric",
   "version": "${version}",
-  "name": "Easy Authentication Mod",
-  "description": "A mod that tries to keep authentication for players easy via commands.",
+  "name": "AuthFabric",
+  "description": "A Fabric mod for player authentication via commands. Based on EasyAuth by NikitaCartes and SimpleAuth by samo_lego.",
   "authors": [
+    "TupacGodoy",
     "NikitaCartes",
     "samo_lego"
   ],
   "contact": {
-    "homepage": "https://github.com/NikitaCartes/EasyAuth",
-    "sources": "https://github.com/NikitaCartes/EasyAuth",
-    "issues": "https://github.com/NikitaCartes/EasyAuth/issues"
+    "homepage": "https://github.com/TupacGodoy/AuthFabric",
+    "sources": "https://github.com/TupacGodoy/AuthFabric",
+    "issues": "https://github.com/TupacGodoy/AuthFabric/issues"
   },
   "license": "MIT",
   "environment": "server",

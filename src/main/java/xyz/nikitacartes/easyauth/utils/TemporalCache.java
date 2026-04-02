@@ -1,11 +1,13 @@
 package xyz.nikitacartes.easyauth.utils;
 
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * A thread-safe cache with automatic expiration based on TTL.
- * Optimized for frequent reads with periodic cleanup.
+ * Uses LinkedHashMap with access-order for true LRU eviction.
  *
  * @param <K> Key type
  * @param <V> Value type
@@ -13,7 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TemporalCache<K, V> {
     private final long ttlMillis;
     private final int maxSize;
-    private final ConcurrentHashMap<K, CacheEntry<V>> map;
+    private final LinkedHashMap<K, CacheEntry<V>> map;
+    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private volatile long lastCleanupTime;
     private static final long CLEANUP_INTERVAL_MS = 60_000; // Cleanup every minute
 
@@ -32,7 +35,7 @@ public class TemporalCache<K, V> {
     }
 
     /**
-     * Creates a new TemporalCache.
+     * Creates a new TemporalCache with true LRU eviction.
      *
      * @param ttlMillis Time-to-live in milliseconds
      * @param maxSize Maximum number of entries before forced cleanup
@@ -40,24 +43,33 @@ public class TemporalCache<K, V> {
     public TemporalCache(long ttlMillis, int maxSize) {
         this.ttlMillis = ttlMillis;
         this.maxSize = maxSize;
-        this.map = new ConcurrentHashMap<>(16, 0.75f);
+        // accessOrder = true for LRU behavior (get/recent put moves to end)
+        this.map = new LinkedHashMap<K, CacheEntry<V>>(16, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<K, CacheEntry<V>> eldest) {
+                // Remove eldest when exceeding max size
+                return size() > maxSize;
+            }
+        };
         this.lastCleanupTime = System.currentTimeMillis();
     }
 
     /**
      * Gets a value from the cache, or null if not present or expired.
+     * Updates access order for LRU tracking.
      */
     public V get(K key) {
         maybeCleanup();
-        CacheEntry<V> entry = map.get(key);
-        if (entry == null) {
-            return null;
+        lock.readLock().lock();
+        try {
+            CacheEntry<V> entry = map.get(key);
+            if (entry == null || entry.isExpired()) {
+                return null;
+            }
+            return entry.value;
+        } finally {
+            lock.readLock().unlock();
         }
-        if (entry.isExpired()) {
-            map.remove(key);
-            return null;
-        }
-        return entry.value;
     }
 
     /**
@@ -70,16 +82,18 @@ public class TemporalCache<K, V> {
 
     /**
      * Puts a value into the cache with the configured TTL.
+     * Updates access order for LRU tracking.
      */
     public void put(K key, V value) {
-        maybeCleanup();
-
-        // Force cleanup if we're at max capacity
-        if (map.size() >= maxSize) {
-            forceCleanup();
+        lock.writeLock().lock();
+        try {
+            maybeCleanupLocked();
+            // LinkedHashMap with accessOrder=true automatically handles LRU
+            // and removeEldestEntry handles max size
+            map.put(key, new CacheEntry<>(value, ttlMillis));
+        } finally {
+            lock.writeLock().unlock();
         }
-
-        map.put(key, new CacheEntry<>(value, ttlMillis));
     }
 
     /**
@@ -87,46 +101,73 @@ public class TemporalCache<K, V> {
      * Atomic operation.
      */
     public V computeIfAbsent(K key, java.util.function.Function<K, V> mappingFunction) {
-        maybeCleanup();
-
-        V existing = get(key);
-        if (existing != null) {
-            return existing;
+        lock.readLock().lock();
+        try {
+            maybeCleanupLocked();
+            CacheEntry<V> entry = map.get(key);
+            if (entry != null && !entry.isExpired()) {
+                return entry.value;
+            }
+        } finally {
+            lock.readLock().unlock();
         }
 
-        // Compute outside of lock for better concurrency
+        // Compute outside of read lock
         V newValue = mappingFunction.apply(key);
         if (newValue == null) {
             return null;
         }
 
-        // Use putIfAbsent for thread safety
-        CacheEntry<V> newEntry = new CacheEntry<>(newValue, ttlMillis);
-        CacheEntry<V> existingEntry = map.putIfAbsent(key, newEntry);
-
-        return existingEntry != null ? existingEntry.value : newValue;
+        // Upgrade to write lock for put
+        lock.writeLock().lock();
+        try {
+            // Double-check after acquiring write lock
+            CacheEntry<V> entry = map.get(key);
+            if (entry != null && !entry.isExpired()) {
+                return entry.value;
+            }
+            map.put(key, new CacheEntry<>(newValue, ttlMillis));
+            return newValue;
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
 
     /**
      * Removes a specific entry.
      */
     public void remove(K key) {
-        map.remove(key);
+        lock.writeLock().lock();
+        try {
+            map.remove(key);
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
 
     /**
      * Clears all entries.
      */
     public void clear() {
-        map.clear();
-        lastCleanupTime = System.currentTimeMillis();
+        lock.writeLock().lock();
+        try {
+            map.clear();
+            lastCleanupTime = System.currentTimeMillis();
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
 
     /**
      * Returns current size (including potentially expired entries).
      */
     public int size() {
-        return map.size();
+        lock.readLock().lock();
+        try {
+            return map.size();
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     /**
@@ -138,32 +179,54 @@ public class TemporalCache<K, V> {
         if (now - lastCleanupTime < CLEANUP_INTERVAL_MS) {
             return;
         }
-        forceCleanup();
+        lock.writeLock().lock();
+        try {
+            maybeCleanupLocked();
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Internal cleanup without locking - caller must hold write lock.
+     */
+    private void maybeCleanupLocked() {
+        long now = System.currentTimeMillis();
+        if (now - lastCleanupTime < CLEANUP_INTERVAL_MS) {
+            return;
+        }
+        lastCleanupTime = now;
+
+        // Remove expired entries using iterator
+        Iterator<Map.Entry<K, CacheEntry<V>>> iterator = map.entrySet().iterator();
+        while (iterator.hasNext()) {
+            if (iterator.next().getValue().isExpired()) {
+                iterator.remove();
+            }
+        }
     }
 
     /**
      * Forces immediate cleanup of expired entries.
+     * LinkedHashMap with accessOrder=true ensures eldest entries are LRU.
      */
-    private synchronized void forceCleanup() {
-        long now = System.currentTimeMillis();
-        lastCleanupTime = now;
+    public void forceCleanup() {
+        lock.writeLock().lock();
+        try {
+            long now = System.currentTimeMillis();
+            lastCleanupTime = now;
 
-        // Remove expired entries
-        map.entrySet().removeIf(entry -> entry.getValue().isExpired());
-
-        // If still over max size, remove oldest entries
-        if (map.size() > maxSize) {
-            int entriesToRemove = map.size() - maxSize + (maxSize / 10); // Remove 10% extra
-
-            // Find oldest entries (simple approximation by iterating)
-            // For large caches, this could be optimized with an access-order LinkedHashMap
-            var iterator = map.entrySet().iterator();
-            int removed = 0;
-            while (iterator.hasNext() && removed < entriesToRemove) {
-                iterator.next();
-                iterator.remove();
-                removed++;
+            // Remove expired entries
+            Iterator<Map.Entry<K, CacheEntry<V>>> iterator = map.entrySet().iterator();
+            while (iterator.hasNext()) {
+                if (iterator.next().getValue().isExpired()) {
+                    iterator.remove();
+                }
             }
+
+            // Max size is automatically handled by removeEldestEntry override
+        } finally {
+            lock.writeLock().unlock();
         }
     }
 }

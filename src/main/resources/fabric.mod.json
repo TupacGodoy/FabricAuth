@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "id": "authfabric",
+  "id": "fabricauth",
   "version": "${version}",
-  "name": "AuthFabric",
+  "name": "FabricAuth",
   "description": "A Fabric mod for player authentication via commands. Based on EasyAuth by NikitaCartes and SimpleAuth by samo_lego.",
   "authors": [
     "TupacGodoy",

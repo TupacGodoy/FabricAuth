@@ -92,8 +92,10 @@ public class MainConfigV1 extends ConfigTemplate {
     public WorldSpawn worldSpawn = new WorldSpawn();
 
     @Comment("""
-            
-            Debug mode. Prints more information to debug.log.""")
+
+            Debug mode. Prints more information to debug.log.
+            WARNING: Enabling debug mode in production may expose sensitive information in logs.
+            Only enable for troubleshooting and disable immediately after.""")
     public boolean debug = false;
 
     @Comment("""

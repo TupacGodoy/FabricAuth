@@ -132,6 +132,11 @@ public class EasyAuth {
 
         configMigration(configVersion);
         AuthEventHandler.refreshConfigFlags();
+
+        // Warn if debug mode is enabled in production
+        if (config.debug) {
+            LogWarn("DEBUG MODE IS ENABLED - This may expose sensitive information in production logs. Disable after troubleshooting.");
+        }
     }
 
     public static void saveConfigs() {

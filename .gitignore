@@ -26,3 +26,5 @@ bin/
 
 run/
 /versions/*/src/
+
+CLAUDE.md

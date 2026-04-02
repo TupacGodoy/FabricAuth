@@ -126,6 +126,7 @@ dependencies {
     implementAndShadow("org.mongodb:bson:${property("mongodb_version")}")
 
     implementAndInclude("com.mysql:mysql-connector-j:${property("mysql_version")}")
+    implementAndInclude("com.zaxxer:HikariCP:${property("hikaricp_version")}")
     implementAndInclude("org.xerial:sqlite-jdbc:${property("sqlite_version")}")
 
     implementAndInclude("org.postgresql:postgresql:${property("postgresql_version")}")

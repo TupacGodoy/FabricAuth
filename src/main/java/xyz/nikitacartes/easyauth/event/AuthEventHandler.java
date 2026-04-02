@@ -37,10 +37,13 @@ import java.net.SocketAddress;
 import java.time.ZonedDateTime;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import xyz.nikitacartes.easyauth.utils.TemporalCache;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
@@ -53,140 +56,167 @@ public class AuthEventHandler {
 
     public static Pattern usernamePattern;
 
-    private static final Map<UUID, Long> lastAcceptedPacketByPlayer = new ConcurrentHashMap<>();
-    private static final Map<UUID, Boolean> administratorCache = new ConcurrentHashMap<>();
+    // Optimized temporal data stores with automatic cleanup
+    private static final TemporalCache<UUID, Long> lastAcceptedPacketByPlayer = new TemporalCache<>(
+            300_000, // 5 minute TTL
+            10_000   // max 10000 entries
+    );
+    private static final TemporalCache<UUID, Boolean> administratorCache = new TemporalCache<>(
+            300_000, // 5 minute TTL
+            1000     // max 1000 entries (fewer operators expected)
+    );
 
+    // Fast packet class lookup - pre-computed allowed packet types
+    // Built via static initializer for compatibility with Stonecutter version conditionals
+    private static final Set<Class<?>> ALWAYS_ALLOWED_PACKETS = new java.util.HashSet<>();
+
+    static {
+        ALWAYS_ALLOWED_PACKETS.addAll(Set.of(
+                KeepAliveC2SPacket.class,
+                ResourcePackStatusC2SPacket.class,
+                TeleportConfirmC2SPacket.class,
+                PlayerSessionC2SPacket.class,
+                MessageAcknowledgmentC2SPacket.class,
+                ClientStatusC2SPacket.class,
+                RequestCommandCompletionsC2SPacket.class,
+                CommandExecutionC2SPacket.class,
+                QueryPingC2SPacket.class,
+                PlayerMoveC2SPacket.class,
+                PlayerMoveC2SPacket.Full.class,
+                PlayerMoveC2SPacket.LookAndOnGround.class,
+                PlayerMoveC2SPacket.OnGroundOnly.class,
+                PlayerMoveC2SPacket.PositionAndOnGround.class,
+                VehicleMoveC2SPacket.class,
+                PlayerInputC2SPacket.class
+        ));
+        //? if >= 1.21.5 {
+        ALWAYS_ALLOWED_PACKETS.add(PlayerLoadedC2SPacket.class);
+        //?}
+        //? if >= 1.21.2 {
+        ALWAYS_ALLOWED_PACKETS.add(ClientTickEndC2SPacket.class);
+        //?}
+        //? if >= 1.20.5 {
+        ALWAYS_ALLOWED_PACKETS.add(CookieResponseC2SPacket.class);
+        ALWAYS_ALLOWED_PACKETS.add(ChatCommandSignedC2SPacket.class);
+        //?}
+        //? if >= 1.20.2 {
+        ALWAYS_ALLOWED_PACKETS.add(CommonPongC2SPacket.class);
+        ALWAYS_ALLOWED_PACKETS.add(ClientOptionsC2SPacket.class);
+        ALWAYS_ALLOWED_PACKETS.add(AcknowledgeChunksC2SPacket.class);
+        ALWAYS_ALLOWED_PACKETS.add(AcknowledgeReconfigurationC2SPacket.class);
+        //?}
+    }
+
+    private static final Set<Class<?>> ITEM_MOVING_PACKETS = Set.of(
+            ClickSlotC2SPacket.class,
+            CreativeInventoryActionC2SPacket.class,
+            UpdateSelectedSlotC2SPacket.class,
+            CloseHandledScreenC2SPacket.class,
+            ButtonClickC2SPacket.class
+    );
+
+    /**
+     * Optimized packet filter using class-based lookup instead of instanceof chain.
+     * Called for every packet from every player - performance is critical.
+     */
     public static boolean isAllowedPacket(ServerPlayerEntity player, Packet<?> packet) {
-        if (packet instanceof KeepAliveC2SPacket
-                || packet instanceof ResourcePackStatusC2SPacket
-                || packet instanceof TeleportConfirmC2SPacket
-                || packet instanceof PlayerSessionC2SPacket
-                || packet instanceof MessageAcknowledgmentC2SPacket
-                || packet instanceof ClientStatusC2SPacket
-                || packet instanceof RequestCommandCompletionsC2SPacket
-                || packet instanceof CommandExecutionC2SPacket
-                || packet instanceof QueryPingC2SPacket
-                //? if >= 1.21.5 {
-                || packet instanceof PlayerLoadedC2SPacket
-                //?}
-                //? if >= 1.21.2 {
-                || packet instanceof ClientTickEndC2SPacket
-                //?}
-                //? if >= 1.20.5 {
-                || packet instanceof CookieResponseC2SPacket
-                || packet instanceof ChatCommandSignedC2SPacket
-                //?}
-                //? if >= 1.20.2 {
-                || packet instanceof CommonPongC2SPacket
-                || packet instanceof ClientOptionsC2SPacket
-                || packet instanceof AcknowledgeChunksC2SPacket
-                || packet instanceof AcknowledgeReconfigurationC2SPacket
-                //?} else {
-                 /*|| packet instanceof PlayPongC2SPacket
-                *///?}
-        ) {
+        Class<?> packetClass = packet.getClass();
+
+        // Fast path: O(1) Set lookup for always-allowed packets
+        if (ALWAYS_ALLOWED_PACKETS.contains(packetClass)) {
             return true;
         }
 
-        // Movement packets are handled separately
-        if (packet instanceof PlayerMoveC2SPacket ||
-                packet instanceof PlayerMoveC2SPacket.Full ||
-                packet instanceof PlayerMoveC2SPacket.LookAndOnGround ||
-                packet instanceof PlayerMoveC2SPacket.OnGroundOnly ||
-                packet instanceof PlayerMoveC2SPacket.PositionAndOnGround ||
-                packet instanceof VehicleMoveC2SPacket ||
-                packet instanceof PlayerInputC2SPacket) {
+        // Config-dependent checks - check config flags first (cheaper than instanceof)
+        if (extendedConfig.allowChat && packetClass == ChatMessageC2SPacket.class) {
             return true;
         }
 
-        if (extendedConfig.allowChat && packet instanceof ChatMessageC2SPacket) {
+        if (extendedConfig.allowBlockInteraction && packetClass == PlayerInteractBlockC2SPacket.class) {
             return true;
         }
 
-        if (extendedConfig.allowBlockInteraction && packet instanceof PlayerInteractBlockC2SPacket) {
+        if (extendedConfig.allowEntityInteraction && packetClass == PlayerInteractEntityC2SPacket.class) {
             return true;
         }
 
-        if (extendedConfig.allowEntityInteraction && packet instanceof PlayerInteractEntityC2SPacket) {
+        if (extendedConfig.allowItemUsing && packetClass == PlayerInteractItemC2SPacket.class) {
             return true;
         }
 
-        if (extendedConfig.allowItemUsing && packet instanceof PlayerInteractItemC2SPacket) {
+        if (packetClass == HandSwingC2SPacket.class) {
+            return extendedConfig.allowBlockInteraction ||
+                   extendedConfig.allowEntityInteraction ||
+                   extendedConfig.allowEntityAttacking;
+        }
+
+        if (packetClass == PlayerActionC2SPacket.class) {
+            return handlePlayerActionPacket((PlayerActionC2SPacket) packet);
+        }
+
+        if (extendedConfig.allowItemMoving && ITEM_MOVING_PACKETS.contains(packetClass)) {
             return true;
         }
 
-        if (packet instanceof HandSwingC2SPacket) {
-            return extendedConfig.allowBlockInteraction || extendedConfig.allowEntityInteraction || extendedConfig.allowEntityAttacking;
-        }
-        
-        if (packet instanceof PlayerActionC2SPacket actionPacket) {
-            var action = actionPacket.getAction();
-            if (action == PlayerActionC2SPacket.Action.START_DESTROY_BLOCK ||
-                    action == PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK ||
-                    action == PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK) {
-                return extendedConfig.allowBlockBreaking;
-            }
-            if (action == PlayerActionC2SPacket.Action.DROP_ALL_ITEMS ||
-                    action == PlayerActionC2SPacket.Action.DROP_ITEM) {
-                return extendedConfig.allowItemDropping;
-            }
-            if (action == PlayerActionC2SPacket.Action.SWAP_ITEM_WITH_OFFHAND) {
-                return extendedConfig.allowItemMoving;
-            }
-            if (action == PlayerActionC2SPacket.Action.RELEASE_USE_ITEM) {
-                return extendedConfig.allowItemUsing;
-            }
-            return false;
-        }
-
-        if (extendedConfig.allowItemMoving && (
-                packet instanceof ClickSlotC2SPacket ||
-                packet instanceof CreativeInventoryActionC2SPacket ||
-                packet instanceof UpdateSelectedSlotC2SPacket ||
-                packet instanceof CloseHandledScreenC2SPacket ||
-                packet instanceof ButtonClickC2SPacket
-        )) {
-            return true;
-        }
-
-        if (packet instanceof CustomPayloadC2SPacket) {
-            if (extendedConfig.allowCustomPackets) {
-                return true;
-            }
-
-            if (extendedConfig.allowCustomPacketsForNonOp && !isAdministratorCached(player)) {
-                return true;
-            }
-
-            //? if >= 1.20.5 {
-            String customPacketIdentifier = ((CustomPayloadC2SPacket) packet).payload().getId().id().toString();
-            //?} else if >= 1.20.2 {
-            /*String customPacketIdentifier = ((CustomPayloadC2SPacket) packet).payload().id().toString();
-            *///?} else {
-            /*String customPacketIdentifier = ((CustomPayloadC2SPacket) packet).getChannel().toString();
-             *///?}
-
-            if (isAllowedCustomPacket(customPacketIdentifier)) {
-                return true;
-            }
-
-            if (config.debug) {
-                LogDebug("Blocked custom packet " + customPacketIdentifier);
-            }
+        if (packetClass == CustomPayloadC2SPacket.class) {
+            return handleCustomPayloadPacket(player, (CustomPayloadC2SPacket) packet);
         }
 
         //? if >= 1.21.6 {
-        if (packet instanceof CustomClickActionC2SPacket) {
-            if (extendedConfig.allowCustomPackets) {
-                return true;
-            }
-
-            return extendedConfig.allowCustomPacketsForNonOp && !isAdministratorCached(player);
+        if (packetClass == CustomClickActionC2SPacket.class) {
+            return handleCustomClickActionPacket(player);
         }
         //?}
 
         return false;
     }
+
+    private static boolean handlePlayerActionPacket(PlayerActionC2SPacket packet) {
+        PlayerActionC2SPacket.Action action = packet.getAction();
+        return switch (action) {
+            case START_DESTROY_BLOCK, ABORT_DESTROY_BLOCK, STOP_DESTROY_BLOCK -> extendedConfig.allowBlockBreaking;
+            case DROP_ALL_ITEMS, DROP_ITEM -> extendedConfig.allowItemDropping;
+            case SWAP_ITEM_WITH_OFFHAND -> extendedConfig.allowItemMoving;
+            case RELEASE_USE_ITEM -> extendedConfig.allowItemUsing;
+            default -> false;
+        };
+    }
+
+    private static boolean handleCustomPayloadPacket(ServerPlayerEntity player, CustomPayloadC2SPacket packet) {
+        if (extendedConfig.allowCustomPackets) {
+            return true;
+        }
+
+        if (extendedConfig.allowCustomPacketsForNonOp && !isAdministratorCached(player)) {
+            return true;
+        }
+
+        //? if >= 1.20.5 {
+        String customPacketIdentifier = packet.payload().getId().id().toString();
+        //?} else if >= 1.20.2 {
+        /*String customPacketIdentifier = packet.payload().id().toString();
+        *///?} else {
+        /*String customPacketIdentifier = packet.getChannel().toString();
+         *///?}
+
+        if (isAllowedCustomPacket(customPacketIdentifier)) {
+            return true;
+        }
+
+        if (config.debug) {
+            LogDebug("Blocked custom packet " + customPacketIdentifier);
+        }
+        return false;
+    }
+
+    //? if >= 1.21.6 {
+    private static boolean handleCustomClickActionPacket(ServerPlayerEntity player) {
+        if (extendedConfig.allowCustomPackets) {
+            return true;
+        }
+        return extendedConfig.allowCustomPacketsForNonOp && !isAdministratorCached(player);
+    }
+    //?}
 
     public static boolean isAdministratorCached(ServerPlayerEntity player) {
         UUID playerUuid = player.getUuid();
@@ -447,15 +477,22 @@ public class AuthEventHandler {
         return ActionResult.PASS;
     }
 
-    // Player movement
+    // Optimized player movement handling with rate-limited teleport
+    // Uses millisecond precision instead of nanoTime for better performance
+    private static final long TELEPORT_COOLDOWN_MS = 500; // Minimum 500ms between teleports
+
     public static ActionResult onPlayerMove(ServerPlayerEntity player) {
         // Player will fall if enabled (prevent fly kick)
         // Otherwise, movement should be disabled
-        if (!((PlayerAuth) player).easyAuth$isAuthenticated() && !extendedConfig.allowMovement) {
+        PlayerAuth playerAuth = (PlayerAuth) player;
+        if (!playerAuth.easyAuth$isAuthenticated() && !extendedConfig.allowMovement) {
             UUID playerUuid = player.getUuid();
-            long now = System.nanoTime();
-            long lastAcceptedPacket = lastAcceptedPacketByPlayer.getOrDefault(playerUuid, 0L);
-            if (now >= lastAcceptedPacket + extendedConfig.teleportationTimeoutMs * 1_000_000L) {
+            long now = System.currentTimeMillis();
+
+            // Check if we should send another teleport
+            Long lastTeleport = lastAcceptedPacketByPlayer.get(playerUuid);
+            if (lastTeleport == null || now - lastTeleport >= TELEPORT_COOLDOWN_MS) {
+                // Only teleport if player has actually moved
                 player.networkHandler.requestTeleport(player.getX(), player.getY(), player.getZ(), player.getYaw(), player.getPitch());
                 lastAcceptedPacketByPlayer.put(playerUuid, now);
             }

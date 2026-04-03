@@ -6,9 +6,11 @@ Optional security enhancements that are **not critical** but could be implemente
 
 ---
 
-## Optional Security Enhancements
+## Security Improvements
 
-### 1. Argon2id as Default Algorithm (Optional)
+### 1. Argon2id as Default Algorithm
+
+**Priority:** Low
 
 **Current state:** BCrypt is used as the default password hashing algorithm. Legacy Argon2 passwords are migrated to BCrypt on login.
 
@@ -19,11 +21,11 @@ Optional security enhancements that are **not critical** but could be implemente
 - Add configuration option to choose between Argon2id and BCrypt
 - Document the security trade-offs for server administrators
 
-**Priority:** Low - BCrypt remains secure for this use case.
-
 ---
 
-### 2. Generic Error Messages Config Option (Optional)
+### 2. Generic Error Messages Config Option
+
+**Priority:** Low
 
 **Current state:** Error messages like `playerAlreadyOnline` reveal that a player account exists.
 
@@ -33,11 +35,11 @@ Optional security enhancements that are **not critical** but could be implemente
 - Add config option `genericErrorMessages` (default: `false`)
 - When enabled, use generic messages like "Authentication failed" for all errors
 
-**Priority:** Low - Current behavior is acceptable for most servers.
-
 ---
 
-### 3. fail2ban Integration Documentation (Optional)
+### 3. fail2ban Integration Documentation
+
+**Priority:** Low
 
 **Current state:** Rate limiting is implemented in-application with exponential backoff.
 
@@ -47,13 +49,11 @@ Optional security enhancements that are **not critical** but could be implemente
 - Add documentation for integrating with fail2ban
 - Provide example filter rules for parsing EasyAuth logs
 
-**Priority:** Low - Only relevant for high-traffic servers.
-
 ---
 
-## New Security Issues Found (2026-04-03 Audit)
+### 4. Command Injection via Argument Parsing
 
-### 1. Command Injection via Argument Parsing (Medium)
+**Priority:** Medium
 
 **Files:** `RegisterCommand.java:48-56`, `LoginCommand.java:39`
 
@@ -65,14 +65,16 @@ Optional security enhancements that are **not critical** but could be implemente
 
 ---
 
-### 2. Race Condition in Session Token Validation (Medium-High)
+### 5. Race Condition in Session Token Validation
+
+**Priority:** Medium-High
 
 **Files:** `AuthEventHandler.java:470-492`
 
 **Problem:** TOCTOU (Time-of-check to time-of-use) race condition in session validation:
-1. Line 470-471: Check if IP hash matches and session is valid
-2. Line 474-479: Read client session token and compare with stored token
-3. Line 481-487: Generate new token and update cache
+1. Check if IP hash matches and session is valid
+2. Read client session token and compare with stored token
+3. Generate new token and update cache
 
 Between steps 1-3, another thread could modify `cache.sessionToken`, potentially allowing session fixation if an attacker can inject a token during the window.
 
@@ -80,16 +82,18 @@ Between steps 1-3, another thread could modify `cache.sessionToken`, potentially
 
 ---
 
-### 3. Inconsistent Lock Ordering in TemporalCache (Medium)
+### 6. Inconsistent Lock Ordering in TemporalCache
+
+**Priority:** Medium
 
 **Files:** `TemporalCache.java:115-146`
 
 **Problem:** The `computeIfAbsent` method has a lock ordering issue:
-1. Acquires read lock (line 116)
-2. Releases read lock (line 124)
-3. Computes value outside any lock (line 128)
-4. Acquires write lock (line 134)
-5. Double-checks (line 137-140)
+1. Acquires read lock
+2. Releases read lock
+3. Computes value outside any lock
+4. Acquires write lock
+5. Double-checks
 
 If two threads compute the same key simultaneously, both will compute the value, and the last writer wins. This could lead to:
 - Wasted computation
@@ -99,7 +103,9 @@ If two threads compute the same key simultaneously, both will compute the value,
 
 ---
 
-### 4. HMAC Key Stored in Config File (Low-Medium)
+### 7. HMAC Key Stored in Config File
+
+**Priority:** Low-Medium
 
 **Files:** `TechnicalConfigV1.java:63`, `AuthEventHandler.java:312-316`
 
@@ -117,7 +123,9 @@ If two threads compute the same key simultaneously, both will compute the value,
 
 ---
 
-### 5. SQL Injection Risk in Table Name (Low)
+### 8. SQL Injection Risk in Table Name
+
+**Priority:** Low
 
 **Files:** `MySQL.java:105-117`, `PostgreSQL.java:82-91`
 
@@ -132,7 +140,9 @@ While the table name comes from config (not user input), if an admin's config is
 
 ---
 
-### 6. Cache Poisoning via Username Case Manipulation (Low)
+### 9. Cache Poisoning via Username Case Manipulation
+
+**Priority:** Low
 
 **Files:** `PlayersCache.java:133-141`, `IpLimitManager.java:141-149`
 
@@ -147,7 +157,9 @@ While the table name comes from config (not user input), if an admin's config is
 
 ---
 
-### 7. Missing Rate Limiting on Custom Packet Handling (Low)
+### 10. Missing Rate Limiting on Custom Packet Handling
+
+**Priority:** Low
 
 **Files:** `AuthEventHandler.java:236-260`
 
@@ -160,7 +172,9 @@ While the table name comes from config (not user input), if an admin's config is
 
 ---
 
-### 8. Session Token Entropy Not Verified (Low)
+### 11. Session Token Entropy Not Verified
+
+**Priority:** Low
 
 **Files:** `AuthEventHandler.java:295-301`
 

@@ -13,7 +13,7 @@ The following improvements have been implemented:
 ### ✅ Session Token Entropy Validation (#11)
 **Implemented:** 2026-04-13 - `AuthEventHandler.java`
 - Added minimum token length validation (20 characters)
-- Added character set validation (base64url only)
+- Added character set validation (base64url only: A-Za-z0-9_-)
 - Prevents brute-force attacks on session tokens
 
 ### ✅ Command Injection Prevention (#4)
@@ -41,6 +41,26 @@ The following improvements have been implemented:
 **Implemented:** Previously - `MySQL.java`, `PostgreSQL.java`
 - `isValidIdentifier()` method validates table/database names
 - Regex pattern `^[a-zA-Z0-9_-]+$` enforced
+
+### ✅ Race Condition in Session Token Validation (#5)
+**Implemented:** Previously - `AuthEventHandler.java:492`
+- `synchronized (playerAuth)` block prevents TOCTOU race condition
+- Entire session validation block is atomic
+
+### ✅ TemporalCache Lock Ordering Fixed (#6)
+**Implemented:** Previously - `TemporalCache.java`
+- Proper double-checked locking with per-key locks
+- Value computation happens inside lock protection
+
+### ✅ TemporalCache DoS Prevention (#14)
+**Implemented:** Previously - `TemporalCache.java:147-169`
+- Exception handling prevents orphaned locks
+- `compute()` for safe lock cleanup on memory leak prevention
+
+### ✅ IpLimitManager Cache Race Condition (#18)
+**Implemented:** Previously - `IpLimitManager.java`
+- `computeIfAbsent` for atomic cache population
+- Eliminates TOCTOU window
 
 ---
 

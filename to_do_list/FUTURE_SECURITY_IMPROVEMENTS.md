@@ -62,6 +62,12 @@ The following improvements have been implemented:
 - `computeIfAbsent` for atomic cache population
 - Eliminates TOCTOU window
 
+### ✅ Custom Packet Rate Limiting (#10)
+**Implemented:** 2026-04-13 - `AuthEventHandler.java`
+- Track custom packet count per unauthenticated player
+- 20 packets per 10-second window limit
+- Prevents DoS via packet flooding
+
 ---
 
 ---

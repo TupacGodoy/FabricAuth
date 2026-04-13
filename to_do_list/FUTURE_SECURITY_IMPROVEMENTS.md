@@ -68,6 +68,12 @@ The following improvements have been implemented:
 - 20 packets per 10-second window limit
 - Prevents DoS via packet flooding
 
+### ✅ Cache Poisoning via Username Case (#9)
+**Implemented:** Previously - `PlayersCache.java`
+- UUID used as primary cache key
+- Username case verification on retrieval (line 167)
+- Mismatch detection prevents cache poisoning
+
 ---
 
 ---

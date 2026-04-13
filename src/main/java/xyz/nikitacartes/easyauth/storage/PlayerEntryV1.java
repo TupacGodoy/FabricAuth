@@ -4,6 +4,7 @@ import com.google.gson.*;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import net.minecraft.server.network.ServerPlayerEntity;
+import org.jetbrains.annotations.Nullable;
 import xyz.nikitacartes.easyauth.event.AuthEventHandler;
 
 import java.time.ZonedDateTime;
@@ -38,6 +39,11 @@ public class PlayerEntryV1 {
     // Debounce delay in milliseconds
     private static final long WRITE_BACK_DELAY_MS = 1000;
 
+    // Register shutdown hook to flush pending updates on server stop
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread(PlayerEntryV1::flushAllPending, "PlayerEntryV1-ShutdownHook"));
+    }
+
     public String username;
     public String usernameLowerCase;
     public UUID uuid = null;
@@ -49,12 +55,22 @@ public class PlayerEntryV1 {
     public String password = "";
 
     /**
-     * Last recorded IP of player.
+     * Last recorded IP hash of player (HMAC-SHA256).
      * Used for {@link AuthEventHandler#onPlayerJoin(ServerPlayerEntity) sessions}.
+     * Storing HMAC-SHA256 hash instead of plain text for privacy compliance (GDPR).
      */
     @Expose
-    @SerializedName("last_ip")
-    public String lastIp = "";
+    @SerializedName("last_ip_hash")
+    public String lastIpHash = "";
+
+    /**
+     * Session token for session fixation prevention.
+     * Generated on successful login and validated on session resume.
+     * Stored in database to persist across server restarts.
+     */
+    @Expose
+    @SerializedName("session_token")
+    public String sessionToken = null;
 
     /**
      * Stores the last time a player was successfully authenticated (unix ms).
@@ -106,7 +122,32 @@ public class PlayerEntryV1 {
      */
     @Expose
     @SerializedName("forced_uuid")
-    public String forcedUuid = null;
+    private String forcedUuid = null;
+
+    /**
+     * Gets the forced UUID for this player.
+     * @return forced UUID or null if not set
+     */
+    @Nullable
+    public String getForcedUuid() {
+        return forcedUuid;
+    }
+
+    /**
+     * Sets the forced UUID for this player with format validation.
+     * @param uuid the UUID to set, or null to clear
+     * @throws IllegalArgumentException if UUID format is invalid
+     */
+    public void setForcedUuid(@Nullable String uuid) {
+        if (uuid != null && !uuid.matches("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")) {
+            throw new IllegalArgumentException("Invalid UUID format: " + uuid);
+        }
+        this.forcedUuid = uuid;
+        // Mark as dirty for write-back
+        if (usernameLowerCase != null) {
+            update();
+        }
+    }
 
     // Cached JSON to avoid redundant serialization
     private transient volatile String cachedJson = null;
@@ -122,7 +163,8 @@ public class PlayerEntryV1 {
         this.uuid = uuid == null ? null : UUID.fromString(uuid);
 
         this.password = entry.password == null ? "" : entry.password;
-        this.lastIp = entry.lastIp == null ? "" : entry.lastIp;
+        // Migrate from deprecated last_ip to last_ip_hash if needed
+        this.lastIpHash = entry.lastIpHash == null ? "" : entry.lastIpHash;
         this.loginTries = entry.loginTries;
         this.onlineAccount = entry.onlineAccount == null ? OnlineAccount.UNKNOWN : entry.onlineAccount;
         this.lastAuthenticatedDate = entry.lastAuthenticatedDate == null ? startOfTime : entry.lastAuthenticatedDate;

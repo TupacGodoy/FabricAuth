@@ -23,6 +23,7 @@ import static xyz.nikitacartes.easyauth.utils.EasyLogger.*;
 public class MongoDB implements DbApi {
     private final StorageConfigV1 config;
     private MongoCollection<Document> collection;
+    private MongoCollection<Document> loginAttemptsCollection;
     private MongoClient mongoClient;
 
     public MongoDB(StorageConfigV1 config) {
@@ -40,6 +41,18 @@ public class MongoDB implements DbApi {
             mongoClient = MongoClients.create(settings);
             MongoDatabase database = mongoClient.getDatabase(config.mongodb.mongodbDatabase);
             collection = database.getCollection("players");
+
+            // Initialize login attempts collection for rate limiting
+            loginAttemptsCollection = database.getCollection("login_attempts");
+            if (loginAttemptsCollection == null) {
+                database.createCollection("login_attempts");
+                loginAttemptsCollection = database.getCollection("login_attempts");
+            }
+            // Create indexes for efficient IP and timestamp queries
+            loginAttemptsCollection.createIndex(new Document("ip_hash", 1));
+            loginAttemptsCollection.createIndex(new Document("timestamp", 1));
+
+            LogInfo("MongoDB login attempts collection initialized with indexes");
         } catch (MongoClientException | MongoCommandException e) {
             throw new DBApiException("Failed connecting to MongoDB", e);
         }
@@ -62,7 +75,7 @@ public class MongoDB implements DbApi {
                     .append("username_lower", data.usernameLowerCase)
                     .append("uuid", data.uuid == null ? null : data.uuid.toString())
                     .append("data", data.toJson())
-                    .append("last_ip", data.lastIp);
+                    .append("last_ip_hash", data.lastIpHash);
             if (collection.insertOne(document).getInsertedId() == null) {
                 LogError("Failed to insert data: " + data.toJson());
             }
@@ -137,7 +150,7 @@ public class MongoDB implements DbApi {
                     .append("username_lower", data.usernameLowerCase)
                     .append("uuid", data.uuid == null ? null : data.uuid.toString())
                     .append("data", data.toJson())
-                    .append("last_ip", data.lastIp);
+                    .append("last_ip_hash", data.lastIpHash);
             if (collection.replaceOne(eq("username", data.username), document).getModifiedCount() == 0) {
                 LogError("Failed to update data: " + data.toJson());
                 return false;
@@ -170,8 +183,9 @@ public class MongoDB implements DbApi {
     @Override
     public int countAccountsByIp(String ipAddress) {
         try {
-            long count = collection.countDocuments(eq("last_ip", ipAddress));
-            LogDebug("Counted " + count + " accounts for IP " + ipAddress);
+            String hashedIp = xyz.nikitacartes.easyauth.event.AuthEventHandler.hashIp(ipAddress);
+            long count = collection.countDocuments(eq("last_ip_hash", hashedIp));
+            LogDebug("Counted " + count + " accounts for IP [HASHED]");
             return (int) count;
         } catch (Exception e) {
             LogError("Error counting accounts by IP", e);
@@ -183,13 +197,14 @@ public class MongoDB implements DbApi {
     public List<String> getUsernamesByIp(String ipAddress) {
         List<String> usernames = new ArrayList<>();
         try {
-            collection.find(eq("last_ip", ipAddress)).forEach(document -> {
+            String hashedIp = xyz.nikitacartes.easyauth.event.AuthEventHandler.hashIp(ipAddress);
+            collection.find(eq("last_ip_hash", hashedIp)).forEach(document -> {
                 String username = document.getString("username");
                 if (username != null) {
                     usernames.add(username);
                 }
             });
-            LogDebug("Found " + usernames.size() + " usernames for IP " + ipAddress);
+            LogDebug("Found " + usernames.size() + " usernames for IP [HASHED]");
         } catch (Exception e) {
             LogError("Error getting usernames by IP", e);
         }
@@ -227,20 +242,72 @@ public class MongoDB implements DbApi {
 
     @Override
     public void migrateFromV4() {
-        LogInfo("Migrating IPs from JSON to field...");
+        LogInfo("Migrating IPs to last_ip_hash (HMAC-SHA256)...");
         try {
             for (Document document : collection.find()) {
                 String data = document.getString("data");
                 if (data != null) {
                     // Create dummy entry to parse JSON
                     PlayerEntryV1 entry = new PlayerEntryV1(document.getString("username"), document.getString("username_lower"), null, data);
-                    collection.updateOne(eq("_id", document.get("_id")), new Document("$set", new Document("last_ip", entry.lastIp)));
+                    String ipToHash = entry.lastIpHash.isEmpty() ? entry.lastIp : entry.lastIp;
+                    String hashedIp = xyz.nikitacartes.easyauth.event.AuthEventHandler.hashIp(ipToHash);
+                    collection.updateOne(eq("_id", document.get("_id")), new Document("$set", new Document("last_ip_hash", hashedIp)));
                 }
             }
-            LogInfo("Migrated IPs successfully.");
+            LogInfo("Migrated IPs to HMAC-SHA256 successfully.");
         } catch (Exception e) {
             LogError("Error migrating IPs", e);
         }
     }
 
+    @Override
+    public void recordLoginAttempt(String ipHash, long timestamp) {
+        try {
+            loginAttemptsCollection.insertOne(new Document("ip_hash", ipHash).append("timestamp", timestamp));
+        } catch (Exception e) {
+            LogError("Error recording login attempt", e);
+        }
+    }
+
+    @Override
+    public int getLoginAttemptsInWindow(String ipHash, long windowMs) {
+        try {
+            long windowStart = System.currentTimeMillis() - windowMs;
+            long count = loginAttemptsCollection.countDocuments(
+                new Document("ip_hash", ipHash).append("timestamp", new Document("$gte", windowStart))
+            );
+            return (int) count;
+        } catch (Exception e) {
+            LogError("Error getting login attempts", e);
+            return 0;
+        }
+    }
+
+    @Override
+    public void clearLoginAttempts(String ipHash) {
+        try {
+            loginAttemptsCollection.deleteMany(new Document("ip_hash", ipHash));
+        } catch (Exception e) {
+            LogError("Error clearing login attempts", e);
+        }
+    }
+
+    @Override
+    public @Nullable String getUsernameByUuid(String uuid) {
+        try {
+            Document document = collection.find(eq("uuid", uuid)).first();
+            if (document != null) {
+                return document.getString("username");
+            }
+        } catch (Exception e) {
+            LogError("Error getting username by UUID", e);
+        }
+        return null;
+    }
+
+    @Override
+    public void initializeLoginAttemptsTable() {
+        // MongoDB collections are created automatically, indexes are created in connect()
+        LogDebug("MongoDB login attempts collection already initialized");
+    }
 }

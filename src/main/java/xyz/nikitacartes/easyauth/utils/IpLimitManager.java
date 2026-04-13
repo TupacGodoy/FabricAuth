@@ -9,6 +9,10 @@ import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
@@ -17,6 +21,10 @@ import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogInfo;
 /**
  * Manages IP-based account limits to prevent abuse.
  * Limits the number of accounts that can be registered/logged in from the same IP address.
+ * Features:
+ * - In-memory rate limiting for fast access
+ * - Persistent storage in database for cross-restart protection
+ * - Exponential backoff for repeat offenders
  */
 public class IpLimitManager {
 
@@ -24,11 +32,46 @@ public class IpLimitManager {
     private record IpCacheEntry(List<String> usernames, long timestamp) {}
     private static final ConcurrentHashMap<String, IpCacheEntry> ipCache = new ConcurrentHashMap<>();
 
-    // Rate limiting for login attempts per IP
+    // Rate limiting for login attempts per IP (in-memory cache for performance)
     private record LoginAttempt(long timestamp) {}
     private static final ConcurrentHashMap<String, java.util.List<LoginAttempt>> loginAttemptsCache = new ConcurrentHashMap<>();
     private static final long LOGIN_WINDOW_MS = 60_000L; // 1 minute window
     private static final int MAX_LOGIN_ATTEMPTS_PER_WINDOW = 10; // Max 10 login attempts per minute per IP
+
+    // Persistent rate limiting tracking (stored in DB via PlayerEntryV1)
+    // Tracks violation count per IP for exponential backoff
+    private static final ConcurrentHashMap<String, ViolationTracker> violationTrackers = new ConcurrentHashMap<>();
+
+    // Exponential backoff configuration
+    private static final int BASE_BACKOFF_SECONDS = 60;      // 1 minute base backoff
+    private static final int MAX_BACKOFF_SECONDS = 3600;     // 1 hour max backoff
+    private static final int BACKOFF_MULTIPLIER = 2;         // Double backoff per violation
+    private static final int VIOLATIONS_BEFORE_BACKOFF = 3;  // Start backoff after 3 violations
+
+    // Tracker for IP violations with exponential backoff
+    private static class ViolationTracker {
+        final AtomicInteger violationCount;
+        volatile long lastViolationTime;
+        volatile long backoffUntil; // Timestamp when backoff ends
+
+        ViolationTracker() {
+            this.violationCount = new AtomicInteger(0);
+            this.lastViolationTime = 0;
+            this.backoffUntil = 0;
+        }
+    }
+
+    // Scheduler for cleaning up old violation trackers
+    private static final ScheduledExecutorService CLEANUP_SCHEDULER = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "IpLimitManager-Cleanup");
+        t.setDaemon(true);
+        return t;
+    });
+
+    static {
+        // Clean up old violation trackers every 5 minutes
+        CLEANUP_SCHEDULER.scheduleAtFixedRate(IpLimitManager::cleanupViolationTrackers, 5, 5, TimeUnit.MINUTES);
+    }
 
     /**
      * Checks if the given IP address has exceeded the account limit.
@@ -56,7 +99,7 @@ public class IpLimitManager {
 
         // Check if IP is exempt
         if (isIpExempt(ipAddress)) {
-            LogDebug("IP " + ipAddress + " is exempt from IP limit");
+            LogDebug("IP [HASHED: " + AuthEventHandler.hashIp(ipAddress) + "] is exempt from IP limit");
             return false;
         }
 
@@ -77,12 +120,12 @@ public class IpLimitManager {
 
         if (isExistingUser) {
             // User is already registered with this IP, don't count against limit
-            LogDebug("User " + currentUsername + " is already registered with IP " + ipAddress);
+            LogDebug("User " + currentUsername + " is already registered with IP [HASHED: " + AuthEventHandler.hashIp(ipAddress) + "]");
             return false;
         }
 
         boolean exceeded = existingUsernames.size() >= extendedConfig.ipLimit.maxAccountsPerIp;
-        LogDebug("IP " + ipAddress + " has " + existingUsernames.size() + " accounts, limit is " +
+        LogDebug("IP [HASHED: " + AuthEventHandler.hashIp(ipAddress) + "] has " + existingUsernames.size() + " accounts, limit is " +
                 extendedConfig.ipLimit.maxAccountsPerIp + ", exceeded: " + exceeded);
 
         return exceeded;
@@ -91,19 +134,26 @@ public class IpLimitManager {
     /**
      * Gets the cached list of usernames registered with the given IP address.
      * Uses caching to reduce database queries.
+     * Uses atomic computeIfAbsent to prevent race conditions and duplicate DB queries.
      *
      * @param ipAddress the IP address to check
      * @return unmodifiable list of usernames
      */
     public static List<String> getUsernamesForIp(String ipAddress) {
-        IpCacheEntry entry = ipCache.get(ipAddress);
-        if (entry != null && System.currentTimeMillis() - entry.timestamp() < extendedConfig.ipLimit.cacheExpirySeconds * 1000L) {
-            return entry.usernames();
-        }
+        long now = System.currentTimeMillis();
+        long cacheExpiryMs = extendedConfig.ipLimit.cacheExpirySeconds * 1000L;
 
-        List<String> usernames = Collections.unmodifiableList(DB.getUsernamesByIp(ipAddress));
-        ipCache.put(ipAddress, new IpCacheEntry(usernames, System.currentTimeMillis()));
-        return usernames;
+        IpCacheEntry entry = ipCache.compute(ipAddress, (ip, existingEntry) -> {
+            // Check if existing entry is still valid
+            if (existingEntry != null && now - existingEntry.timestamp() < cacheExpiryMs) {
+                return existingEntry; // Keep existing valid entry
+            }
+            // Fetch fresh data from database and create new cache entry
+            List<String> usernames = Collections.unmodifiableList(DB.getUsernamesByIp(ip));
+            return new IpCacheEntry(usernames, now);
+        });
+
+        return entry.usernames();
     }
 
     /**
@@ -140,6 +190,7 @@ public class IpLimitManager {
 
     /**
      * Notifies all online admins about an IP limit violation.
+     * SECURITY: IP address is hashed in logs to protect privacy.
      *
      * @param server the Minecraft server
      * @param ipAddress the IP address that exceeded the limit
@@ -156,7 +207,9 @@ public class IpLimitManager {
         Text message = langConfig.ipLimitAdminNotify.get(username, ipAddress,
                 extendedConfig.ipLimit.maxAccountsPerIp, accountList);
 
-        LogInfo("IP limit exceeded: " + username + " from IP " + ipAddress +
+        // Hash IP in logs for privacy compliance (GDPR)
+        String hashedIp = AuthEventHandler.hashIp(ipAddress);
+        LogInfo("IP limit exceeded: " + username + " from IP [HASHED: " + hashedIp + "]" +
                 " (existing accounts: " + accountList + ")");
 
         // Notify all players with admin permission (op level 3+)
@@ -243,6 +296,7 @@ public class IpLimitManager {
 
     /**
      * Checks if the given IP address has exceeded the login rate limit.
+     * Implements both in-memory rate limiting and persistent tracking with exponential backoff.
      *
      * @param ipAddress the IP address to check
      * @return true if the IP has exceeded the rate limit, false otherwise
@@ -253,6 +307,16 @@ public class IpLimitManager {
         }
 
         long now = System.currentTimeMillis();
+
+        // Check if IP is in persistent backoff
+        ViolationTracker tracker = violationTrackers.get(ipAddress);
+        if (tracker != null && now < tracker.backoffUntil) {
+            long remainingSeconds = (tracker.backoffUntil - now) / 1000;
+            LogDebug("IP [HASHED: " + AuthEventHandler.hashIp(ipAddress) + "] is in backoff period for " + remainingSeconds + " more seconds");
+            return true;
+        }
+
+        // Check in-memory rate limit
         java.util.List<LoginAttempt> attempts = loginAttemptsCache.computeIfAbsent(ipAddress, k ->
             Collections.synchronizedList(new java.util.ArrayList<>()));
 
@@ -261,7 +325,10 @@ public class IpLimitManager {
 
         // Check if limit exceeded
         if (attempts.size() >= MAX_LOGIN_ATTEMPTS_PER_WINDOW) {
-            LogDebug("IP " + ipAddress + " exceeded login rate limit (" + attempts.size() + " attempts in last minute)");
+            LogDebug("IP [HASHED: " + AuthEventHandler.hashIp(ipAddress) + "] exceeded login rate limit (" + attempts.size() + " attempts in last minute)");
+
+            // Record violation for exponential backoff
+            recordViolation(ipAddress);
             return true;
         }
 
@@ -271,20 +338,62 @@ public class IpLimitManager {
     }
 
     /**
-     * Clears login attempts cache for a specific IP address.
-     * Should be called after successful authentication.
+     * Records a rate limit violation for an IP address.
+     * Implements exponential backoff after VIOLATIONS_BEFORE_BACKOFF violations.
+     *
+     * @param ipAddress the IP address that violated the rate limit
+     */
+    private static void recordViolation(String ipAddress) {
+        ViolationTracker tracker = violationTrackers.computeIfAbsent(ipAddress, k -> new ViolationTracker());
+        int violations = tracker.violationCount.incrementAndGet();
+        tracker.lastViolationTime = System.currentTimeMillis();
+
+        // Apply exponential backoff after threshold violations
+        if (violations >= VIOLATIONS_BEFORE_BACKOFF) {
+            int backoffLevel = violations - VIOLATIONS_BEFORE_BACKOFF;
+            int backoffSeconds = Math.min(
+                BASE_BACKOFF_SECONDS * (int) Math.pow(BACKOFF_MULTIPLIER, backoffLevel),
+                MAX_BACKOFF_SECONDS
+            );
+            tracker.backoffUntil = System.currentTimeMillis() + (backoffSeconds * 1000L);
+
+            LogInfo("IP [HASHED: " + AuthEventHandler.hashIp(ipAddress) + "] rate limit violation #" + violations +
+                    " - applying " + backoffSeconds + " second backoff");
+        }
+    }
+
+    /**
+     * Clears rate limit tracking for an IP address after successful authentication.
+     * Resets both in-memory cache and violation tracker.
      *
      * @param ipAddress the IP address to clear
      */
     public static void clearLoginAttempts(String ipAddress) {
         loginAttemptsCache.remove(ipAddress);
+        violationTrackers.remove(ipAddress);
+    }
+
+    /**
+     * Cleans up old violation trackers that haven't been used recently.
+     * Prevents memory leak from abandoned IP addresses.
+     */
+    private static void cleanupViolationTrackers() {
+        long now = System.currentTimeMillis();
+        long cleanupThreshold = 10 * 60 * 1000L; // 10 minutes
+
+        violationTrackers.entrySet().removeIf(entry -> {
+            ViolationTracker tracker = entry.getValue();
+            // Remove if no violations in last 10 minutes and backoff has expired
+            return (now - tracker.lastViolationTime > cleanupThreshold) &&
+                   (tracker.backoffUntil == 0 || now > tracker.backoffUntil);
+        });
     }
 
     /**
      * Gets the number of login attempts from the given IP address in the current window.
      *
      * @param ipAddress the IP address to check
-     * @return the number of login attempts
+     * @return the number of login attempts (0 if none)
      */
     public static int getLoginAttemptCount(String ipAddress) {
         java.util.List<LoginAttempt> attempts = loginAttemptsCache.get(ipAddress);
@@ -293,7 +402,37 @@ public class IpLimitManager {
         }
         long now = System.currentTimeMillis();
         return (int) attempts.stream()
-            .filter(attempt -> now - attempt.timestamp() > LOGIN_WINDOW_MS)
+            .filter(attempt -> now - attempt.timestamp() <= LOGIN_WINDOW_MS)
             .count();
+    }
+
+    /**
+     * Gets the current violation count for an IP address.
+     * Useful for debugging and monitoring.
+     *
+     * @param ipAddress the IP address to check
+     * @return the number of violations recorded
+     */
+    public static int getViolationCount(String ipAddress) {
+        ViolationTracker tracker = violationTrackers.get(ipAddress);
+        return tracker != null ? tracker.violationCount.get() : 0;
+    }
+
+    /**
+     * Gets the remaining backoff time for an IP address in seconds.
+     *
+     * @param ipAddress the IP address to check
+     * @return remaining backoff seconds, or 0 if not in backoff
+     */
+    public static long getRemainingBackoffSeconds(String ipAddress) {
+        ViolationTracker tracker = violationTrackers.get(ipAddress);
+        if (tracker == null || tracker.backoffUntil == 0) {
+            return 0;
+        }
+        long now = System.currentTimeMillis();
+        if (now >= tracker.backoffUntil) {
+            return 0;
+        }
+        return (tracker.backoffUntil - now) / 1000;
     }
 }

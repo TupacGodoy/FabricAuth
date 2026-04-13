@@ -3,6 +3,7 @@ package xyz.nikitacartes.easyauth.utils;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
@@ -15,10 +16,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class TemporalCache<K, V> {
     private final long ttlMillis;
     private final int maxSize;
+    private final long maxMemoryBytes; // Memory-based eviction threshold
     private final LinkedHashMap<K, CacheEntry<V>> map;
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private volatile long lastCleanupTime;
     private static final long CLEANUP_INTERVAL_MS = 60_000; // Cleanup every minute
+    private static final long DEFAULT_MAX_MEMORY_MB = Long.getLong("easyauth.cache.maxMemoryMb", 64);
 
     private static final class CacheEntry<V> {
         final V value;
@@ -35,7 +38,7 @@ public class TemporalCache<K, V> {
     }
 
     /**
-     * Creates a new TemporalCache with true LRU eviction.
+     * Creates a new TemporalCache with true LRU eviction and memory-based limits.
      *
      * @param ttlMillis Time-to-live in milliseconds
      * @param maxSize Maximum number of entries before forced cleanup
@@ -43,6 +46,7 @@ public class TemporalCache<K, V> {
     public TemporalCache(long ttlMillis, int maxSize) {
         this.ttlMillis = ttlMillis;
         this.maxSize = maxSize;
+        this.maxMemoryBytes = DEFAULT_MAX_MEMORY_MB * 1024 * 1024;
         // accessOrder = true for LRU behavior (get/recent put moves to end)
         this.map = new LinkedHashMap<K, CacheEntry<V>>(16, 0.75f, true) {
             @Override
@@ -52,6 +56,15 @@ public class TemporalCache<K, V> {
             }
         };
         this.lastCleanupTime = System.currentTimeMillis();
+    }
+
+    /**
+     * Estimates memory usage of cache entries.
+     * This is a rough estimate based on entry count and average object size.
+     */
+    private long estimateMemoryUsage() {
+        // Rough estimate: ~1KB per entry (covers most typical use cases)
+        return map.size() * 1024;
     }
 
     /**
@@ -98,9 +111,14 @@ public class TemporalCache<K, V> {
 
     /**
      * Gets existing value or computes and stores if absent.
-     * Atomic operation.
+     * Atomic operation with proper double-checked locking to prevent race conditions.
+     * Uses a per-key lock striping approach to avoid computing values outside of lock protection.
+     * Includes proper exception handling to prevent memory leaks from orphaned locks.
      */
+    private final ConcurrentHashMap<K, ReentrantReadWriteLock> keyLocks = new ConcurrentHashMap<>();
+
     public V computeIfAbsent(K key, java.util.function.Function<K, V> mappingFunction) {
+        // First, try fast path with read lock
         lock.readLock().lock();
         try {
             maybeCleanupLocked();
@@ -112,24 +130,43 @@ public class TemporalCache<K, V> {
             lock.readLock().unlock();
         }
 
-        // Compute outside of read lock
-        V newValue = mappingFunction.apply(key);
-        if (newValue == null) {
-            return null;
-        }
-
-        // Upgrade to write lock for put
-        lock.writeLock().lock();
+        // Acquire per-key lock for atomic compute
+        ReentrantReadWriteLock keyLock = keyLocks.computeIfAbsent(key, k -> new ReentrantReadWriteLock());
+        keyLock.writeLock().lock();
         try {
             // Double-check after acquiring write lock
             CacheEntry<V> entry = map.get(key);
             if (entry != null && !entry.isExpired()) {
                 return entry.value;
             }
+
+            // Compute value while holding the lock to prevent race conditions
+            V newValue;
+            try {
+                newValue = mappingFunction.apply(key);
+            } catch (RuntimeException e) {
+                // Re-throw RuntimeExceptions from the mapping function
+                // Do not store anything if computation fails
+                throw e;
+            }
+
+            if (newValue == null) {
+                return null;
+            }
+
             map.put(key, new CacheEntry<>(newValue, ttlMillis));
+
             return newValue;
         } finally {
-            lock.writeLock().unlock();
+            keyLock.writeLock().unlock();
+            // Clean up key lock if no longer needed (prevent memory leak)
+            // Only remove if the lock we acquired is still the current one
+            keyLocks.compute(key, (k, existingLock) -> {
+                if (existingLock == keyLock && !map.containsKey(key)) {
+                    return null; // Remove lock if it's still ours and no entry exists
+                }
+                return existingLock; // Keep lock for concurrent accessors
+            });
         }
     }
 
@@ -189,6 +226,7 @@ public class TemporalCache<K, V> {
 
     /**
      * Internal cleanup without locking - caller must hold write lock.
+     * Removes expired entries and enforces memory-based eviction.
      */
     private void maybeCleanupLocked() {
         long now = System.currentTimeMillis();
@@ -201,6 +239,16 @@ public class TemporalCache<K, V> {
         Iterator<Map.Entry<K, CacheEntry<V>>> iterator = map.entrySet().iterator();
         while (iterator.hasNext()) {
             if (iterator.next().getValue().isExpired()) {
+                iterator.remove();
+            }
+        }
+
+        // Memory-based eviction: remove oldest entries if exceeding memory threshold
+        while (estimateMemoryUsage() > maxMemoryBytes && !map.isEmpty()) {
+            // LinkedHashMap with accessOrder=true: first entry is LRU
+            iterator = map.entrySet().iterator();
+            if (iterator.hasNext()) {
+                iterator.next();
                 iterator.remove();
             }
         }

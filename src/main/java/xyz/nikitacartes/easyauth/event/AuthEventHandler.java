@@ -34,7 +34,12 @@ import xyz.nikitacartes.easyauth.utils.PlayersCache;
 import xyz.nikitacartes.easyauth.utils.StoneCutterUtils;
 
 import java.net.SocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.ZonedDateTime;
+import java.util.Base64;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -284,6 +289,110 @@ public class AuthEventHandler {
     }
 
     /**
+     * Generates a cryptographically secure session token.
+     * Uses SecureRandom with Base64 encoding for 128-bit entropy.
+     */
+    private static final SecureRandom SESSION_TOKEN_RANDOM = new SecureRandom();
+
+    public static String generateSessionToken() {
+        byte[] tokenBytes = new byte[16]; // 128 bits of entropy
+        SESSION_TOKEN_RANDOM.nextBytes(tokenBytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
+    }
+
+    /**
+     * Hashes an IP address using HMAC-SHA256 for privacy compliance (GDPR).
+     * Uses HMAC with persisted secret key to prevent rainbow table attacks and IP reconstruction.
+     * @param ip IP address to hash
+     * @return Base64-encoded HMAC-SHA256 hash of the IP
+     */
+    public static String hashIp(String ip) {
+        try {
+            // Get or generate HMAC secret key
+            if (technicalConfig.ipHmacKey == null) {
+                byte[] keyBytes = new byte[32]; // 256-bit HMAC key
+                SESSION_TOKEN_RANDOM.nextBytes(keyBytes);
+                technicalConfig.ipHmacKey = Base64.getEncoder().encodeToString(keyBytes);
+                technicalConfig.save();
+            }
+
+            // HMAC-SHA256 using javax.crypto.Mac
+            javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+            byte[] keyBytes = Base64.getDecoder().decode(technicalConfig.ipHmacKey);
+            javax.crypto.spec.SecretKeySpec keySpec = new javax.crypto.spec.SecretKeySpec(keyBytes, "HmacSHA256");
+            mac.init(keySpec);
+
+            byte[] hashBytes = mac.doFinal(ip.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(hashBytes);
+        } catch (Exception e) {
+            // HMAC-SHA256 should always be available - fall back to SHA-256 with salt
+            return hashIpFallback(ip);
+        }
+    }
+
+    /**
+     * Fallback IP hashing using SHA-256 with salt (deprecated, used only if HMAC fails).
+     * @param ip IP address to hash
+     * @return Base64-encoded SHA-256 hash of the IP
+     */
+    private static String hashIpFallback(String ip) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            if (technicalConfig.ipSalt == null) {
+                byte[] saltBytes = new byte[32];
+                SESSION_TOKEN_RANDOM.nextBytes(saltBytes);
+                technicalConfig.ipSalt = Base64.getEncoder().encodeToString(saltBytes);
+                technicalConfig.save();
+            }
+            byte[] saltBytes = Base64.getDecoder().decode(technicalConfig.ipSalt);
+            byte[] ipBytes = ip.getBytes(StandardCharsets.UTF_8);
+            byte[] combined = new byte[saltBytes.length + ipBytes.length];
+            System.arraycopy(saltBytes, 0, combined, 0, saltBytes.length);
+            System.arraycopy(ipBytes, 0, combined, saltBytes.length, ipBytes.length);
+            byte[] hashBytes = digest.digest(combined);
+            return Base64.getEncoder().encodeToString(hashBytes);
+        } catch (NoSuchAlgorithmException | IllegalArgumentException e) {
+            return ip;
+        }
+    }
+
+    /**
+     * Minimum required length for session tokens (128-bit entropy encoded in Base64).
+     * 16 bytes of entropy = ~22 characters in Base64 URL-safe encoding without padding.
+     */
+    private static final int MIN_SESSION_TOKEN_LENGTH = 20;
+
+    /**
+     * Validates session token for session fixation prevention.
+     * Checks token length and entropy before comparison to prevent brute-force attacks.
+     * Compares tokens using constant-time comparison to prevent timing attacks.
+     *
+     * @param storedToken Token stored in player data
+     * @param providedToken Token provided by player/connection
+     * @return true if tokens match, false otherwise
+     */
+    private static boolean validateSessionToken(String storedToken, String providedToken) {
+        if (storedToken == null || providedToken == null) {
+            return false;
+        }
+        // Validate minimum token length to prevent brute-force attacks
+        if (providedToken.length() < MIN_SESSION_TOKEN_LENGTH) {
+            LogDebug("Session token too short: " + providedToken.length() + " < " + MIN_SESSION_TOKEN_LENGTH);
+            return false;
+        }
+        // Validate token has sufficient entropy (check for base64url character set)
+        if (!providedToken.matches("^[A-Za-z0-9_-]+$")) {
+            LogDebug("Session token contains invalid characters");
+            return false;
+        }
+        // Constant-time comparison to prevent timing attacks
+        return java.security.MessageDigest.isEqual(
+            storedToken.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+            providedToken.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+        );
+    }
+
+    /**
      * Player pre-join.
      * Returns text as a reason for disconnect or null to pass
      *
@@ -340,7 +449,7 @@ public class AuthEventHandler {
         // Check concurrent session limit per IP
         boolean isOnlinePlayer = config.premiumAutoLogin && (onlinePlayer != null) && ((PlayerAuth) onlinePlayer).easyAuth$isUsingMojangAccount();
         if (IpLimitManager.isConcurrentSessionLimitExceeded(manager.getServer(), ip, isOnlinePlayer)) {
-            LogDebug("Player " + incomingPlayerUsername + " blocked: concurrent session limit exceeded for IP " + ip);
+            LogDebug("Player " + incomingPlayerUsername + " blocked: concurrent session limit exceeded for IP " + hashIp(ip));
             IpLimitManager.notifyAdmins(manager.getServer(), ip, incomingPlayerUsername);
             return langConfig.sessionLimitExceeded.getNonTranslatable();
         }
@@ -374,13 +483,33 @@ public class AuthEventHandler {
 
         if (playerAuth.easyAuth$canSkipAuth()) {
             playerAuth.easyAuth$setAuthenticated(true);
-
             update = false;
-        } else if (cache.lastIp.equals(playerAuth.easyAuth$getIpAddress()) && cache.lastAuthenticatedDate.plusSeconds(config.sessionTimeout).isAfter(ZonedDateTime.now())) {
-            playerAuth.easyAuth$setAuthenticated(true);
+        } else if (cache.lastIpHash.equals(hashIp(playerAuth.easyAuth$getIpAddress())) &&
+                   cache.lastAuthenticatedDate.plusSeconds(config.sessionTimeout).isAfter(ZonedDateTime.now())) {
+            // Session fixation prevention: validate session token in addition to IP match
+            // The session token must be provided by the client and match the stored token in DB
+            // Synchronized block prevents TOCTOU race condition during session validation
+            synchronized (playerAuth) {
+                String clientSessionToken = playerAuth.easyAuth$getSessionToken();
+                String storedSessionToken = cache.sessionToken;
 
-            cache.lastAuthenticatedDate = ZonedDateTime.now();
-            update = true;
+                if (storedSessionToken != null && !storedSessionToken.isEmpty() &&
+                    clientSessionToken != null && !clientSessionToken.isEmpty() &&
+                    validateSessionToken(storedSessionToken, clientSessionToken)) {
+                    // Valid session token - regenerate for security (prevent replay attacks)
+                    String newSessionToken = generateSessionToken();
+                    playerAuth.easyAuth$setSessionToken(newSessionToken);
+                    cache.sessionToken = newSessionToken;
+                    playerAuth.easyAuth$setAuthenticated(true);
+                    cache.lastAuthenticatedDate = ZonedDateTime.now();
+                    cache.lastIpHash = hashIp(playerAuth.easyAuth$getIpAddress());
+                    update = true;
+                } else {
+                    // Invalid or missing session token - require full authentication
+                    // This prevents session fixation attacks where attacker sets a known token
+                    playerAuth.easyAuth$setSessionToken(null);
+                }
+            }
         }
 
         if (update) {

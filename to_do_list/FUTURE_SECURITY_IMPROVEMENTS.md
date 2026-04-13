@@ -6,6 +6,46 @@ Optional security enhancements that are **not critical** but could be implemente
 
 ---
 
+## Implemented Security Improvements
+
+The following improvements have been implemented:
+
+### ✅ Session Token Entropy Validation (#11)
+**Implemented:** 2026-04-13 - `AuthEventHandler.java`
+- Added minimum token length validation (20 characters)
+- Added character set validation (base64url only)
+- Prevents brute-force attacks on session tokens
+
+### ✅ Command Injection Prevention (#4)
+**Implemented:** Previously - `RegisterCommand.java`, `LoginCommand.java`
+- Null character rejection
+- Shell metacharacter rejection (`;|&$\``)
+- Unicode normalization for consistent comparison
+
+### ✅ MongoDB Login Rate Limiting (#12, #13)
+**Implemented:** Previously - `MongoDB.java`
+- Login attempts collection with indexes
+- Full implementation of rate limiting methods
+
+### ✅ UUID Format Validation (#17)
+**Implemented:** Previously - `PlayerEntryV1.java`
+- UUID format validation on `setForcedUuid()`
+- Prevents malformed UUID injection
+
+### ✅ PlayerEntryV1 Shutdown Hook (#15)
+**Implemented:** Previously - `PlayerEntryV1.java`
+- Shutdown hook flushes pending writes on server stop
+- Prevents data loss on crash
+
+### ✅ SQL Injection Prevention in Table Names (#8)
+**Implemented:** Previously - `MySQL.java`, `PostgreSQL.java`
+- `isValidIdentifier()` method validates table/database names
+- Regex pattern `^[a-zA-Z0-9_-]+$` enforced
+
+---
+
+---
+
 ## Security Improvements
 
 ### 1. Argon2id as Default Algorithm

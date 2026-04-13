@@ -1,6 +1,6 @@
 # Future Security Improvements - FabricAuth
 
-**Last updated:** 2026-04-03
+**Last updated:** 2026-04-13
 
 Optional security enhancements that are **not critical** but could be implemented.
 
@@ -183,6 +183,211 @@ While the table name comes from config (not user input), if an admin's config is
 2. Use predictable tokens from weak PRNG states
 
 **Fix:** Validate that session tokens have minimum length and entropy when received from clients.
+
+---
+
+### 12. MongoDB Login Rate Limiting Not Implemented
+
+**Priority:** Medium-High
+
+**Files:** `MongoDB.java`
+
+**Problem:** MongoDB implementation does NOT implement the `recordLoginAttempt`, `getLoginAttemptsInWindow`, `clearLoginAttempts`, and `getUsernameByUuid` methods from `DbApi` interface. This means:
+- Login rate limiting is completely bypassed when using MongoDB
+- Attackers can brute-force passwords without any throttling
+- The `isLoginRateLimitExceeded` check in `LoginCommand.java` will always return false
+
+**Current state:** Methods are inherited from `DbApi` default implementations, but MongoDB doesn't have the `login_attempts` collection/table.
+
+**Fix:** Implement login rate limiting collection and methods for MongoDB:
+```java
+@Override
+public void recordLoginAttempt(String ipHash, long timestamp) {
+    collection.insertOne(new Document("ip_hash", ipHash).append("timestamp", timestamp));
+}
+// ... implement other rate limiting methods
+```
+
+---
+
+### 13. MongoDB Missing `initializeLoginAttemptsTable` Call
+
+**Priority:** Medium-High
+
+**Files:** `MongoDB.java:32-46`
+
+**Problem:** Unlike MySQL (`initializeLoginAttemptsTable()` at line 86) and SQLite (`initializeLoginAttemptsTable()` at line 81), MongoDB's `connect()` method does not initialize any collection for login attempts tracking.
+
+**Fix:** Add login attempts collection initialization in MongoDB's `connect()` method:
+```java
+// Create login_attempts collection with indexes
+database.createCollection("login_attempts");
+collection.createIndex(new Document("ip_hash", 1));
+collection.createIndex(new Document("timestamp", 1));
+```
+
+---
+
+### 14. Potential DoS via Unbounded TemporalCache Key Locks
+
+**Priority:** Medium
+
+**Files:** `TemporalCache.java:117-157`
+
+**Problem:** The `keyLocks` ConcurrentHashMap stores a `ReentrantReadWriteLock` per key during `computeIfAbsent`. While locks are removed after use (line 151), there's a race condition:
+1. Thread A acquires keyLock for "user1"
+2. Thread B waits for keyLock
+3. Thread A removes keyLock (line 151)
+4. Thread C computes same key, creates new lock
+5. Thread B acquires OLD (now orphaned) lock that no one uses
+
+Additionally, if `mappingFunction` throws an exception, the lock is never removed, causing memory leak.
+
+**Fix:** Use try-finally to ensure lock cleanup and handle exceptions:
+```java
+try {
+    // compute value
+} finally {
+    keyLock.writeLock().unlock();
+    // Clean up key lock
+    keyLocks.compute(key, (k, lock) -> {
+        if (lock == keyLock && !map.containsKey(key)) {
+            return null; // Remove if no entry exists
+        }
+        return lock;
+    });
+}
+```
+
+---
+
+### 15. PlayerEntryV1 Write-Back Scheduler No Shutdown Hook
+
+**Priority:** Low-Medium
+
+**Files:** `PlayerEntryV1.java:29-33`
+
+**Problem:** The `WRITE_BACK_SCHEDULER` is a daemon thread that batches database updates. However:
+1. No shutdown hook ensures pending updates are flushed on server stop
+2. If server crashes, pending writes (up to 1 second of updates) are lost
+3. `flushAllPending()` exists but is never called on shutdown
+
+**Fix:** Register shutdown hook in static initializer:
+```java
+static {
+    Runtime.getRuntime().addShutdownHook(new Thread(PlayerEntryV1::flushAllPending));
+}
+```
+
+---
+
+### 16. MongoDB BSON Injection via JSON String
+
+**Priority:** Low
+
+**Files:** `MongoDB.java:58-72`, `MongoDB.java:132-150`
+
+**Problem:** Player data is stored as a JSON string inside BSON Document (`data.toJson()`). While MongoDB is generally safe from injection, if the JSON contains malicious BSON-like structures or if MongoDB query operators somehow get into the JSON, it could lead to:
+- Data corruption
+- Unexpected query results
+- Potential data exfiltration via crafted JSON
+
+**Current mitigation:** Gson serializes to plain JSON string, which MongoDB treats as opaque string data.
+
+**Fix:** Consider using proper BSON embedding instead of JSON string serialization, or validate JSON structure before storage.
+
+---
+
+### 17. Missing Input Validation on Forced UUID
+
+**Priority:** Low-Medium
+
+**Files:** `PlayerEntryV1.java:117-119`
+
+**Problem:** The `forcedUuid` field accepts any string without validation. If an admin sets a malformed UUID via direct database manipulation:
+1. `PlayerEntryV1` constructor doesn't validate `forcedUuid` format
+2. Could cause UUID parsing errors when used
+3. Potential for UUID collision attacks if format isn't enforced
+
+**Fix:** Add UUID format validation when setting `forcedUuid`:
+```java
+public void setForcedUuid(String uuid) {
+    if (uuid != null && !uuid.matches("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")) {
+        throw new IllegalArgumentException("Invalid UUID format");
+    }
+    this.forcedUuid = uuid;
+}
+```
+
+---
+
+### 18. Race Condition in IpLimitManager Cache
+
+**Priority:** Low
+
+**Files:** `IpLimitManager.java:141-149`
+
+**Problem:** The `getUsernamesForIp` method has a TOCTOU window:
+1. Check cache for IP
+2. If expired/missing, query database
+3. Put result in cache
+
+Between steps 2-3, another thread could do the same, causing duplicate DB queries. More importantly, if the cache expires between a registration and the next lookup, the new account won't be counted until cache refresh.
+
+**Current mitigation:** Cache expiry is configurable (`cacheExpirySeconds`), and IP limit is checked before registration.
+
+**Fix:** Use `computeIfAbsent` for atomic cache population:
+```java
+return ipCache.compute(ipAddress, (ip, entry) -> {
+    if (entry != null && System.currentTimeMillis() - entry.timestamp() < extendedConfig.ipLimit.cacheExpirySeconds * 1000L) {
+        return entry;
+    }
+    List<String> usernames = Collections.unmodifiableList(DB.getUsernamesByIp(ip));
+    return new IpCacheEntry(usernames, System.currentTimeMillis());
+}).usernames();
+```
+
+---
+
+### 19. Hardcoded Admin Notification Level
+
+**Priority:** Low
+
+**Files:** `IpLimitManager.java:209-212`, `StoneCutterUtils.isOperator()`
+
+**Problem:** Admin notifications are sent to "op level 3+" players. This hardcoded level may not match server configurations where:
+- Permission plugins use different permission nodes
+- Admins are defined by permission nodes, not op level
+- Servers use permission APIs instead of vanilla op system
+
+**Fix:** Use permission API when available, fallback to op check:
+```java
+if (PermissionsAPI.hasPermission(player, "easyauth.admin") || 
+    StoneCutterUtils.isOperator(server.getPlayerManager(), player)) {
+    player.sendMessage(message);
+}
+```
+
+---
+
+### 20. Deprecated Field Access in Config Classes
+
+**Priority:** Low
+
+**Files:** `TechnicalConfigV1.java:24, 30, 36, 70`
+
+**Problem:** Several fields are marked `@Deprecated` but still actively used:
+- `globalPasswordSalt` - deprecated but field still exists
+- `forcedOfflinePlayers` - deprecated but still used for lookups
+- `confirmedOnlinePlayers` - deprecated but still used for lookups
+- `ipSalt` - deprecated fallback for IP hashing
+
+Having deprecated fields that are still functional creates confusion and technical debt.
+
+**Fix:** Either:
+1. Remove deprecated fields entirely (breaking change)
+2. Add `@SuppressWarnings("deprecation")` and document migration path
+3. Create migration script to move data to new fields
 
 ---
 

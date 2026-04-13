@@ -116,6 +116,14 @@ public class AuthEventHandler {
             300_000, // 5 minute TTL
             1000     // max 1000 entries (fewer operators expected)
     );
+    // Rate limiting for custom packets from unauthenticated players (DoS prevention)
+    // Tracks count of custom packets per player in 10-second windows
+    private static final TemporalCache<UUID, Integer> customPacketRateLimit = new TemporalCache<>(
+            10_000,  // 10 second TTL (window)
+            5000     // max 5000 players tracked
+    );
+    // Maximum custom packets per 10-second window from unauthenticated players
+    private static final int MAX_CUSTOM_PACKETS_PER_WINDOW = 20;
 
     // Fast packet class lookup - pre-computed allowed packet types
     // Built via static initializer for compatibility with Stonecutter version conditionals
@@ -252,6 +260,21 @@ public class AuthEventHandler {
 
         if (isAllowedCustomPacket(customPacketIdentifier)) {
             return true;
+        }
+
+        // Rate limiting for custom packets from unauthenticated players (DoS prevention)
+        // Prevents CPU/memory exhaustion from packet flooding
+        if (!((PlayerAuth) player).easyAuth$isAuthenticated()) {
+            UUID playerUuid = player.getUuid();
+            Integer packetCount = customPacketRateLimit.get(playerUuid);
+            if (packetCount == null) {
+                packetCount = 0;
+            }
+            if (packetCount >= MAX_CUSTOM_PACKETS_PER_WINDOW) {
+                LogDebug("Rate limited custom packet flood from unauthenticated player " + StoneCutterUtils.getUsername(player));
+                return false;
+            }
+            customPacketRateLimit.put(playerUuid, packetCount + 1);
         }
 
         if (config.debug) {
@@ -558,6 +581,7 @@ public class AuthEventHandler {
         UUID playerUuid = player.getUuid();
         administratorCache.remove(playerUuid);
         lastAcceptedPacketByPlayer.remove(playerUuid);
+        customPacketRateLimit.remove(playerUuid); // Clean up rate limit cache
 
         PlayerAuth playerAuth = (PlayerAuth) player;
         if (playerAuth.easyAuth$canSkipAuth())

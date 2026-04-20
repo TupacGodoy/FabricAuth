@@ -72,10 +72,16 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
     PlayerEntryV1 playerEntryV1 = new PlayerEntryV1(getUsername(player));
 
     @Unique
-    private boolean canSkipAuth = this.player.getClass() != ServerPlayerEntity.class;
+    private volatile boolean canSkipAuth = this.player.getClass() != ServerPlayerEntity.class;
 
     @Unique
     private volatile boolean isAuthenticated = this.player.getClass() != ServerPlayerEntity.class;
+
+    @Unique
+    private volatile String sessionToken = null;
+
+    @Unique
+    private final Object authLock = new Object();
 
     @Unique
     private boolean isUsingMojangAccount = false;
@@ -188,10 +194,12 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
 
     @Override
     public void easyAuth$setSkipAuth() {
-        easyAuth$setUsingMojangAccount();
-        canSkipAuth = (this.player.getClass() != ServerPlayerEntity.class) ||
-                (config.floodgateAutoLogin && FloodgateApiHelper.isFloodgatePlayer(this.player)) ||
-                (config.premiumAutoLogin && easyAuth$isUsingMojangAccount());
+        synchronized (authLock) {
+            easyAuth$setUsingMojangAccount();
+            canSkipAuth = (this.player.getClass() != ServerPlayerEntity.class) ||
+                    (config.floodgateAutoLogin && FloodgateApiHelper.isFloodgatePlayer(this.player)) ||
+                    (config.premiumAutoLogin && easyAuth$isUsingMojangAccount());
+        }
     }
 
     /**
@@ -206,7 +214,9 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
 
     @Override
     public void easyAuth$setUsingMojangAccount() {
-        isUsingMojangAccount = server.isOnlineMode() && playerEntryV1.onlineAccount == PlayerEntryV1.OnlineAccount.TRUE;
+        synchronized (authLock) {
+            isUsingMojangAccount = server.isOnlineMode() && playerEntryV1.onlineAccount == PlayerEntryV1.OnlineAccount.TRUE;
+        }
     }
 
     /**
@@ -220,16 +230,34 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
     }
 
     /**
-     * Sets the authentication status of the player
+     * Sets the authentication status of the player with atomic state transitions.
      *
      * @param authenticated whether player should be authenticated
      */
     @Override
     public void easyAuth$setAuthenticated(boolean authenticated) {
-        isAuthenticated = authenticated;
+        synchronized (authLock) {
+            // Prevent state downgrade (authenticated -> false) to avoid malicious de-authentication
+            // Only allow de-authentication during explicit logout or account removal
+            if (!authenticated && isAuthenticated) {
+                // Silently ignore to prevent race conditions and malicious de-authentication
+                return;
+            }
 
-        if (authenticated) {
+            // Atomic state transition: only allow false -> true or stay same
+            if (!authenticated) {
+                return;
+            }
+
+            // Already authenticated, nothing to do
+            if (isAuthenticated) {
+                return;
+            }
+
+            // Perform authentication
+            isAuthenticated = true;
             kickTimer = config.kickTimeout * 20;
+
             // Updating blocks if needed (in case if portal rescue action happened)
             World world = StoneCutterUtils.getServerWorld(player);
             BlockPos pos = player.getBlockPos();
@@ -246,11 +274,6 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
             player.currentScreenHandler.syncState();
 
             VanishIntegration.setVanished(player, wasVanished);
-        } else {
-            if (config.vanishUntilAuth) {
-                wasVanished = VanishIntegration.isVanished(player);
-                VanishIntegration.setVanished(player, true);
-            }
         }
     }
 
@@ -296,16 +319,17 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
     private void copyFrom(ServerPlayerEntity oldPlayer, boolean alive, CallbackInfo ci) {
         PlayerAuth oldPlayerAuth = (PlayerAuth) oldPlayer;
         PlayerAuth newPlayerAuth = (PlayerAuth) player;
-        newPlayerAuth.easyAuth$setKickTimer(oldPlayerAuth.easyAuth$getKickTimer());
-        newPlayerAuth.easyAuth$setIpAddress(oldPlayerAuth.easyAuth$getIpAddress());
-        newPlayerAuth.easyAuth$setLastLocation(oldPlayerAuth.easyAuth$getLastLocation());
-        newPlayerAuth.easyAuth$setRidingEntityUUID(oldPlayerAuth.easyAuth$getRidingEntityUUID());
-        newPlayerAuth.easyAuth$setRootVehicle(oldPlayerAuth.easyAuth$getRootVehicle());
-        newPlayerAuth.easyAuth$wasDead(oldPlayerAuth.easyAuth$wasDead());
-        newPlayerAuth.easyAuth$canSkipAuth(oldPlayerAuth.easyAuth$canSkipAuth());
-        newPlayerAuth.easyAuth$setAuthenticated(oldPlayerAuth.easyAuth$isAuthenticated());
-
-        newPlayerAuth.easyAuth$setPlayerEntryV1(oldPlayerAuth.easyAuth$getPlayerEntryV1());
+        synchronized (authLock) {
+            newPlayerAuth.easyAuth$setKickTimer(oldPlayerAuth.easyAuth$getKickTimer());
+            newPlayerAuth.easyAuth$setIpAddress(oldPlayerAuth.easyAuth$getIpAddress());
+            newPlayerAuth.easyAuth$setLastLocation(oldPlayerAuth.easyAuth$getLastLocation());
+            newPlayerAuth.easyAuth$setRidingEntityUUID(oldPlayerAuth.easyAuth$getRidingEntityUUID());
+            newPlayerAuth.easyAuth$setRootVehicle(oldPlayerAuth.easyAuth$getRootVehicle());
+            newPlayerAuth.easyAuth$wasDead(oldPlayerAuth.easyAuth$wasDead());
+            newPlayerAuth.easyAuth$canSkipAuth(oldPlayerAuth.easyAuth$canSkipAuth());
+            newPlayerAuth.easyAuth$setAuthenticated(oldPlayerAuth.easyAuth$isAuthenticated());
+            newPlayerAuth.easyAuth$setPlayerEntryV1(oldPlayerAuth.easyAuth$getPlayerEntryV1());
+        }
     }
 
     @Override
@@ -399,6 +423,16 @@ public abstract class ServerPlayerEntityMixin extends EntityMixin implements Pla
 
     public void easyAuth$wasVanished(boolean wasVanished) {
         this.wasVanished = wasVanished;
+    }
+
+    @Override
+    public String easyAuth$getSessionToken() {
+        return sessionToken;
+    }
+
+    @Override
+    public void easyAuth$setSessionToken(String sessionToken) {
+        this.sessionToken = sessionToken;
     }
 
 }

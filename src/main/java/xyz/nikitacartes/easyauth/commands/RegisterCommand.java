@@ -18,6 +18,8 @@ import static com.mojang.brigadier.arguments.StringArgumentType.string;
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
+import static xyz.nikitacartes.easyauth.event.AuthEventHandler.generateSessionToken;
+import static xyz.nikitacartes.easyauth.event.AuthEventHandler.hashIp;
 import static xyz.nikitacartes.easyauth.utils.AuthHelper.checkGlobalPassword;
 import static xyz.nikitacartes.easyauth.utils.AuthHelper.hashPassword;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogRegister;
@@ -122,8 +124,15 @@ public class RegisterCommand {
             return 0;
         }
 
-        // Validate password input - reject null characters
+        // Validate password input - reject null characters and shell metacharacters
         if (pass1.indexOf('\0') != -1 || pass2.indexOf('\0') != -1) {
+            langConfig.invalidPassword.send(source);
+            return 0;
+        }
+
+        // Reject shell metacharacters that could be used for command injection
+        // if passwords are ever logged or passed to shell commands
+        if (pass1.matches(".*[;|&$`\\\\].*") || pass2.matches(".*[;|&$`\\\\].*")) {
             langConfig.invalidPassword.send(source);
             return 0;
         }
@@ -192,13 +201,19 @@ public class RegisterCommand {
         THREADPOOL.submit(() -> {
             playerData.password = hashPassword(normalizedPass1.toCharArray());
             playerData.registrationDate = ZonedDateTime.now();
-            playerData.lastIp = playerAuth.easyAuth$getIpAddress();
+            playerData.lastIpHash = hashIp(playerAuth.easyAuth$getIpAddress());
             playerData.lastAuthenticatedDate = ZonedDateTime.now();
+
+            // Generate and store session token for session fixation prevention
+            String newSessionToken = generateSessionToken();
+            playerData.sessionToken = newSessionToken;
+            playerAuth.easyAuth$setSessionToken(newSessionToken);
+
             playerAuth.easyAuth$setPlayerEntryV1(playerData);
             playerData.update();
 
             // Invalidate IP cache after registration
-            IpLimitManager.invalidateCache(playerData.lastIp);
+            IpLimitManager.invalidateCache(playerAuth.easyAuth$getIpAddress());
 
             LogRegister("Player " + username + "{" + player.getUuidAsString() + "} successfully registered (password omitted for security)");
         });

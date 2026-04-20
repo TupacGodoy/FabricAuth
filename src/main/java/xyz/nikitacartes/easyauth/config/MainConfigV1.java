@@ -9,11 +9,14 @@ public class MainConfigV1 extends ConfigTemplate {
     public static final int CURRENT_CONFIG_VERSION = 8;
 
     @Comment("""
-            SECURITY WARNING: Passwords entered via commands (/login, /register) may be visible in:
-            - Server logs (if logging is enabled)
+            SECURITY WARNING: Passwords entered via commands (/auth register, /auth update) may be visible in:
+            - Server logs (if command logging is enabled)
             - Command history
-            - Spectator mode or admin monitoring plugins
-            Consider disabling command logging in your server configuration for production environments.
+
+            RECOMMENDATIONS:
+            - Disable command logging in production
+            - Use chat-based password entry when possible
+            - Review logs periodically for sensitive data exposure
 
             Whether online players should skip the authentication process.
             You have to set online-mode to true in server.properties!

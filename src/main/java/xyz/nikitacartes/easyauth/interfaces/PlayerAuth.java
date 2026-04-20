@@ -102,4 +102,11 @@ public interface PlayerAuth {
     void easyAuth$wasDead(boolean wasDead);
     boolean easyAuth$wasVanished();
     void easyAuth$wasVanished(boolean wasVanished);
+
+    /**
+     * Session token for session fixation prevention.
+     * Generated on login and validated on session resume.
+     */
+    String easyAuth$getSessionToken();
+    void easyAuth$setSessionToken(String sessionToken);
 }

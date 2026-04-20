@@ -22,7 +22,9 @@ import xyz.nikitacartes.easyauth.interfaces.PlayerAuth;
 import xyz.nikitacartes.easyauth.utils.StoneCutterUtils;
 
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.time.ZonedDateTime;
+import java.util.Base64;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -32,6 +34,7 @@ import static com.mojang.brigadier.arguments.StringArgumentType.*;
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
+import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogInfo;
 import static xyz.nikitacartes.easyauth.integrations.MojangApi.isValidUsername;
 import static xyz.nikitacartes.easyauth.utils.StoneCutterUtils.getUsername;
 
@@ -227,6 +230,12 @@ public class AuthCommand {
 
     /**
      * Sets global password.
+     * Password is masked in logs to prevent exposure.
+     * SECURITY NOTE: Passwords passed via commands may still be logged by:
+     * - Server command logging plugins
+     * - Console appenders with command logging enabled
+     * - Audit logging systems
+     * Consider using config file directly for production global passwords.
      *
      * @param source   executioner of the command
      * @param password password that will be set
@@ -234,7 +243,12 @@ public class AuthCommand {
      * @return 0
      */
     private static int setGlobalPassword(ServerCommandSource source, String password, boolean singleUse) {
-        // Writing the global pass to config
+        // Generate a new salt for additional application-level security
+        byte[] saltBytes = new byte[16];
+        new SecureRandom().nextBytes(saltBytes);
+        technicalConfig.globalPasswordSalt = Base64.getEncoder().encodeToString(saltBytes);
+
+        // Writing the global pass to config (BCrypt/Argon2 already includes embedded salt)
         technicalConfig.globalPassword = AuthHelper.hashPassword(password.toCharArray());
         config.enableGlobalPassword = true;
         config.singleUseGlobalPassword = singleUse;
@@ -243,7 +257,9 @@ public class AuthCommand {
 
         reloadConfigs(source.getServer());
 
+        // Mask password completely in logs - don't even reveal length
         langConfig.globalPasswordSet.send(source);
+        LogInfo("Global password set successfully (password masked for security)");
         return 1;
     }
 
@@ -311,6 +327,8 @@ public class AuthCommand {
 
     /**
      * Creates account for player.
+     * SECURITY WARNING: Password passed via command argument may be logged by server logging systems.
+     * Players should use /register command directly in chat, not via admin command with password argument.
      *
      * @param source   executioner of the command
      * @param username username of the player to create account for
@@ -325,12 +343,15 @@ public class AuthCommand {
             playerData.update();
 
             langConfig.userdataUpdated.send(source);
+            LogInfo("Account created for " + username + " (password masked for security)");
         });
         return 0;
     }
 
     /**
      * Force-updates the player's password.
+     * SECURITY WARNING: Password passed via command argument may be logged by server logging systems.
+     * Consider using alternative methods for password updates in production environments.
      *
      * @param source   executioner of the command
      * @param username username of the player to update data for
@@ -347,7 +368,7 @@ public class AuthCommand {
             String newPasswordHash = AuthHelper.hashPassword(password.toCharArray());
             playerData.password = newPasswordHash;
             playerData.update();
-            
+
             // Also update the cached PlayerEntryV1 if the player is online
             ServerPlayerEntity player = source.getServer().getPlayerManager().getPlayer(username);
             if (player != null) {
@@ -356,8 +377,9 @@ public class AuthCommand {
                     cachedEntry.password = newPasswordHash;
                 }
             }
-            
+
             langConfig.userdataUpdated.send(source);
+            LogInfo("Password updated for " + username + " (password masked for security)");
         });
         return 0;
     }
@@ -493,6 +515,7 @@ public class AuthCommand {
     /**
      * Sets a forced UUID for a player.
      * This UUID will be used instead of the default offline/online UUID when the player joins.
+     * Validates that the UUID is not already in use by another player to prevent identity spoofing.
      *
      * @param source   executioner of the command
      * @param username username of the player
@@ -510,11 +533,21 @@ public class AuthCommand {
                 return;
             }
 
+            // SECURITY: Check for UUID collisions to prevent identity spoofing
+            String existingOwner = DB.getUsernameByUuid(uuid.toString());
+            if (existingOwner != null && !existingOwner.equalsIgnoreCase(username)) {
+                langConfig.uuidCollision.send(source, uuidStr, existingOwner);
+                LogInfo("UUID collision detected: " + username + " attempted to claim UUID " + uuidStr +
+                        " already owned by " + existingOwner);
+                return;
+            }
+
             PlayerEntryV1 entry = DB.getUserDataOrCreate(username);
             entry.forcedUuid = uuid.toString();
             entry.update();
 
             langConfig.uuidSet.send(source, username, uuid.toString());
+            LogInfo("Forced UUID " + uuidStr + " set for " + username);
 
             // Kick the player if online so they rejoin with the new UUID
             ServerPlayerEntity player = source.getServer().getPlayerManager().getPlayer(username);

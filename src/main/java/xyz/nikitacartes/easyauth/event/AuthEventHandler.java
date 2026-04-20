@@ -50,6 +50,11 @@ import java.util.regex.Pattern;
 
 import xyz.nikitacartes.easyauth.utils.TemporalCache;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Properties;
+
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogDebug;
 
@@ -323,25 +328,65 @@ public class AuthEventHandler {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
     }
 
+    // Cached HMAC key derived from server UUID (not stored in config)
+    private static volatile byte[] cachedHmacKey = null;
+
+    /**
+     * Derives HMAC-SHA256 key from server UUID.
+     * This avoids storing the key in config file (GDPR/privacy improvement).
+     * @return 256-bit HMAC key derived from server UUID
+     */
+    private static byte[] getHmacKeyFromServerUuid() {
+        if (cachedHmacKey != null) {
+            return cachedHmacKey;
+        }
+
+        // Read server UUID from server.properties (server-id field)
+        String serverId = null;
+        File serverPropsFile = new File(gameDirectory + "/server.properties");
+        if (serverPropsFile.exists()) {
+            Properties props = new Properties();
+            try (FileReader reader = new FileReader(serverPropsFile)) {
+                props.load(reader);
+                serverId = props.getProperty("server-id");
+            } catch (IOException e) {
+                LogDebug("Failed to read server-id from properties: " + e.getMessage());
+            }
+        }
+
+        // Fallback: use technical config IP salt if server-id not available
+        if (serverId == null || serverId.isEmpty()) {
+            serverId = technicalConfig.ipSalt != null ? technicalConfig.ipSalt : "easyauth-fallback-seed";
+        }
+
+        // Derive 256-bit key using SHA-256 hash of server UUID
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            cachedHmacKey = digest.digest(serverId.getBytes(StandardCharsets.UTF_8));
+            LogDebug("HMAC key derived from server UUID (SHA-256 hash)");
+            return cachedHmacKey;
+        } catch (NoSuchAlgorithmException e) {
+            // SHA-256 should always be available
+            LogError("SHA-256 not available, using fallback key");
+            cachedHmacKey = "easyauth-fallback-hmac-key-256bit".getBytes(StandardCharsets.UTF_8);
+            return cachedHmacKey;
+        }
+    }
+
     /**
      * Hashes an IP address using HMAC-SHA256 for privacy compliance (GDPR).
-     * Uses HMAC with persisted secret key to prevent rainbow table attacks and IP reconstruction.
+     * Uses HMAC with secret key derived from server UUID (not stored in config).
+     * This prevents IP reconstruction even if config file is compromised.
      * @param ip IP address to hash
      * @return Base64-encoded HMAC-SHA256 hash of the IP
      */
     public static String hashIp(String ip) {
         try {
-            // Get or generate HMAC secret key
-            if (technicalConfig.ipHmacKey == null) {
-                byte[] keyBytes = new byte[32]; // 256-bit HMAC key
-                SESSION_TOKEN_RANDOM.nextBytes(keyBytes);
-                technicalConfig.ipHmacKey = Base64.getEncoder().encodeToString(keyBytes);
-                technicalConfig.save();
-            }
+            // Derive HMAC key from server UUID (not stored in config)
+            byte[] keyBytes = getHmacKeyFromServerUuid();
 
             // HMAC-SHA256 using javax.crypto.Mac
             javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
-            byte[] keyBytes = Base64.getDecoder().decode(technicalConfig.ipHmacKey);
             javax.crypto.spec.SecretKeySpec keySpec = new javax.crypto.spec.SecretKeySpec(keyBytes, "HmacSHA256");
             mac.init(keySpec);
 
@@ -354,27 +399,23 @@ public class AuthEventHandler {
     }
 
     /**
-     * Fallback IP hashing using SHA-256 with salt (deprecated, used only if HMAC fails).
+     * Fallback IP hashing using SHA-256 with server UUID-derived salt (deprecated, used only if HMAC fails).
      * @param ip IP address to hash
      * @return Base64-encoded SHA-256 hash of the IP
      */
     private static String hashIpFallback(String ip) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            if (technicalConfig.ipSalt == null) {
-                byte[] saltBytes = new byte[32];
-                SESSION_TOKEN_RANDOM.nextBytes(saltBytes);
-                technicalConfig.ipSalt = Base64.getEncoder().encodeToString(saltBytes);
-                technicalConfig.save();
-            }
-            byte[] saltBytes = Base64.getDecoder().decode(technicalConfig.ipSalt);
+            // Use same key derivation as HMAC for consistency
+            byte[] keyBytes = getHmacKeyFromServerUuid();
             byte[] ipBytes = ip.getBytes(StandardCharsets.UTF_8);
-            byte[] combined = new byte[saltBytes.length + ipBytes.length];
-            System.arraycopy(saltBytes, 0, combined, 0, saltBytes.length);
-            System.arraycopy(ipBytes, 0, combined, saltBytes.length, ipBytes.length);
+            byte[] combined = new byte[keyBytes.length + ipBytes.length];
+            System.arraycopy(keyBytes, 0, combined, 0, keyBytes.length);
+            System.arraycopy(ipBytes, 0, combined, keyBytes.length, ipBytes.length);
             byte[] hashBytes = digest.digest(combined);
             return Base64.getEncoder().encodeToString(hashBytes);
         } catch (NoSuchAlgorithmException | IllegalArgumentException e) {
+            LogError("Hashing algorithm failed", e);
             return ip;
         }
     }

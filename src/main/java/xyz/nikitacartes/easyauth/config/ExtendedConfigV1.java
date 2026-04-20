@@ -138,10 +138,20 @@ public class ExtendedConfigV1 extends ConfigTemplate {
     public long maxPasswordLength = -1;
 
     @Comment("""
-            
+
             Regex for validation of player names.
-            For more information, see https://github.com/NikitaCartes/EasyAuth/wiki/Username-Restriction""")
+            For more information, see https://github.com/NikitaCartes/EasyAuth/wiki/Username-Restriction
+            SECURITY: Avoid complex regex patterns with nested quantifiers to prevent ReDoS attacks.
+            Safe patterns: simple character classes with bounded quantifiers (e.g., [a-z]{3,16})
+            Dangerous patterns: nested quantifiers like (a+)+, ([a-z]+)+, alternations with overlapping matches""")
     public String usernameRegexp = "^[a-zA-Z0-9_]{3,16}$";
+
+    @Comment("""
+
+            Validate username regex for ReDoS vulnerabilities before applying.
+            Rejects patterns with dangerous constructs like nested quantifiers.
+            Enable this to prevent accidental ReDoS via misconfigured regex.""")
+    public boolean validateUsernameRegex = true;
 
     @Comment("""
             
@@ -236,7 +246,7 @@ public class ExtendedConfigV1 extends ConfigTemplate {
             config = new ExtendedConfigV1();
             config.save();
         }
-        AuthEventHandler.usernamePattern = Pattern.compile(config.usernameRegexp);
+        AuthEventHandler.usernamePattern = compileSafeUsernamePattern(config.usernameRegexp, config.validateUsernameRegex);
         return config;
     }
 
@@ -245,8 +255,37 @@ public class ExtendedConfigV1 extends ConfigTemplate {
         if (config == null) {
             throw new RuntimeException("extended.conf was not found. To regenerate the config files, delete the existing main.conf");
         }
-        AuthEventHandler.usernamePattern = Pattern.compile(config.usernameRegexp);
+        AuthEventHandler.usernamePattern = compileSafeUsernamePattern(config.usernameRegexp, config.validateUsernameRegex);
         return config;
+    }
+
+    /**
+     * Compiles username regex with optional ReDoS vulnerability validation.
+     * @param pattern the regex pattern to compile
+     * @param validate whether to validate against ReDoS patterns
+     * @throws RuntimeException if pattern contains dangerous ReDoS constructs
+     */
+    private static Pattern compileSafeUsernamePattern(String pattern, boolean validate) {
+        if (validate) {
+            // Check for dangerous ReDoS patterns
+            // Nested quantifiers: (a+)+, ([a-z]+)+, etc.
+            if (pattern.matches(".*\\([^)]*[+*?]\\s*\\)[+*?].*")) {
+                throw new RuntimeException("Unsafe username regex: nested quantifiers detected (ReDoS risk). Pattern: " + pattern);
+            }
+            // Alternations with overlapping matches: (a|a)+
+            if (pattern.matches(".*\\([^)]*\\|[^)]*\\)[+*?].*")) {
+                throw new RuntimeException("Unsafe username regex: overlapping alternation detected (ReDoS risk). Pattern: " + pattern);
+            }
+            // Multiple consecutive quantifiers: [a-z]++[a-z]*
+            if (pattern.matches(".*\\[[^\\]]+\\][+*?][+*?].*")) {
+                throw new RuntimeException("Unsafe username regex: consecutive quantifiers detected (ReDoS risk). Pattern: " + pattern);
+            }
+        }
+        try {
+            return Pattern.compile(pattern);
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid username regex pattern: " + pattern, e);
+        }
     }
 
     @Override

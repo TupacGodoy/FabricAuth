@@ -125,4 +125,35 @@ public interface DbApi {
      * Migrates IP addresses from JSON to column.
      */
     void migrateFromV4();
+
+    /**
+     * Records a login attempt for rate limiting (persistent storage).
+     * @param ipHash Hashed IP address
+     * @param timestamp Timestamp of the attempt
+     */
+    void recordLoginAttempt(String ipHash, long timestamp);
+
+    /**
+     * Gets login attempts from the last window milliseconds.
+     * @param ipHash Hashed IP address
+     * @param windowMs Window size in milliseconds
+     * @return Number of login attempts in the window
+     */
+    int getLoginAttemptsInWindow(String ipHash, long windowMs);
+
+    /**
+     * Clears login attempts for an IP address (called after successful authentication).
+     * @param ipHash Hashed IP address
+     */
+    void clearLoginAttempts(String ipHash);
+
+    /**
+     * Gets the username associated with the given UUID.
+     * Used to detect UUID collisions when setting forced UUIDs.
+     *
+     * @param uuid the UUID to look up
+     * @return username if found, null otherwise
+     */
+    @Nullable
+    String getUsernameByUuid(String uuid);
 }

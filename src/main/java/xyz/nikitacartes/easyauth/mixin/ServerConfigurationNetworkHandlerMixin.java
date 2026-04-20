@@ -56,7 +56,7 @@ public abstract class ServerConfigurationNetworkHandlerMixin extends ServerCommo
             return;
         }
 
-        if (entry.lastIp.isEmpty()) {
+        if (entry.lastIpHash.isEmpty()) {
             spawnTask.easyAuth$setAuthenticated(false);
             LogDebug(String.format("Player %s is not authenticated: no IP", profile.name()));
 
@@ -65,7 +65,8 @@ public abstract class ServerConfigurationNetworkHandlerMixin extends ServerCommo
 
         SocketAddress socketAddress = ((ServerConfigurationNetworkHandler)(Object)this).connection.getAddress();
         String ipAddress = socketAddress instanceof InetSocketAddress inetSocketAddress ? InetAddresses.toAddrString(inetSocketAddress.getAddress()) : "<unknown>";
-        if (entry.lastIp.equals(ipAddress) && entry.lastAuthenticatedDate.plusSeconds(config.sessionTimeout).isAfter(ZonedDateTime.now())) {
+        String hashedIp = xyz.nikitacartes.easyauth.event.AuthEventHandler.hashIp(ipAddress);
+        if (entry.lastIpHash.equals(hashedIp) && entry.lastAuthenticatedDate.plusSeconds(config.sessionTimeout).isAfter(ZonedDateTime.now())) {
             spawnTask.easyAuth$setAuthenticated(true);
             LogDebug(String.format("Player %s is authenticated by alive session", profile.name()));
 

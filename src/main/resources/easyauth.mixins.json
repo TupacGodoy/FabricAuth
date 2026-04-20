@@ -3,6 +3,8 @@
   "package": "xyz.nikitacartes.easyauth.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "SessionTokenCookieMixin",
+    "SessionTokenResponseMixin"
   ],
   "minVersion": "0.8",
   "injectors": {

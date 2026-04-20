@@ -19,6 +19,7 @@ import static com.mojang.brigadier.arguments.StringArgumentType.string;
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 import static xyz.nikitacartes.easyauth.EasyAuth.*;
+import static xyz.nikitacartes.easyauth.event.AuthEventHandler.hashIp;
 import static xyz.nikitacartes.easyauth.utils.EasyLogger.LogLogin;
 
 public class LoginCommand {
@@ -52,8 +53,15 @@ public class LoginCommand {
 
         String username = StoneCutterUtils.getUsername(player);
 
-        // Validate password input - reject null characters
+        // Validate password input - reject null characters and shell metacharacters
         if (pass.indexOf('\0') != -1) {
+            langConfig.invalidPassword.send(source);
+            return 0;
+        }
+
+        // Reject shell metacharacters that could be used for command injection
+        // if passwords are ever logged or passed to shell commands
+        if (pass.matches(".*[;|&$`\\\\].*")) {
             langConfig.invalidPassword.send(source);
             return 0;
         }
@@ -98,18 +106,23 @@ public class LoginCommand {
             playerAuth.easyAuth$restoreTrueLocation();
             playerData.lastAuthenticatedDate = ZonedDateTime.now();
             playerData.loginTries = 0;
-            String oldIp = playerData.lastIp;
-            playerData.lastIp = playerAuth.easyAuth$getIpAddress();
+            String currentIp = playerAuth.easyAuth$getIpAddress();
+            String oldIpHash = playerData.lastIpHash;
+            playerData.lastIpHash = hashIp(currentIp);
+
+            // Generate and store new session token for session fixation prevention
+            String newSessionToken = AuthEventHandler.generateSessionToken();
+            playerAuth.easyAuth$setSessionToken(newSessionToken);
+            playerData.sessionToken = newSessionToken;
             playerData.update();
-            
+
             // Invalidate IP cache if IP changed
-            if (!oldIp.equals(playerData.lastIp)) {
-                IpLimitManager.invalidateCache(oldIp);
-                IpLimitManager.invalidateCache(playerData.lastIp);
+            if (!oldIpHash.equals(hashIp(currentIp))) {
+                IpLimitManager.invalidateCache(currentIp);
             }
 
             // Clear login attempts cache after successful authentication
-            IpLimitManager.clearLoginAttempts(playerAuth.easyAuth$getIpAddress());
+            IpLimitManager.clearLoginAttempts(currentIp);
 
             // player.getServer().getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, player));
             return 0;

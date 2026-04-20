@@ -28,11 +28,11 @@ public class PostgreSQL implements DbApi {
 
     // Prepared statement templates
     private static final String SELECT_USER_SQL = "SELECT username, username_lower, uuid, data FROM %s WHERE %s = ?;";
-    private static final String INSERT_USER_SQL = "INSERT INTO %s (username, username_lower, uuid, data, last_ip) VALUES (?, ?, ?, ?::jsonb, ?);";
-    private static final String UPDATE_USER_SQL = "UPDATE %s SET uuid = ?, data = ?::jsonb, last_ip = ? WHERE username = ?;";
+    private static final String INSERT_USER_SQL = "INSERT INTO %s (username, username_lower, uuid, data, last_ip_hash) VALUES (?, ?, ?, ?::jsonb, ?);";
+    private static final String UPDATE_USER_SQL = "UPDATE %s SET uuid = ?, data = ?::jsonb, last_ip_hash = ? WHERE username = ?;";
     private static final String DELETE_USER_SQL = "DELETE FROM %s WHERE username = ?;";
-    private static final String COUNT_ACCOUNTS_BY_IP_SQL = "SELECT COUNT(*) FROM %s WHERE last_ip = ?;";
-    private static final String GET_USERNAMES_BY_IP_SQL = "SELECT username FROM %s WHERE last_ip = ?;";
+    private static final String COUNT_ACCOUNTS_BY_IP_SQL = "SELECT COUNT(*) FROM %s WHERE last_ip_hash = ?;";
+    private static final String GET_USERNAMES_BY_IP_SQL = "SELECT username FROM %s WHERE last_ip_hash = ?;";
 
     public PostgreSQL(StorageConfigV1 config) {
         this.config = config;
@@ -74,7 +74,20 @@ public class PostgreSQL implements DbApi {
         }
     }
 
+    /**
+     * Validates table/database names against SQL injection.
+     * Only allows alphanumeric characters, underscores, and hyphens.
+     */
+    private static boolean isValidIdentifier(String name) {
+        return name != null && name.matches("^[a-zA-Z0-9_-]+$");
+    }
+
     private void initializeTable() throws SQLException {
+        // Validate table name to prevent SQL injection
+        if (!isValidIdentifier(config.postgresql.pgTable)) {
+            throw new SQLException("Invalid table name: must match ^[a-zA-Z0-9_-]+$");
+        }
+
         try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {
 
@@ -85,7 +98,7 @@ public class PostgreSQL implements DbApi {
                         username VARCHAR(255) UNIQUE NOT NULL,
                         username_lower VARCHAR(255) NOT NULL,
                         uuid VARCHAR(255),
-                        last_ip VARCHAR(45),
+                        last_ip_hash VARCHAR(64),
                         data JSONB NOT NULL
                     );
                     """, config.postgresql.pgTable));
@@ -93,7 +106,7 @@ public class PostgreSQL implements DbApi {
             // Create indexes
             try {
                 stmt.executeUpdate(String.format(
-                        "CREATE INDEX IF NOT EXISTS idx_%s_last_ip ON %s(last_ip);",
+                        "CREATE INDEX IF NOT EXISTS idx_%s_last_ip_hash ON %s(last_ip_hash);",
                         config.postgresql.pgTable, config.postgresql.pgTable));
                 stmt.executeUpdate(String.format(
                         "CREATE INDEX IF NOT EXISTS idx_%s_username_lower ON %s(username_lower);",
@@ -135,7 +148,7 @@ public class PostgreSQL implements DbApi {
             stmt.setString(2, data.usernameLowerCase);
             stmt.setString(3, data.uuid == null ? null : data.uuid.toString());
             stmt.setString(4, data.toJson());
-            stmt.setString(5, data.lastIp);
+            stmt.setString(5, data.lastIpHash);
 
             if (stmt.executeUpdate() == 0) {
                 LogError("Failed to register user: " + data.username);
@@ -205,7 +218,7 @@ public class PostgreSQL implements DbApi {
 
             stmt.setString(1, data.uuid == null ? null : data.uuid.toString());
             stmt.setString(2, data.toJson());
-            stmt.setString(3, data.lastIp);
+            stmt.setString(3, data.lastIpHash);
             stmt.setString(4, data.username);
 
             return stmt.executeUpdate() > 0;
@@ -247,7 +260,8 @@ public class PostgreSQL implements DbApi {
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, ipAddress);
+            String hashedIp = xyz.nikitacartes.easyauth.event.AuthEventHandler.hashIp(ipAddress);
+            stmt.setString(1, hashedIp);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt(1);
@@ -267,7 +281,8 @@ public class PostgreSQL implements DbApi {
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, ipAddress);
+            String hashedIp = xyz.nikitacartes.easyauth.event.AuthEventHandler.hashIp(ipAddress);
+            stmt.setString(1, hashedIp);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     usernames.add(rs.getString("username"));
@@ -286,6 +301,127 @@ public class PostgreSQL implements DbApi {
 
     @Override
     public void migrateFromV4() {
-        throw new UnsupportedOperationException("PostgreSQL does not support migrateFromV4");
+        LogInfo("Migrating IPs to last_ip_hash (HMAC-SHA256)...");
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement()) {
+
+            // Get all data and migrate to HMAC-SHA256 hashed IPs
+            HashMap<String, PlayerEntryV1> allData = getAllData();
+            PreparedStatement updateStmt = conn.prepareStatement(
+                String.format("UPDATE %s SET last_ip_hash = ? WHERE username = ?", config.postgresql.pgTable));
+
+            int batchSize = 0;
+            for (PlayerEntryV1 entry : allData.values()) {
+                String ipToHash = entry.lastIpHash.isEmpty() ? entry.lastIp : entry.lastIpHash;
+                String hashedIp = xyz.nikitacartes.easyauth.event.AuthEventHandler.hashIp(ipToHash);
+                updateStmt.setString(1, hashedIp);
+                updateStmt.setString(2, entry.username);
+                updateStmt.addBatch();
+
+                if (++batchSize >= 1000) {
+                    updateStmt.executeBatch();
+                    batchSize = 0;
+                }
+            }
+            if (batchSize > 0) {
+                updateStmt.executeBatch();
+            }
+            updateStmt.close();
+            LogInfo("Migrated IPs to HMAC-SHA256 successfully.");
+        } catch (SQLException e) {
+            LogError("Error migrating IPs", e);
+        }
+    }
+
+    // Login rate limiting
+    private static final String RECORD_LOGIN_ATTEMPT_SQL = """
+            INSERT INTO %s_login_attempts (ip_hash, timestamp) VALUES (?, ?);""";
+
+    private static final String GET_LOGIN_ATTEMPTS_SQL = """
+            SELECT COUNT(*) FROM %s_login_attempts WHERE ip_hash = ? AND timestamp > ?;""";
+
+    private static final String CLEAR_LOGIN_ATTEMPTS_SQL = """
+            DELETE FROM %s_login_attempts WHERE ip_hash = ?;""";
+
+    private static final String CREATE_LOGIN_ATTEMPTS_TABLE_SQL = """
+            CREATE TABLE IF NOT EXISTS %s_login_attempts (
+                id SERIAL PRIMARY KEY,
+                ip_hash VARCHAR(64) NOT NULL,
+                timestamp BIGINT NOT NULL
+            );""";
+
+    @Override
+    public void recordLoginAttempt(String ipHash, long timestamp) {
+        String sql = String.format(RECORD_LOGIN_ATTEMPT_SQL, config.postgresql.pgTable);
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, ipHash);
+            stmt.setLong(2, timestamp);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LogError("Error recording login attempt", e);
+        }
+    }
+
+    @Override
+    public int getLoginAttemptsInWindow(String ipHash, long windowMs) {
+        String sql = String.format(GET_LOGIN_ATTEMPTS_SQL, config.postgresql.pgTable);
+        long windowStart = System.currentTimeMillis() - windowMs;
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, ipHash);
+            stmt.setLong(2, windowStart);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            LogError("Error getting login attempts", e);
+            return 0;
+        }
+        return 0;
+    }
+
+    @Override
+    public void clearLoginAttempts(String ipHash) {
+        String sql = String.format(CLEAR_LOGIN_ATTEMPTS_SQL, config.postgresql.pgTable);
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, ipHash);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LogError("Error clearing login attempts", e);
+        }
+    }
+
+    @Override
+    public @Nullable String getUsernameByUuid(String uuid) {
+        String sql = "SELECT username FROM " + config.postgresql.pgTable + " WHERE uuid = ? LIMIT 1;";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, uuid);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("username");
+                }
+            }
+        } catch (SQLException e) {
+            LogError("Error getting username by UUID", e);
+        }
+        return null;
+    }
+
+    /**
+     * Initializes login attempts table for PostgreSQL.
+     */
+    public void initializeLoginAttemptsTable() {
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate(String.format(CREATE_LOGIN_ATTEMPTS_TABLE_SQL, config.postgresql.pgTable));
+            LogDebug("Login attempts table initialized for PostgreSQL");
+        } catch (SQLException e) {
+            LogError("Failed to initialize login attempts table", e);
+        }
     }
 }

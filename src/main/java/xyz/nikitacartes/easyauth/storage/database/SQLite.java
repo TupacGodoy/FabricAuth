@@ -48,22 +48,37 @@ public class SQLite implements DbApi {
                                 username TEXT UNIQUE NOT NULL,
                                 username_lower TEXT NOT NULL,
                                 uuid TEXT NULL,
-                                last_ip TEXT NULL,
+                                last_ip_hash TEXT NULL,
                                 data TEXT NOT NULL
                             );
                             """.formatted(config.sqlite.sqliteTable)
             );
             statement.close();
 
-            // Check if last_ip column exists
+            // Check if last_ip_hash column exists (migrate from old last_ip)
             DatabaseMetaData metaData = connection.getMetaData();
-            ResultSet columns = metaData.getColumns(null, null, config.sqlite.sqliteTable, "last_ip");
+            ResultSet columns = metaData.getColumns(null, null, config.sqlite.sqliteTable, "last_ip_hash");
             if (!columns.next()) {
-                Statement alterStatement = connection.createStatement();
-                alterStatement.executeUpdate("ALTER TABLE " + config.sqlite.sqliteTable + " ADD COLUMN last_ip TEXT NULL;");
-                alterStatement.close();
+                // Check if old last_ip column exists for migration
+                ResultSet oldColumns = metaData.getColumns(null, null, config.sqlite.sqliteTable, "last_ip");
+                if (oldColumns.next()) {
+                    // Migrate existing last_ip to last_ip_hash using application-level hashing
+                    LogInfo("Migrating last_ip to last_ip_hash (HMAC-SHA256)...");
+                    Statement alterStatement = connection.createStatement();
+                    alterStatement.executeUpdate("ALTER TABLE " + config.sqlite.sqliteTable + " ADD COLUMN last_ip_hash TEXT NULL;");
+                    // Migration of data happens in migrateFromV4()
+                    alterStatement.close();
+                } else {
+                    Statement alterStatement = connection.createStatement();
+                    alterStatement.executeUpdate("ALTER TABLE " + config.sqlite.sqliteTable + " ADD COLUMN last_ip_hash TEXT NULL;");
+                    alterStatement.close();
+                }
+                oldColumns.close();
             }
             columns.close();
+
+            // Initialize login attempts table
+            initializeLoginAttemptsTable();
 
             LogDebug("Connected to SQLite database successfully.");
         } catch (ClassNotFoundException | SQLException e) {
@@ -93,12 +108,12 @@ public class SQLite implements DbApi {
     public void registerUser(PlayerEntryV1 data) {
         LogDebug("Registering new player " + data.username + ": " + data.toJson());
         try {
-            PreparedStatement statement = connection.prepareStatement("INSERT INTO " + config.sqlite.sqliteTable + " (username, username_lower, uuid, data, last_ip) VALUES (?, ?, ?, ?, ?);");
+            PreparedStatement statement = connection.prepareStatement("INSERT INTO " + config.sqlite.sqliteTable + " (username, username_lower, uuid, data, last_ip_hash) VALUES (?, ?, ?, ?, ?);");
             statement.setString(1, data.username);
             statement.setString(2, data.usernameLowerCase);
             statement.setObject(3, data.uuid);
             statement.setString(4, data.toJson());
-            statement.setString(5, data.lastIp);
+            statement.setString(5, data.lastIpHash);
             if (statement.executeUpdate() == 0) {
                 LogError("Failed to register user " + data.username + ": " + data.toJson());
             }
@@ -180,10 +195,10 @@ public class SQLite implements DbApi {
     public boolean updateUserData(PlayerEntryV1 data) {
         LogDebug("Updating player data for " + data.username + ": " + data.toJson());
         try {
-            PreparedStatement statement = connection.prepareStatement("UPDATE " + config.sqlite.sqliteTable + " SET uuid = ?, data = ?, last_ip = ? WHERE username = ?;");
+            PreparedStatement statement = connection.prepareStatement("UPDATE " + config.sqlite.sqliteTable + " SET uuid = ?, data = ?, last_ip_hash = ? WHERE username = ?;");
             statement.setObject(1, data.uuid);
             statement.setString(2, data.toJson());
-            statement.setString(3, data.lastIp);
+            statement.setString(3, data.lastIpHash);
             statement.setString(4, data.username);
             int rowsAffected = statement.executeUpdate();
             statement.close();
@@ -221,10 +236,11 @@ public class SQLite implements DbApi {
     @Override
     public int countAccountsByIp(String ipAddress) {
         try {
+            String hashedIp = xyz.nikitacartes.easyauth.event.AuthEventHandler.hashIp(ipAddress);
             PreparedStatement statement = connection.prepareStatement(
-                    "SELECT COUNT(*) FROM " + config.sqlite.sqliteTable + " WHERE last_ip = ?;"
+                    "SELECT COUNT(*) FROM " + config.sqlite.sqliteTable + " WHERE last_ip_hash = ?;"
             );
-            statement.setString(1, ipAddress);
+            statement.setString(1, hashedIp);
             ResultSet resultSet = statement.executeQuery();
             int count = 0;
             if (resultSet.next()) {
@@ -232,7 +248,7 @@ public class SQLite implements DbApi {
             }
             resultSet.close();
             statement.close();
-            LogDebug("Counted " + count + " accounts for IP " + ipAddress);
+            LogDebug("Counted " + count + " accounts for IP [HASHED]");
             return count;
         } catch (SQLException e) {
             LogError("Error counting accounts by IP", e);
@@ -244,17 +260,18 @@ public class SQLite implements DbApi {
     public List<String> getUsernamesByIp(String ipAddress) {
         List<String> usernames = new ArrayList<>();
         try {
+            String hashedIp = xyz.nikitacartes.easyauth.event.AuthEventHandler.hashIp(ipAddress);
             PreparedStatement statement = connection.prepareStatement(
-                    "SELECT username FROM " + config.sqlite.sqliteTable + " WHERE last_ip = ?;"
+                    "SELECT username FROM " + config.sqlite.sqliteTable + " WHERE last_ip_hash = ?;"
             );
-            statement.setString(1, ipAddress);
+            statement.setString(1, hashedIp);
             ResultSet resultSet = statement.executeQuery();
             while (resultSet.next()) {
                 usernames.add(resultSet.getString("username"));
             }
             resultSet.close();
             statement.close();
-            LogDebug("Found " + usernames.size() + " usernames for IP " + ipAddress);
+            LogDebug("Found " + usernames.size() + " usernames for IP [HASHED]");
         } catch (SQLException e) {
             LogError("Error getting usernames by IP", e);
         }
@@ -301,21 +318,120 @@ public class SQLite implements DbApi {
 
     @Override
     public void migrateFromV4() {
-        LogInfo("Migrating IPs from JSON to column...");
+        LogInfo("Migrating IPs from JSON/last_ip to last_ip_hash (HMAC-SHA256)...");
         try {
             HashMap<String, PlayerEntryV1> allData = getAllData();
-            PreparedStatement statement = connection.prepareStatement("UPDATE " + config.sqlite.sqliteTable + " SET last_ip = ? WHERE username = ?;");
+            PreparedStatement statement = connection.prepareStatement("UPDATE " + config.sqlite.sqliteTable + " SET last_ip_hash = ? WHERE username = ?;");
 
             for (PlayerEntryV1 entry : allData.values()) {
-                statement.setString(1, entry.lastIp);
+                // Hash the IP using HMAC-SHA256 for privacy compliance
+                String ipToHash = entry.lastIpHash.isEmpty() ? entry.lastIp : entry.lastIpHash;
+                String hashedIp = xyz.nikitacartes.easyauth.event.AuthEventHandler.hashIp(ipToHash);
+                statement.setString(1, hashedIp);
                 statement.setString(2, entry.username);
                 statement.addBatch();
             }
             statement.executeBatch();
             statement.close();
-            LogInfo("Migrated IPs successfully.");
+            LogInfo("Migrated IPs to HMAC-SHA256 successfully.");
         } catch (SQLException e) {
             LogError("Error migrating IPs", e);
+        }
+    }
+
+    // Login rate limiting
+    @Override
+    public void recordLoginAttempt(String ipHash, long timestamp) {
+        try {
+            PreparedStatement stmt = connection.prepareStatement(
+                    "INSERT INTO " + config.sqlite.sqliteTable + "_login_attempts (ip_hash, timestamp) VALUES (?, ?);"
+            );
+            stmt.setString(1, ipHash);
+            stmt.setLong(2, timestamp);
+            stmt.executeUpdate();
+            stmt.close();
+        } catch (SQLException e) {
+            LogError("Error recording login attempt", e);
+        }
+    }
+
+    @Override
+    public int getLoginAttemptsInWindow(String ipHash, long windowMs) {
+        try {
+            PreparedStatement stmt = connection.prepareStatement(
+                    "SELECT COUNT(*) FROM " + config.sqlite.sqliteTable + "_login_attempts WHERE ip_hash = ? AND timestamp > ?;"
+            );
+            stmt.setString(1, ipHash);
+            stmt.setLong(2, System.currentTimeMillis() - windowMs);
+            ResultSet rs = stmt.executeQuery();
+            int count = 0;
+            if (rs.next()) {
+                count = rs.getInt(1);
+            }
+            rs.close();
+            stmt.close();
+            return count;
+        } catch (SQLException e) {
+            LogError("Error getting login attempts", e);
+            return 0;
+        }
+    }
+
+    @Override
+    public void clearLoginAttempts(String ipHash) {
+        try {
+            PreparedStatement stmt = connection.prepareStatement(
+                    "DELETE FROM " + config.sqlite.sqliteTable + "_login_attempts WHERE ip_hash = ?;"
+            );
+            stmt.setString(1, ipHash);
+            stmt.executeUpdate();
+            stmt.close();
+        } catch (SQLException e) {
+            LogError("Error clearing login attempts", e);
+        }
+    }
+
+    @Override
+    public @Nullable String getUsernameByUuid(String uuid) {
+        try {
+            PreparedStatement stmt = connection.prepareStatement(
+                    "SELECT username FROM " + config.sqlite.sqliteTable + " WHERE uuid = ? LIMIT 1;"
+            );
+            stmt.setString(1, uuid);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                String username = rs.getString("username");
+                rs.close();
+                stmt.close();
+                return username;
+            }
+            rs.close();
+            stmt.close();
+        } catch (SQLException e) {
+            LogError("Error getting username by UUID", e);
+        }
+        return null;
+    }
+
+    /**
+     * Initializes login attempts table for SQLite.
+     */
+    public void initializeLoginAttemptsTable() {
+        try (Statement stmt = connection.createStatement()) {
+            stmt.executeUpdate(
+                    """
+                    CREATE TABLE IF NOT EXISTS %s_login_attempts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ip_hash TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_%s_ip_hash ON %s_login_attempts(ip_hash);
+                    CREATE INDEX IF NOT EXISTS idx_%s_timestamp ON %s_login_attempts(timestamp);
+                    """.formatted(config.sqlite.sqliteTable, config.sqlite.sqliteTable, config.sqlite.sqliteTable, config.sqlite.sqliteTable, config.sqlite.sqliteTable)
+            );
+            LogDebug("Login attempts table initialized for SQLite");
+        } catch (SQLException e) {
+            LogError("Failed to initialize login attempts table", e);
         }
     }
 

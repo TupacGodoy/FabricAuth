@@ -12,8 +12,16 @@ import static xyz.nikitacartes.easyauth.utils.StoneCutterUtils.isModLoaded;
 public class TechnicalConfigV1 extends ConfigTemplate {
 
     @Comment("""
-            Hashed global password.""")
+            Hashed global password with embedded salt.
+            BCrypt and Argon2 algorithms include salt in the hash itself (128-bit random salt).
+            The globalPasswordSalt field is deprecated and not used - algorithm handles salting.""")
     public @Nullable String globalPassword = null;
+
+    @Comment("""
+            Deprecated: BCrypt/Argon2 handle salting internally.
+            This field is kept for backwards compatibility but is not used.""")
+    @Deprecated
+    public @Nullable String globalPasswordSalt = null;
 
     @Comment("""
             
@@ -43,9 +51,17 @@ public class TechnicalConfigV1 extends ConfigTemplate {
     public transient boolean vanishLoaded = false;
 
     @Comment("""
-            
+
             Whether Permissions API mod is loaded.""")
     public transient boolean permissionsLoaded = false;
+
+    @Comment("""
+
+            Deprecated: Legacy IP salt for SHA-256 fallback.
+            HMAC key is now derived from server UUID (not stored in config).
+            This field is kept for backwards compatibility only.""")
+    @Deprecated
+    public @Nullable String ipSalt = null;
 
     public TechnicalConfigV1() {
         super("technical.conf", """

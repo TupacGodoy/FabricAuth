@@ -32,11 +32,11 @@ public class MySQL implements DbApi {
 
     // Prepared statement cache for common queries
     private static final String SELECT_USER_SQL = "SELECT username, username_lower, uuid, data FROM %s WHERE %s = ?;";
-    private static final String INSERT_USER_SQL = "INSERT INTO %s (username, username_lower, uuid, data, last_ip) VALUES (?, ?, ?, ?, ?);";
-    private static final String UPDATE_USER_SQL = "UPDATE %s SET uuid = ?, data = ?, last_ip = ? WHERE username = ?;";
+    private static final String INSERT_USER_SQL = "INSERT INTO %s (username, username_lower, uuid, data, last_ip_hash) VALUES (?, ?, ?, ?, ?);";
+    private static final String UPDATE_USER_SQL = "UPDATE %s SET uuid = ?, data = ?, last_ip_hash = ? WHERE username = ?;";
     private static final String DELETE_USER_SQL = "DELETE FROM %s WHERE username = ?;";
-    private static final String COUNT_ACCOUNTS_BY_IP_SQL = "SELECT COUNT(*) FROM %s WHERE last_ip = ?;";
-    private static final String GET_USERNAMES_BY_IP_SQL = "SELECT username FROM %s WHERE last_ip = ?;";
+    private static final String COUNT_ACCOUNTS_BY_IP_SQL = "SELECT COUNT(*) FROM %s WHERE last_ip_hash = ?;";
+    private static final String GET_USERNAMES_BY_IP_SQL = "SELECT username FROM %s WHERE last_ip_hash = ?;";
 
     // ThreadLocal cache for prepared statements - avoids re-preparation overhead
     private static final ThreadLocal<Map<String, PreparedStatement>> PREPARED_STATEMENT_CACHE =
@@ -81,8 +81,9 @@ public class MySQL implements DbApi {
 
             dataSource = new HikariDataSource(hikariConfig);
 
-            // Initialize table if needed
+            // Initialize tables if needed
             initializeTable();
+            initializeLoginAttemptsTable();
 
             LogInfo("MySQL connection pool initialized successfully");
         } catch (Exception e) {
@@ -90,7 +91,23 @@ public class MySQL implements DbApi {
         }
     }
 
+    /**
+     * Validates table/database names against SQL injection.
+     * Only allows alphanumeric characters, underscores, and hyphens.
+     */
+    private static boolean isValidIdentifier(String name) {
+        return name != null && name.matches("^[a-zA-Z0-9_-]+$");
+    }
+
     private void initializeTable() throws SQLException {
+        // Validate table and database names to prevent SQL injection
+        if (!isValidIdentifier(config.mysql.mysqlTable)) {
+            throw new SQLException("Invalid table name: must match ^[a-zA-Z0-9_-]+$");
+        }
+        if (!isValidIdentifier(config.mysql.mysqlDatabase)) {
+            throw new SQLException("Invalid database name: must match ^[a-zA-Z0-9_-]+$");
+        }
+
         try (Connection conn = dataSource.getConnection();
              PreparedStatement checkStmt = conn.prepareStatement(
                      "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?;")) {
@@ -108,9 +125,9 @@ public class MySQL implements DbApi {
                                         `username_lower` VARCHAR(255) NOT NULL,
                                         `uuid` VARCHAR(255) NULL,
                                         `data` JSON NOT NULL,
-                                        `last_ip` VARCHAR(45) NULL,
+                                        `last_ip_hash` VARCHAR(64) NULL,
                                         PRIMARY KEY (`id`), UNIQUE (`username`),
-                                        INDEX idx_last_ip (`last_ip`),
+                                        INDEX idx_last_ip_hash (`last_ip_hash`),
                                         INDEX idx_username_lower (`username_lower`)
                                     ) ENGINE = InnoDB;""",
                             config.mysql.mysqlDatabase, config.mysql.mysqlTable));
@@ -143,13 +160,13 @@ public class MySQL implements DbApi {
             }
         }
 
-        // Check for last_ip column
-        try (ResultSet columns = metaData.getColumns(null, null, config.mysql.mysqlTable, "last_ip")) {
+        // Check for last_ip_hash column (migrate from old last_ip)
+        try (ResultSet columns = metaData.getColumns(null, null, config.mysql.mysqlTable, "last_ip_hash")) {
             if (!columns.next()) {
                 try (Statement stmt = conn.createStatement()) {
-                    stmt.executeUpdate(String.format("ALTER TABLE `%s`.`%s` ADD COLUMN `last_ip` VARCHAR(45) NULL;",
+                    stmt.executeUpdate(String.format("ALTER TABLE `%s`.`%s` ADD COLUMN `last_ip_hash` VARCHAR(64) NULL;",
                             config.mysql.mysqlDatabase, config.mysql.mysqlTable));
-                    LogInfo("Migrated table schema: added last_ip column");
+                    LogInfo("Migrated table schema: added last_ip_hash column");
                 }
             }
         }
@@ -157,7 +174,7 @@ public class MySQL implements DbApi {
         // Add indexes for performance
         try (Statement stmt = conn.createStatement()) {
             try {
-                stmt.executeUpdate(String.format("CREATE INDEX idx_last_ip ON `%s`.`%s`(`last_ip`);",
+                stmt.executeUpdate(String.format("CREATE INDEX idx_last_ip_hash ON `%s`.`%s`(`last_ip_hash`);",
                         config.mysql.mysqlDatabase, config.mysql.mysqlTable));
             } catch (SQLException ignored) {
                 // Index may already exist
@@ -238,7 +255,7 @@ public class MySQL implements DbApi {
             stmt.setString(2, data.usernameLowerCase);
             stmt.setString(3, data.uuid == null ? null : data.uuid.toString());
             stmt.setString(4, data.toJson());
-            stmt.setString(5, data.lastIp);
+            stmt.setString(5, data.lastIpHash);
 
             if (stmt.executeUpdate() == 0) {
                 LogError("Failed to register user: " + data.username);
@@ -308,7 +325,7 @@ public class MySQL implements DbApi {
 
             stmt.setString(1, data.uuid == null ? null : data.uuid.toString());
             stmt.setString(2, data.toJson());
-            stmt.setString(3, data.lastIp);
+            stmt.setString(3, data.lastIpHash);
             stmt.setString(4, data.username);
 
             return stmt.executeUpdate() > 0;
@@ -350,7 +367,8 @@ public class MySQL implements DbApi {
         try (Connection conn = getConnection();
              PreparedStatement stmt = getCachedPreparedStatement(conn, sql)) {
 
-            stmt.setString(1, ipAddress);
+            String hashedIp = xyz.nikitacartes.easyauth.event.AuthEventHandler.hashIp(ipAddress);
+            stmt.setString(1, hashedIp);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt(1);
@@ -370,7 +388,8 @@ public class MySQL implements DbApi {
         try (Connection conn = getConnection();
              PreparedStatement stmt = getCachedPreparedStatement(conn, sql)) {
 
-            stmt.setString(1, ipAddress);
+            String hashedIp = xyz.nikitacartes.easyauth.event.AuthEventHandler.hashIp(ipAddress);
+            stmt.setString(1, hashedIp);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     usernames.add(rs.getString("username"));
@@ -443,24 +462,132 @@ public class MySQL implements DbApi {
 
     @Override
     public void migrateFromV4() {
-        // Try SQL-based migration first
+        // Try SQL-based migration first - migrate from JSON last_ip to last_ip_hash (HMAC-SHA256)
         String sql = String.format(
-                "UPDATE %s SET last_ip = JSON_UNQUOTE(JSON_EXTRACT(data, '$.last_ip'));",
+                "UPDATE %s SET last_ip_hash = (SELECT SHA2(JSON_UNQUOTE(JSON_EXTRACT(data, '$.last_ip')), 256)) WHERE last_ip_hash IS NULL;",
                 config.mysql.mysqlTable);
 
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
 
             stmt.executeUpdate(sql);
-            LogInfo("Migrated IPs successfully using SQL");
+            LogInfo("Migrated IPs to SHA256 using SQL, now applying HMAC...");
+            // Apply HMAC on top for enhanced privacy (Java fallback handles this)
+            migrateFromV4JavaFallback();
         } catch (SQLException e) {
             LogWarn("SQL migration failed, falling back to Java: " + e.getMessage());
             migrateFromV4JavaFallback();
         }
     }
 
+    // Login rate limiting table
+    private static final String LOGIN_ATTEMPTS_TABLE_SQL = """
+            CREATE TABLE IF NOT EXISTS `%s`.`login_attempts` (
+                `id` BIGINT NOT NULL AUTO_INCREMENT,
+                `ip_hash` VARCHAR(64) NOT NULL,
+                `timestamp` BIGINT NOT NULL,
+                INDEX idx_ip_hash (`ip_hash`),
+                INDEX idx_timestamp (`timestamp`),
+                PRIMARY KEY (`id`)
+            ) ENGINE = InnoDB;""";
+
+    private static final String RECORD_LOGIN_ATTEMPT_SQL = """
+            INSERT INTO `%s`.`login_attempts` (ip_hash, timestamp) VALUES (?, ?);""";
+
+    private static final String GET_LOGIN_ATTEMPTS_SQL = """
+            SELECT COUNT(*) FROM `%s`.`login_attempts` WHERE ip_hash = ? AND timestamp > ?;""";
+
+    private static final String CLEAR_LOGIN_ATTEMPTS_SQL = """
+            DELETE FROM `%s`.`login_attempts` WHERE ip_hash = ?;""";
+
+    private static final String CLEANUP_OLD_LOGIN_ATTEMPTS_SQL = """
+            DELETE FROM `%s`.`login_attempts` WHERE timestamp < ?;""";
+
+    private static final String GET_USERNAME_BY_UUID_SQL = """
+            SELECT username FROM %s WHERE uuid = ? LIMIT 1;""";
+
+    @Override
+    public void recordLoginAttempt(String ipHash, long timestamp) {
+        String sql = String.format(RECORD_LOGIN_ATTEMPT_SQL, config.mysql.mysqlTable);
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, ipHash);
+            stmt.setLong(2, timestamp);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LogError("Error recording login attempt", e);
+        }
+    }
+
+    @Override
+    public int getLoginAttemptsInWindow(String ipHash, long windowMs) {
+        String sql = String.format(GET_LOGIN_ATTEMPTS_SQL, config.mysql.mysqlTable);
+        long windowStart = System.currentTimeMillis() - windowMs;
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, ipHash);
+            stmt.setLong(2, windowStart);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            LogError("Error getting login attempts", e);
+        }
+        return 0;
+    }
+
+    @Override
+    public void clearLoginAttempts(String ipHash) {
+        String sql = String.format(CLEAR_LOGIN_ATTEMPTS_SQL, config.mysql.mysqlTable);
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, ipHash);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LogError("Error clearing login attempts", e);
+        }
+    }
+
+    @Override
+    public @Nullable String getUsernameByUuid(String uuid) {
+        String sql = String.format(GET_USERNAME_BY_UUID_SQL, config.mysql.mysqlTable);
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, uuid);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("username");
+                }
+            }
+        } catch (SQLException e) {
+            LogError("Error getting username by UUID", e);
+        }
+        return null;
+    }
+
+    /**
+     * Initializes login attempts table and cleans up old entries.
+     */
+    public void initializeLoginAttemptsTable() {
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement()) {
+            // Create table
+            stmt.executeUpdate(String.format(LOGIN_ATTEMPTS_TABLE_SQL, config.mysql.mysqlTable));
+            LogDebug("Login attempts table initialized");
+
+            // Cleanup old entries (older than 1 hour)
+            long cleanupThreshold = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1);
+            stmt.executeUpdate(String.format(CLEANUP_OLD_LOGIN_ATTEMPTS_SQL, config.mysql.mysqlTable, cleanupThreshold));
+            LogDebug("Cleaned up old login attempt records");
+        } catch (SQLException e) {
+            LogError("Failed to initialize login attempts table", e);
+        }
+    }
+
     private void migrateFromV4JavaFallback() {
-        String updateSql = String.format("UPDATE %s SET last_ip = ? WHERE username = ?;", config.mysql.mysqlTable);
+        String updateSql = String.format("UPDATE %s SET last_ip_hash = ? WHERE username = ?;", config.mysql.mysqlTable);
 
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(updateSql)) {
@@ -469,7 +596,10 @@ public class MySQL implements DbApi {
             int batchSize = 0;
 
             for (PlayerEntryV1 entry : allData.values()) {
-                stmt.setString(1, entry.lastIp);
+                // Hash the IP using HMAC-SHA256 for privacy compliance
+                String ipToHash = entry.lastIpHash.isEmpty() ? entry.lastIp : entry.lastIpHash;
+                String hashedIp = xyz.nikitacartes.easyauth.event.AuthEventHandler.hashIp(ipToHash);
+                stmt.setString(1, hashedIp);
                 stmt.setString(2, entry.username);
                 stmt.addBatch();
 
@@ -482,7 +612,7 @@ public class MySQL implements DbApi {
             if (batchSize > 0) {
                 stmt.executeBatch();
             }
-            LogInfo("Migrated IPs successfully using Java fallback");
+            LogInfo("Migrated IPs to HMAC-SHA256 successfully using Java fallback");
         } catch (SQLException e) {
             LogError("Java fallback migration failed", e);
         }

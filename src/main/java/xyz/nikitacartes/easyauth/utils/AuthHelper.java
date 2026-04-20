@@ -33,8 +33,8 @@ public class AuthHelper {
         }
         String storedPassword = playerEntry.password;
         if (config.debug) {
-            LogDebug("Checking password for " + playerEntry.username);
-            LogDebug("Stored password's hash: " + storedPassword);
+            LogDebug("Checking password for player: " + playerEntry.username);
+            // Never log password hashes - security risk
         }
         // Verify password
         if (!verifyPassword(password, storedPassword)) {
@@ -57,9 +57,12 @@ public class AuthHelper {
     }
 
     public static boolean checkGlobalPassword(char[] password) {
+        if (technicalConfig.globalPassword == null) return false;
+
         if (!verifyPassword(password, technicalConfig.globalPassword)) return false;
 
-        // Rehash password if it's using Argon2
+        // Rehash password if it's using Argon2 (migrate to BCrypt)
+        // BCrypt includes embedded 128-bit salt, so no separate salt field is needed
         if (technicalConfig.globalPassword.startsWith("$argon2")) {
             technicalConfig.globalPassword = HasherBCrypt.hash(password);
             technicalConfig.save();
@@ -73,10 +76,10 @@ public class AuthHelper {
 
     private static boolean verifyPassword(char[] pass, String hashed) {
         if (hashed.startsWith("$argon2")) {
-            if (config.debug) LogDebug("Hashed password (Argon2): " + HasherArgon2.hash(pass));
+            // Never log password hashes - security risk even in debug mode
             return HasherArgon2.verify(pass, hashed);
         }
-        if (config.debug) LogDebug("Hashed password (BCrypt): " + HasherBCrypt.hash(pass));
+        // Never log password hashes - security risk even in debug mode
         return HasherBCrypt.verify(pass, hashed);
     }
 

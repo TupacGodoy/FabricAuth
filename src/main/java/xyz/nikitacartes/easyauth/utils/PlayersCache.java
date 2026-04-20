@@ -3,6 +3,7 @@ package xyz.nikitacartes.easyauth.utils;
 import xyz.nikitacartes.easyauth.storage.PlayerEntryV1;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -21,6 +22,8 @@ public class PlayersCache {
     private static final long CACHE_ENTRY_TTL_MS = Long.getLong("easyauth.cache.ttlMinutes", 30) * 60 * 1000;
     // Cleanup interval in milliseconds (5 minutes default)
     private static final long CLEANUP_INTERVAL_MS = Long.getLong("easyauth.cache.cleanupIntervalMinutes", 5) * 60 * 1000;
+    // Memory-based eviction threshold (64MB default)
+    private static final long MAX_MEMORY_BYTES = Long.getLong("easyauth.cache.maxMemoryMb", 64) * 1024 * 1024;
 
     /**
      * Cache entry with atomic access time tracking for lock-free LRU.
@@ -87,50 +90,100 @@ public class PlayersCache {
     }
 
     /**
-     * Enforces maximum cache size by removing oldest entries.
+     * Enforces maximum cache size and memory limit by removing oldest entries.
      */
     private static void enforceMaxSize() {
-        if (playerDataCache.size() <= MAX_CACHE_SIZE) {
-            return;
+        // Count-based eviction
+        if (playerDataCache.size() > MAX_CACHE_SIZE) {
+            int toRemove = playerDataCache.size() - MAX_CACHE_SIZE;
+
+            // Find oldest entries by sequence number
+            insertionOrder.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue())
+                .limit(toRemove)
+                .forEach(entry -> {
+                    playerDataCache.remove(entry.getKey());
+                    insertionOrder.remove(entry.getKey());
+                });
         }
 
-        int toRemove = playerDataCache.size() - MAX_CACHE_SIZE;
-
-        // Find oldest entries by sequence number
-        insertionOrder.entrySet().stream()
-            .sorted(Map.Entry.comparingByValue())
-            .limit(toRemove)
-            .forEach(entry -> {
-                playerDataCache.remove(entry.getKey());
-                insertionOrder.remove(entry.getKey());
-            });
+        // Memory-based eviction
+        while (estimateMemoryUsage() > MAX_MEMORY_BYTES && !playerDataCache.isEmpty()) {
+            // Find oldest entry by sequence number
+            insertionOrder.entrySet().stream()
+                .min(Map.Entry.comparingByValue())
+                .ifPresent(entry -> {
+                    playerDataCache.remove(entry.getKey());
+                    insertionOrder.remove(entry.getKey());
+                });
+        }
     }
 
     /**
-     * Puts a player entry into the cache.
+     * Estimates memory usage of cache entries.
+     * Rough estimate based on typical PlayerEntryV1 size (~2KB per entry).
+     */
+    private static long estimateMemoryUsage() {
+        return playerDataCache.size() * 2048;
+    }
+
+    /**
+     * Puts a player entry into the cache using both username and UUID for lookup.
+     * Uses UUID as primary key to prevent cache poisoning via username case manipulation.
      * Thread-safe without global locking.
      */
     public static void put(String username, PlayerEntryV1 data) {
         if (username == null || data == null) return;
 
         maybeCleanup();
-        String key = username.toLowerCase();
+        // Use UUID as primary cache key to prevent case-based cache poisoning
+        // Fallback to lowercase username only if UUID is not available
+        String cacheKey = (data.uuid != null) ? data.uuid.toString() : username.toLowerCase();
         CacheEntry entry = new CacheEntry(data);
-        playerDataCache.put(key, entry);
-        insertionOrder.put(key, sequenceGenerator.incrementAndGet());
+        playerDataCache.put(cacheKey, entry);
+        insertionOrder.put(cacheKey, sequenceGenerator.incrementAndGet());
+
+        // Also store with lowercase username for backwards compatibility
+        // but verify UUID matches on retrieval
+        if (!cacheKey.equals(username.toLowerCase())) {
+            String usernameKey = username.toLowerCase();
+            playerDataCache.put(usernameKey, entry);
+            insertionOrder.put(usernameKey, sequenceGenerator.incrementAndGet());
+        }
     }
 
     /**
-     * Gets a player entry from the cache.
+     * Gets a player entry from the cache using UUID if available, otherwise username.
      * Thread-safe without global locking.
      */
     public static PlayerEntryV1 get(String username) {
         if (username == null) return null;
 
         maybeCleanup();
+        // Try lowercase username lookup first
         CacheEntry entry = playerDataCache.get(username.toLowerCase());
         if (entry != null) {
-            entry.touch(); // Update access time for LRU
+            // Verify the cached entry matches the requested username (case-insensitive)
+            if (entry.data.usernameLowerCase.equals(username.toLowerCase())) {
+                entry.touch(); // Update access time for LRU
+                return entry.data;
+            }
+            // Username mismatch - this could be cache poisoning, don't return the entry
+        }
+        return null;
+    }
+
+    /**
+     * Gets a player entry from cache by UUID. More reliable than username-based lookup.
+     * Thread-safe without global locking.
+     */
+    public static PlayerEntryV1 getByUuid(UUID uuid) {
+        if (uuid == null) return null;
+
+        maybeCleanup();
+        CacheEntry entry = playerDataCache.get(uuid.toString());
+        if (entry != null) {
+            entry.touch();
             return entry.data;
         }
         return null;
@@ -178,6 +231,17 @@ public class PlayersCache {
         String key = username.toLowerCase();
         playerDataCache.remove(key);
         insertionOrder.remove(key);
+    }
+
+    /**
+     * Invalidates a specific entry from the cache by UUID.
+     * More reliable than username-based invalidation.
+     */
+    public static void invalidateByUuid(UUID uuid) {
+        if (uuid == null) return;
+
+        playerDataCache.remove(uuid.toString());
+        insertionOrder.remove(uuid.toString());
     }
 
     /**
